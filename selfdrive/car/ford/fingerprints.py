@@ -204,7 +204,7 @@ FW_VERSIONS = {
       b'PJ6T-14H102-ABJ\x00\x00\x00\x00\x00\x00\x00\x00\x00',
     ],
    },
-   CAR.Lincoln_nautilus: {
+   CAR.LINCOLN_NAUTILUS: {
      (Ecu.eps, 0x730, None): [
       b'K2GC-14D003-AH\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00',
     ],
