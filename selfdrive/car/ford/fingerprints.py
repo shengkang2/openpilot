@@ -1,4 +1,4 @@
-rom cereal import car
+from cereal import car
 from openpilot.selfdrive.car.ford.values import CAR
 
 Ecu = car.CarParams.Ecu
@@ -203,8 +203,8 @@ FW_VERSIONS = {
     (Ecu.fwdCamera, 0x706, None): [
       b'PJ6T-14H102-ABJ\x00\x00\x00\x00\x00\x00\x00\x00\x00',
     ],
-   },
-   CAR.LINCOLN_NAUTILUS: {
+  },
+  CAR.LINCOLN_NAUTILUS: {
      (Ecu.eps, 0x730, None): [
       b'K2GC-14D003-AH\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00',
     ],
