@@ -3,7 +3,7 @@ import re
 from collections import namedtuple
 from dataclasses import dataclass, field, replace
 from enum import Enum, IntFlag
-from openpilot.common.params import Params
+
 import panda.python.uds as uds
 from cereal import car
 from openpilot.selfdrive.car import AngleRateLimit, CarSpecs, dbc_dict, DbcDict, PlatformConfig, Platforms
@@ -13,7 +13,7 @@ from openpilot.selfdrive.car.fw_query_definitions import FwQueryConfig, LiveFwVe
 
 Ecu = car.CarParams.Ecu
 Button = namedtuple('Button', ['event_type', 'can_addr', 'can_msg', 'values'])
-params = Params()
+
 
 class CarControllerParams:
   STEER_STEP = 5        # LateralMotionControl, 20Hz
@@ -23,16 +23,14 @@ class CarControllerParams:
   ACC_UI_STEP = 20      # ACCDATA_3, 5Hz
   BUTTONS_STEP = 5      # Steering_Data_FD1, 10Hz, but send twice as fast
 
-  CURVATURE_MAX = 0.02  # Max curvature for steering command, m^-1
+  CURVATURE_MAX = 0.01  # Max curvature for steering command, m^-1
   STEER_DRIVER_ALLOWANCE = 1.0  # Driver intervention threshold, Nm
 
   # Curvature rate limits
   # The curvature signal is limited to 0.003 to 0.009 m^-1/sec by the EPS depending on speed and direction
-  # Limit to ~2 m/s^3 up, ~3 m/s^3 down at 75 mph
-  # Worst case, the low speed limits will allow 4.3 m/s^3 up, 4.9 m/s^3 down at 75 mph
-  ANGLE_RATE_LIMIT_UP = AngleRateLimit(speed_bp=[5, 25], angle_v=[0.0006, 0.0004]) # windup limit
-  ANGLE_RATE_LIMIT_DOWN = AngleRateLimit(speed_bp=[5, 25], angle_v=[0.0006, 0.0006]) # unwind limit
-  CURVATURE_ERROR = 0.004  # ~6 degrees at 10 m/s, ~10 degrees at 35 m/s
+  ANGLE_RATE_LIMIT_UP = AngleRateLimit(speed_bp=[5, 16, 25], angle_v=[0.0024, 0.0011, 0.00008])
+  ANGLE_RATE_LIMIT_DOWN = AngleRateLimit(speed_bp=[5, 13, 25], angle_v=[0.0024, 0.0013, 0.00015])
+  CURVATURE_ERROR = 0.01  # ~6 degrees at 10 m/s, ~10 degrees at 35 m/s
 
   ACCEL_MAX = 2.0               # m/s^2 max acceleration
   ACCEL_MIN = -3.5              # m/s^2 max deceleration
@@ -44,7 +42,7 @@ class CarControllerParams:
 
 
 class FordConfig:
-  BLUECRUISE_CLUSTER_PRESENT = False
+    BLUECRUISE_CLUSTER_PRESENT = False
 
 class FordFlags(IntFlag):
   # Static flags
@@ -114,7 +112,7 @@ class CAR(Platforms):
   )
   FORD_EDGE_MK2 = FordPlatformConfig(
     [FordCarDocs("Ford Edge 2022")],
-    CarSpecs(mass=1933, steerRatio=15.3, wheelbase=2.824),
+    CarSpecs(mass=2050, steerRatio=19.3, wheelbase=3.824),
     flags=FordFlags.ALT_STEER_ANGLE,
   )
   FORD_ESCAPE_MK4 = FordPlatformConfig(
@@ -165,17 +163,22 @@ class CAR(Platforms):
     [FordCarDocs("Ford Ranger 2024", "Adaptive Cruise Control with Lane Centering")],
     CarSpecs(mass=2000, wheelbase=3.27, steerRatio=17.0),
   )
-  LINCOLN_NAUTILUS = FordPlatformConfig(
-    [FordCarDocs("Lincoln Nautilus 2018-20", "Adaptive Cruise Control with Lane Centering")],
-    CarSpecs(mass=2050, wheelbase=3.025, steerRatio=19.3),
+  Lincoln_nautilus = FordPlatformConfig(
+    [FordCarDocs("Lincoln nautilus 2018-21", "Adaptive Cruise Control with Lane Centering")],  
+    CarSpecs(mass=2050, steerRatio=19.3, wheelbase=3.824),
+    flags=FordFlags.ALT_STEER_ANGLE,
   )
 
 
 # Custom Ford Vehicle Tuning Params (per-fingerprint)
 FORD_VEHICLE_TUNINGS = {
   "FORD_F_150_MK14": {
-    "brake_actuator_activate": -0.14,
-    "brake_actuator_release_delta": 0.08,
+    "brake_actuator_target": -0.04,
+    "brake_actuator_stdDevLow": 0.1,
+    "brake_actuator_stdDevHigh": 0.0,
+    "precharge_actuator_target": -0.04,
+    "precharge_actuator_stdDevLow": 0.08,
+    "precharge_actuator_stdDevHigh": 0.0,
     "path_lookup_time": 0.25,
     "reset_lookup_time": 0.5,
     "steerActuatorDelay": 0.2,
@@ -192,11 +195,15 @@ FORD_VEHICLE_TUNINGS = {
     "lane_change_factor": 0.65,
   },
   "FORD_F_150_LIGHTNING_MK1": {
-    "brake_actuator_activate": -0.14,
-    "brake_actuator_release_delta": 0.08,
+    "brake_actuator_target": -0.04,
+    "brake_actuator_stdDevLow": 0.1,
+    "brake_actuator_stdDevHigh": 0.0,
+    "precharge_actuator_target": -0.04,
+    "precharge_actuator_stdDevLow": 0.08,
+    "precharge_actuator_stdDevHigh": 0.0,
     "path_lookup_time": 0.5,
     "reset_lookup_time": 0.5,
-    "steerActuatorDelay": 0.2,
+    "steerActuatorDelay": 0.02,
     "steerLimitTimer": 1.5,
     "stoppingControl": True,
     "startingState": True,
@@ -210,8 +217,12 @@ FORD_VEHICLE_TUNINGS = {
     "lane_change_factor": 0.65,
   },
   "FORD_MUSTANG_MACH_E_MK1": {
-    "brake_actuator_activate": -0.14,
-    "brake_actuator_release_delta": 0.08,
+    "brake_actuator_target": -0.04,
+    "brake_actuator_stdDevLow": 0.1,
+    "brake_actuator_stdDevHigh": 0.0,
+    "precharge_actuator_target": -0.04,
+    "precharge_actuator_stdDevLow": 0.08,
+    "precharge_actuator_stdDevHigh": 0.0,
     "path_lookup_time": 0.5,
     "reset_lookup_time": 0.5,
     "steerActuatorDelay": 0.2,
@@ -314,8 +325,6 @@ def match_fw_to_car_fuzzy(live_fw_versions: LiveFwVersions, vin: str, offline_fw
 
       valid_found_ecus.add(addr)
 
-    # output candidates to a param named "FingerPrintData"
-    # params.put("FingerPrintData", f"{vin}: {valid_found_ecus}")
     # If all live ECUs pass all checks for candidate, add it as a match
     if valid_expected_ecus.issubset(valid_found_ecus):
       candidates.add(candidate)
@@ -386,8 +395,6 @@ FW_QUERY_CONFIG = FwQueryConfig(
     (Ecu.hud, 0x720, None),           # Instrument Cluster Module
   ],
   # Custom fuzzy fingerprinting function using platform and model year hints
-  # Save the raw fingerprint data to a param name "FingerprintData"
-  # param.put("FingerprintData", f'{vin}: {match_fw_to_car_fuzzy}')
   match_fw_to_car_fuzzy=match_fw_to_car_fuzzy,
 )
 
