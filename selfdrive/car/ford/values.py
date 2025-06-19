@@ -164,7 +164,7 @@ class CAR(Platforms):
     CarSpecs(mass=2000, wheelbase=3.27, steerRatio=17.0),
   )
   Lincoln_nautilus = FordPlatformConfig(
-    [FordCarDocs("Lincoln nautilus 2018-21", "Adaptive Cruise Control with Lane Centering")],  
+    [FordCarDocs("Lincoln Nautilus 2018-21", "Adaptive Cruise Control with Lane Centering")],  
     CarSpecs(mass=2050, steerRatio=19.3, wheelbase=3.824),
     flags=FordFlags.ALT_STEER_ANGLE,
   )
