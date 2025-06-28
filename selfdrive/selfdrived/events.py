@@ -575,7 +575,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "Poor GPS reception",
       "Ensure device has a clear view of the sky",
       AlertStatus.normal, AlertSize.mid,
-      Priority.LOWER, VisualAlert.none, AudibleAlert.none, .2, creation_delay=600.)
+      Priority.LOWER, VisualAlert.none, AudibleAlert.none, .2, creation_delay=60000000000.)
   },
 
   EventName.tooDistracted: {
