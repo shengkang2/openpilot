@@ -156,7 +156,7 @@ procs = [
 ]
 
 # bluepilot
-procs += [PythonProcess("bluepilot_uploader", "bluepilot.data_collection.bp_uploader", always_run, enabled=not PC)]
+#procs += [PythonProcess("bluepilot_uploader", "bluepilot.data_collection.bp_uploader", always_run, enabled=not PC)]
 
 # sunnypilot
 procs += [
