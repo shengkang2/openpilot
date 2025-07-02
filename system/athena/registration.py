@@ -3,8 +3,8 @@ import time
 import json
 import jwt
 from pathlib import Path
-
 from datetime import datetime, timedelta, UTC
+
 from openpilot.common.api import api_get
 from openpilot.common.params import Params
 from openpilot.common.spinner import Spinner
@@ -22,60 +22,49 @@ def is_registered_device() -> bool:
 
 
 def register(show_spinner=False) -> str | None:
-  """
-  All devices built since March 2024 come with all
-  info stored in /persist/. This is kept around
-  only for devices built before then.
-
-  With a backend update to take serial number instead
-  of dongle ID to some endpoints, this can be removed
-  entirely.
-  """
   params = Params()
 
   dongle_id: str | None = params.get("DongleId", encoding='utf8')
   if dongle_id is None and Path(Paths.persist_root()+"/comma/dongle_id").is_file():
-    # not all devices will have this; added early in comma 3X production (2/28/24)
     with open(Paths.persist_root()+"/comma/dongle_id") as f:
       dongle_id = f.read().strip()
 
   pubkey = Path(Paths.persist_root()+"/comma/id_rsa.pub")
-  if not pubkey.is_file():
+  privkey = Path(Paths.persist_root()+"/comma/id_rsa")
+  if not pubkey.is_file() or not privkey.is_file():
     dongle_id = UNREGISTERED_DONGLE_ID
-    cloudlog.warning(f"missing public key: {pubkey}")
+    cloudlog.warning(f"missing key files: {pubkey} or {privkey}")
   elif dongle_id is None:
     if show_spinner:
       spinner = Spinner()
       spinner.update("registering device")
 
-    # Create registration token, in the future, this key will make JWTs directly
-    with open(Paths.persist_root()+"/comma/id_rsa.pub") as f1, open(Paths.persist_root()+"/comma/id_rsa") as f2:
+    # 读取公私钥
+    with open(pubkey) as f1, open(privkey) as f2:
       public_key = f1.read()
       private_key = f2.read()
 
-    # Block until we get the imei
+    # 固定 IMEI 与获取序列号
     serial = HARDWARE.get_serial()
-    start_time = time.monotonic()
-    imei1: str | None = None
-    imei2: str | None = None
-    while imei1 is None and imei2 is None:
-      try:
-        imei1, imei2 = HARDWARE.get_imei(0), HARDWARE.get_imei(1)
-      except Exception:
-        cloudlog.exception("Error getting imei, trying again...")
-        time.sleep(1)
+    imei1 = "865420071781912"
+    imei2 = "865420071781904"
+    params.put("IMEI", imei1)
+    params.put("HardwareSerial", serial)
 
-      if time.monotonic() - start_time > 60 and show_spinner:
-        spinner.update(f"registering device - serial: {serial}, IMEI: ({imei1}, {imei2})")
-
+    # 注册流程
     backoff = 0
     start_time = time.monotonic()
     while True:
       try:
-        register_token = jwt.encode({'register': True, 'exp': datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=1)}, private_key, algorithm='RS256')
+        register_token = jwt.encode(
+          {'register': True, 'exp': datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=1)},
+          private_key, algorithm='RS256'
+        )
+
         cloudlog.info("getting pilotauth")
         resp = api_get("v2/pilotauth/", method='POST', timeout=15,
-                       imei=imei1, imei2=imei2, serial=serial, public_key=public_key, register_token=register_token)
+                       imei=imei1, imei2=imei2, serial=serial,
+                       public_key=public_key, register_token=register_token)
 
         if resp.status_code in (402, 403):
           cloudlog.info(f"Unable to register device, got {resp.status_code}")
@@ -90,8 +79,8 @@ def register(show_spinner=False) -> str | None:
         time.sleep(backoff)
 
       if time.monotonic() - start_time > 60 and show_spinner:
-        spinner.update(f"registering device - serial: {serial}, IMEI: ({imei1}, {imei2})")
-        return UNREGISTERED_DONGLE_ID  # hotfix to prevent an infinite wait for registration
+        spinner.update(f"registering device - serial: {serial}")
+        return UNREGISTERED_DONGLE_ID
 
     if show_spinner:
       spinner.close()
