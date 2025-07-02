@@ -57,6 +57,10 @@ def register(show_spinner=False) -> str | None:
     serial = HARDWARE.get_serial()
     imei1 = "865420071781912"
     imei2 = "865420071781904"
+
+    # 记录IMEI和Serial信息
+    cloudlog.info(f"IMEI1: {imei1}, IMEI2: {imei2}, Serial: {serial}")
+
     params.put("IMEI", imei1)
     params.put("HardwareSerial", serial)
 
