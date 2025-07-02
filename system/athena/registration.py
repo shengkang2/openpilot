@@ -15,7 +15,7 @@ from openpilot.common.swaglog import cloudlog
 
 
 UNREGISTERED_DONGLE_ID = "UnregisteredDevice"
-MAX_REGISTRATION_TIME_S = 90  # 防止无限阻塞注册逻辑
+MAX_REGISTRATION_TIME_S = 60  # 防止无限阻塞注册逻辑
 
 
 def is_registered_device() -> bool:
