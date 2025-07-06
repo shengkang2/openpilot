@@ -1,86 +1,71 @@
 #!/usr/bin/env python3
 import time
 import json
-import jwt
+import requests
 from pathlib import Path
-from datetime import datetime, timedelta, UTC
+from datetime import datetime
 
-from openpilot.common.api import api_get
 from openpilot.common.params import Params
 from openpilot.common.spinner import Spinner
 from openpilot.common.swaglog import cloudlog
-from openpilot.system.hardware import HARDWARE, PC
+from openpilot.system.hardware import HARDWARE
 from openpilot.system.hardware.hw import Paths
 
 UNREGISTERED_DONGLE_ID = "UnregisteredDevice"
 
-def is_registered_device() -> bool:
-  dongle = Params().get("DongleId", encoding='utf-8')
-  return dongle not in (None, UNREGISTERED_DONGLE_ID)
+SUNNYLINK_REGISTER_URL = "http://sunnylink.local/api/register"  # ✅ 你的 SunnyLink 注册接口
 
-def register(show_spinner=False) -> str | None:
+def register(show_spinner=False) -> str:
   params = Params()
-  dongle_id = params.get("DongleId", encoding='utf8')
+  dongle_id = params.get("DongleId", encoding='utf-8')
 
   if dongle_id and dongle_id != UNREGISTERED_DONGLE_ID:
-    return dongle_id  # 已注册
+    return dongle_id
 
-  imei1 = '865420071781912'
-  imei2 = '865420071781904'
+  imei1 = "865420071781912"
+  imei2 = "865420071781904"
   serial = HARDWARE.get_serial()
-  params.put("HardwareSerial", serial)
 
   pubkey_path = Path(Paths.persist_root() + "/comma/id_rsa.pub")
-  privkey_path = Path(Paths.persist_root() + "/comma/id_rsa")
-  if not pubkey_path.is_file() or not privkey_path.is_file():
-    cloudlog.warning("Missing key files")
+  if not pubkey_path.is_file():
+    cloudlog.warning("Missing public key file")
     params.put("DongleId", UNREGISTERED_DONGLE_ID)
     return UNREGISTERED_DONGLE_ID
 
-  with open(pubkey_path) as f1, open(privkey_path) as f2:
-    public_key = f1.read()
-    private_key = f2.read()
+  with open(pubkey_path) as f:
+    public_key = f.read().strip()
+
+  data = {
+    "serial": serial,
+    "imei1": imei1,
+    "imei2": imei2,
+    "public_key": public_key,
+    "timestamp": datetime.utcnow().isoformat()
+  }
 
   if show_spinner:
     spinner = Spinner()
-    spinner.update("Registering device...")
+    spinner.update("Registering with SunnyLink...")
 
-  backoff = 1
-  start_time = time.monotonic()
-  max_wait_time = 30  # seconds
-
-  while True:
-    try:
-      token = jwt.encode(
-        {'register': True, 'exp': datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=1)},
-        private_key, algorithm='RS256'
-      )
-      resp = api_get("v2/pilotauth/", method='POST', timeout=15,
-                     imei=imei1, imei2=imei2, serial=serial,
-                     public_key=public_key, register_token=token)
-
-      if resp.status_code in (402, 403):
-        cloudlog.warning(f"Registration rejected: {resp.status_code}")
-        dongle_id = UNREGISTERED_DONGLE_ID
-      else:
-        dongleauth = json.loads(resp.text)
-        dongle_id = dongleauth.get("dongle_id", UNREGISTERED_DONGLE_ID)
-      break
-    except Exception:
-      cloudlog.exception("Registration failed, retrying...")
-      if time.monotonic() - start_time > max_wait_time:
-        dongle_id = UNREGISTERED_DONGLE_ID
-        break
-      time.sleep(backoff)
-      backoff = min(backoff + 1, 10)
+  try:
+    r = requests.post(SUNNYLINK_REGISTER_URL, json=data, timeout=10)
+    if r.status_code == 200:
+      resp = r.json()
+      dongle_id = resp.get("dongle_id", UNREGISTERED_DONGLE_ID)
+      cloudlog.info(f"Registered: {dongle_id}")
+    else:
+      dongle_id = UNREGISTERED_DONGLE_ID
+      cloudlog.error(f"SunnyLink registration failed: {r.status_code}")
+  except Exception as e:
+    cloudlog.exception("Exception during SunnyLink registration")
+    dongle_id = UNREGISTERED_DONGLE_ID
 
   if show_spinner:
     spinner.close()
 
   params.put("DongleId", dongle_id)
-  cloudlog.info(f"Registration completed, DongleId: {dongle_id}")
   return dongle_id
 
 
 if __name__ == "__main__":
-  print(register())
+  print("DongleId:", register(show_spinner=True))
