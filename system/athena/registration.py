@@ -28,7 +28,6 @@ def register(show_spinner=False) -> str | None:
   imei1 = '865420071781912'
   imei2 = '865420071781904'
   serial = HARDWARE.get_serial()
-  params.put("IMEI", imei1)
   params.put("HardwareSerial", serial)
 
   pubkey_path = Path(Paths.persist_root() + "/comma/id_rsa.pub")
@@ -79,6 +78,7 @@ def register(show_spinner=False) -> str | None:
     spinner.close()
 
   params.put("DongleId", dongle_id)
+  cloudlog.info(f"Registration completed, DongleId: {dongle_id}")
   return dongle_id
 
 
