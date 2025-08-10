@@ -2,67 +2,68 @@
 
 # Support Information for 363 Known Cars
 
-|Make|Model|Package|Support Level|
+|制造商|型号|包装|支持级别|
 |---|---|---|:---:|
-|Acura|ILX 2016-18|Technology Plus Package or AcuraWatch Plus|[Upstream](#upstream)|
-|Acura|ILX 2019|All|[Upstream](#upstream)|
-|Acura|Integra 2024|All|[Community](#community)|
-|Acura|RDX 2016-18|AcuraWatch Plus or Advance Package|[Upstream](#upstream)|
-|Acura|RDX 2019-21|All|[Upstream](#upstream)|
-|Audi|A3 2014-19|Adaptive Cruise Control (ACC) & Lane Assist|[Upstream](#upstream)|
-|Audi|A3 Sportback e-tron 2017-18|Adaptive Cruise Control (ACC) & Lane Assist|[Upstream](#upstream)|
-|Audi|A4 2016-24|All|[Not compatible](#flexray)|
-|Audi|A5 2016-24|All|[Not compatible](#flexray)|
-|Audi|Q2 2018|Adaptive Cruise Control (ACC) & Lane Assist|[Upstream](#upstream)|
-|Audi|Q3 2019-24|Adaptive Cruise Control (ACC) & Lane Assist|[Upstream](#upstream)|
-|Audi|Q5 2017-24|All|[Not compatible](#flexray)|
-|Audi|RS3 2018|Adaptive Cruise Control (ACC) & Lane Assist|[Upstream](#upstream)|
-|Audi|S3 2015-17|Adaptive Cruise Control (ACC) & Lane Assist|[Upstream](#upstream)|
-|Chevrolet|Bolt EUV 2022-23|Premier or Premier Redline Trim without Super Cruise Package|[Upstream](#upstream)|
-|Chevrolet|Bolt EV 2022-23|2LT Trim with Adaptive Cruise Control Package|[Upstream](#upstream)|
-|Chevrolet|Equinox 2019-22|Adaptive Cruise Control (ACC)|[Upstream](#upstream)|
-|Chevrolet|Silverado 1500 2020-21|Safety Package II|[Upstream](#upstream)|
-|Chevrolet|Trailblazer 2021-22|Adaptive Cruise Control (ACC)|[Upstream](#upstream)|
-|Chrysler|Pacifica 2017-18|Adaptive Cruise Control (ACC)|[Upstream](#upstream)|
-|Chrysler|Pacifica 2019-20|Adaptive Cruise Control (ACC)|[Upstream](#upstream)|
-|Chrysler|Pacifica 2021-23|All|[Upstream](#upstream)|
-|Chrysler|Pacifica Hybrid 2017-18|Adaptive Cruise Control (ACC)|[Upstream](#upstream)|
-|Chrysler|Pacifica Hybrid 2019-24|Adaptive Cruise Control (ACC)|[Upstream](#upstream)|
-|comma|body|All|[Upstream](#upstream)|
-|CUPRA|Ateca 2018-23|Adaptive Cruise Control (ACC) & Lane Assist|[Upstream](#upstream)|
-|Dodge|Durango 2020-21|Adaptive Cruise Control (ACC)|[Upstream](#upstream)|
-|Ford|Bronco Sport 2021-24|Co-Pilot360 Assist+|[Upstream](#upstream)|
-|Ford|Escape 2020-22|Co-Pilot360 Assist+|[Upstream](#upstream)|
-|Ford|Escape 2023-24|Co-Pilot360 Assist+|[Upstream](#upstream)|
-|Ford|Escape Hybrid 2020-22|Co-Pilot360 Assist+|[Upstream](#upstream)|
-|Ford|Escape Hybrid 2023-24|Co-Pilot360 Assist+|[Upstream](#upstream)|
-|Ford|Escape Plug-in Hybrid 2020-22|Co-Pilot360 Assist+|[Upstream](#upstream)|
-|Ford|Escape Plug-in Hybrid 2023-24|Co-Pilot360 Assist+|[Upstream](#upstream)|
-|Ford|Expedition 2022-24|Co-Pilot360 Assist 2.0|[Upstream](#upstream)|
-|Ford|Explorer 2020-24|Co-Pilot360 Assist+|[Upstream](#upstream)|
-|Ford|Explorer Hybrid 2020-24|Co-Pilot360 Assist+|[Upstream](#upstream)|
-|Ford|F-150 2021-23|Co-Pilot360 Assist 2.0|[Upstream](#upstream)|
-|Ford|F-150 Hybrid 2021-23|Co-Pilot360 Assist 2.0|[Upstream](#upstream)|
-|Ford|Focus 2018|Adaptive Cruise Control with Lane Centering|[Upstream](#upstream)|
-|Ford|Focus Hybrid 2018|Adaptive Cruise Control with Lane Centering|[Upstream](#upstream)|
-|Ford|Kuga 2020-23|Adaptive Cruise Control with Lane Centering|[Upstream](#upstream)|
-|Ford|Kuga Hybrid 2020-23|Adaptive Cruise Control with Lane Centering|[Upstream](#upstream)|
-|Ford|Kuga Hybrid 2024|All|[Upstream](#upstream)|
-|Ford|Kuga Plug-in Hybrid 2020-23|Adaptive Cruise Control with Lane Centering|[Upstream](#upstream)|
-|Ford|Kuga Plug-in Hybrid 2024|All|[Upstream](#upstream)|
-|Ford|Maverick 2022|LARIAT Luxury|[Upstream](#upstream)|
-|Ford|Maverick 2023-24|Co-Pilot360 Assist|[Upstream](#upstream)|
-|Ford|Maverick Hybrid 2022|LARIAT Luxury|[Upstream](#upstream)|
-|Ford|Maverick Hybrid 2023-24|Co-Pilot360 Assist|[Upstream](#upstream)|
-|Ford|Mustang Mach-E 2021-24|All|[Upstream](#upstream)|
-|Ford|Ranger 2024|Adaptive Cruise Control with Lane Centering|[Upstream](#upstream)|
-|Genesis|G70 2018|All|[Upstream](#upstream)|
-|Genesis|G70 2019-21|All|[Upstream](#upstream)|
-|Genesis|G70 2022-23|All|[Upstream](#upstream)|
-|Genesis|G80 2017|All|[Upstream](#upstream)|
-|Genesis|G80 2018-19|All|[Upstream](#upstream)|
-|Genesis|G80 (2.5T Advanced Trim, with HDA II) 2024|Highway Driving Assist II|[Upstream](#upstream)|
-|Genesis|G90 2017-20|All|[Upstream](#upstream)|
+|Acura|ILX 2016-18|科技增强包或AcuraWatch Plus|[上游](#上游)|
+|Acura|ILX 2019|全部|[上游](#上游)|
+|Acura|Integra 2024|全部|[社区](#社区)|
+|Acura|RDX 2016-18|AcuraWatch Plus 或进阶包|[上游](#上游)|
+|Acura|RDX 2019-21|全部|[上游](#上游)|
+|Audi|A3 2014-19|自适应巡航控制 (ACC) 和车道辅助|[上游](#上游)|
+|Audi|A3 Sportback e-tron 2017-18|自适应巡航控制 (ACC) 和车道辅助|[上游](#上游)|
+|Audi|A4 2016-24|All|[不兼容](#flexray)|
+|Audi|A5 2016-24|全部|[不兼容](#flexray)|
+|Audi|Q2 2018|自适应巡航控制 (ACC) 和车道辅助|[上游](#上游)|
+|Audi|Q3 2019-24|自适应巡航控制（ACC）和车道辅助|[上游](#上游)|
+|Audi|Q5 2017-24|All|[不兼容](#flexray)|
+|奥迪|RS3 2018|自适应巡航控制（ACC）和车道辅助|[上游](#上游)|
+|奥迪|S3 2015-17|自适应巡航控制 (ACC) 和车道辅助|[上游](#上游)|
+|雪佛兰|Bolt EUV 2022-23|高级版或高级红线版配置 without Super Cruise 套件|[上游](#上游)|
+|雪佛兰|2022-23款 Bolt EV|2LT 装饰，带自适应巡航控制套件|[上游](#上游)|
+|雪佛兰|Equinox 2019-22|自适应巡航控制 (ACC)|[上游](#上游)|
+|雪佛兰|Silverado 1500 2020-21|安全套件 II|[上游](#上游)|
+|雪佛兰|创酷 2021-22|自适应巡航控制 (ACC)|[上游](#上游)|
+|克莱斯勒|Pacifica 2017-18|自适应巡航控制 (ACC)|[上游](#上游)|
+|克莱斯勒|Pacifica 2019-20|自适应巡航控制 (ACC)|[上游](#上游)|
+|克莱斯勒|Pacifica 2021-23|全部|[上游](#上游)|
+|克莱斯勒|Pacifica 混合动力车 2017-18|自适应巡航控制 (ACC)|[上游](#上游)|
+|克莱斯勒|Pacifica 混合动力车 2019-24|自适应巡航控制 (ACC)|[上游](#上游)|
+|逗号|主体|全部|[上游](#上游)|
+|CUPRA|Ateca 2018-23|自适应巡航控制（ACC）&车道辅助|[上游](#上游)|
+|道奇|杜兰戈 2020-21|自适应巡航控制 (ACC)|[上游](#上游)|
+|福特|Bronco Sport 2021-24|Co-Pilot360 Assist+|[上游](#上游)|
+|福特|Escape 2020-22|Co-Pilot360 Assist+|[上游](#上游)|
+|福特|Escape 2023-24|Co-Pilot360 Assist+|[上游](#上游)|
+|福特|Escape 混合动力 2020-22|Co-Pilot360 Assist+|[上游](#上游)|
+|福特|Escape 混合动力 2023-24|Co-Pilot360 Assist+|[上游](#上游)|
+|福特|Escape 插电式混合动力车 2020-22|Co-Pilot360 Assist+|[上游](#上游)|
+|福特|Escape 插电式混合动力 2023-24|Co-Pilot360 Assist+|[上游](#上游)|
+|福特|探险者 2022-24|Co-Pilot360 Assist 2.0|[上游](#上游)|
+|福特|探险者 2020-24|Co-Pilot360 Assist+|[上游](#上游)|
+|福特|探险者混合动力车 2020-24|Co-Pilot360 Assist+|[上游](#上游)|
+|福特|F-150 2021-23|Co-Pilot360 Assist 2.0|[上游](#上游)|
+|福特|2021-23款F-150混合动力车|Co-Pilot360 Assist 2.0|[上游](#上游)|
+|福特|福克斯 2018~2020
+|带车道居中功能的自适应巡航控制|[上游](#上游)|
+|福特|福克斯混合动力车 2018|带车道居中功能的自适应巡航控制|[上游](#上游)|
+|福特|Kuga 2020-23|带车道居中功能的智能巡航控制|[上游](#上游)|
+|福特|2020-23款Kuga混合动力车|带车道居中功能的智能巡航控制|[上游](#上游)|
+|福特|Kuga 混合动力 2024|全部|[上游](#上游)|
+|福特|福克斯插电式混合动力车 2020-23|带车道居中功能的智能巡航控制|[上游](#上游)|
+|福特|福克斯插电式混合动力2024|全部|[上游](#上游)|
+|福特|2022款Maverick|豪华版LARIAT|[上游](#上游)|
+|福特|游骑兵 2023-24|Co-Pilot360 助手|[上游](#上游)|
+|福特|2022款Maverick混合动力车|拉里特豪华版|[上游](#上游)|
+|福特|福克斯混合动力 2023-24|Co-Pilot360 Assist|[上游](#上游)|
+|福特|野马 Mach-E 2021-24|全部|[上游](#上游)|
+|福特|游骑兵 2024|带车道居中功能的自适应巡航控制|[上游](#上游)|
+|创世纪|G70 2018|全部|[上游](#上游)|
+|创世纪|G70 2019-21|全部|[上游](#上游)|
+|创世纪|G70 2022-23|全部|[上游](#上游)|
+|创世纪|G80 2017|全部|[上游](#上游)|
+|创世纪|G80 2018-19|全部|[上游](#上游)|
+|创世纪|G80 (2.5T高级修剪，带HDA II) 2024|高速公路驾驶辅助II|[上游](#上游)|
+|创世纪|G90 2017-20|全部|[上游](#上游)|
 |Genesis|GV60 (Advanced Trim) 2023|All|[Upstream](#upstream)|
 |Genesis|GV60 (Performance Trim) 2022-23|All|[Upstream](#upstream)|
 |Genesis|GV70 (2.5T Trim, without HDA II) 2022-24|All|[Upstream](#upstream)|
