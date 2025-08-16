@@ -2338,6 +2338,19 @@
     ],
     "package": "Co-Pilot360 Plus"
   },
+  "Lincoln Nautilus 2018-21": {
+    "platform": "FORD_EXPLORER_MK6",
+    "make": "Lincoln",
+    "brand": "ford",
+    "model": "Nautilus",
+    "year": [
+      "2018",
+      "2019",
+      "2020",
+      "2021"
+    ],
+    "package": "Adaptive Cruise Control with Lane Centering"
+  },
   "Lincoln Aviator Plug-in Hybrid 2020-24": {
     "platform": "FORD_EXPLORER_MK6",
     "make": "Lincoln",
