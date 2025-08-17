@@ -127,7 +127,18 @@ class Controls(ControlsExt):
 
     # accel PID loop
     pid_accel_limits = self.CI.get_pid_accel_limits(self.CP, CS.vEgo, CS.vCruise * CV.KPH_TO_MS)
-    actuators.accel = float(self.LoC.update(CC.longActive, CS, long_plan.aTarget, long_plan.shouldStop, pid_accel_limits))
+
+    # === ECO/舒适模式个性化限制 ===
+    personality = int(self.sm['selfdriveState'].personality.raw) if self.sm.valid['selfdriveState'] else 1
+    a_target = long_plan.aTarget
+
+    if personality == 2:  # ECO / relaxed
+      # 限制最大加速度上限，避免高转速急加速
+      pid_accel_limits = (pid_accel_limits[0], min(pid_accel_limits[1], 0.6))
+      # feedforward 减弱，让加速更柔和
+      a_target *= 0.85
+
+    actuators.accel = float(self.LoC.update(CC.longActive, CS, a_target, long_plan.shouldStop, pid_accel_limits))
 
     # Steering PID loop and lateral MPC
     # Reset desired curvature to current to avoid violating the limits on engage
@@ -137,7 +148,7 @@ class Controls(ControlsExt):
     actuators.curvature = self.desired_curvature
     steer, steeringAngleDeg, lac_log = self.LaC.update(CC.latActive, CS, self.VM, lp,
                                                        self.steer_limited_by_controls, self.desired_curvature,
-                                                       self.calibrated_pose, curvature_limited)  # TODO what if not available
+                                                       self.calibrated_pose, curvature_limited)
     actuators.torque = float(steer)
     actuators.steeringAngleDeg = float(steeringAngleDeg)
     # Ensure no NaNs/Infs
@@ -155,8 +166,6 @@ class Controls(ControlsExt):
   def publish(self, CC, lac_log):
     CS = self.sm['carState']
 
-    # Orientation and angle rates can be useful for carcontroller
-    # Only calibrated (car) frame is relevant for the carcontroller
     CC.currentCurvature = self.curvature
     if self.calibrated_pose is not None:
       CC.orientationNED = self.calibrated_pose.orientation.xyz.tolist()
@@ -191,10 +200,6 @@ class Controls(ControlsExt):
       else:
         self.steer_limited_by_controls = abs(CC.actuators.torque - CO.actuatorsOutput.torque) > 1e-2
 
-    # TODO: both controlsState and carControl valids should be set by
-    #       sm.all_checks(), but this creates a circular dependency
-
-    # controlsState
     dat = messaging.new_message('controlsState')
     dat.valid = CS.canValid
     cs = dat.controlsState
@@ -220,7 +225,6 @@ class Controls(ControlsExt):
 
     self.pm.send('controlsState', dat)
 
-    # carControl
     cc_send = messaging.new_message('carControl')
     cc_send.valid = CS.canValid
     cc_send.carControl = CC
@@ -229,7 +233,6 @@ class Controls(ControlsExt):
   def params_thread(self, evt):
     while not evt.is_set():
       self.get_params_sp()
-
       time.sleep(0.1)
 
   def run(self):
