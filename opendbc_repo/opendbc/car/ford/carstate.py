@@ -125,23 +125,13 @@ class CarState(CarStateBase, MadsCarState):
       ret.accFaulted = ret.accFaulted or cp_cam.vl["ACCDATA"]["CmbbDeny_B_Actl"] == 1
 
     # gear
+     # gear
     if self.CP.transmissionType == TransmissionType.automatic:
-      if self.CP.flags & FordFlags.CANFD:
-        gear = self.shifter_values.get(cp.vl["Gear_Shift_by_Wire_FD1"]["TrnRng_D_RqGsm"], GearState.unknown)
-      elif self.CP.flags & FordFlags.ALT_STEER_ANGLE: 
-        if cp.vl["TransGearData"]["GearLvrPos_D_Actl"] in self.shifter_values:
-          gear = self.shifter_values.get(cp.vl["TransGearData"]["GearLvrPos_D_Actl"])
-        else:
-          gear = GearState.unknown
-      else:
-        if cp.vl["Gear_Shift_by_Wire"]["TrnRng_D_RqGsm"] in self.shifter_values:
-          gear = self.shifter_values.get(cp.vl["Gear_Shift_by_Wire"]["TrnRng_D_RqGsm"])
-        else:
-          gear = GearState.unknown
-      
-      # 统一在 automatic 分支最后转换
-      ret.gearShifter = self.parse_gear_shifter(gear)
-                 
+        if (cp.vl["TransGearData"]["GearLvrPos_D_Actl"] in (3, 4, 5)):
+         ret.gearShifter = GearShifter.drive
+        elif (cp.vl["TransGearData"]["GearLvrPos_D_Actl"] == 1):
+         ret.gearShifter = GearShifter.reverse
+          
     elif self.CP.transmissionType == TransmissionType.manual:
       ret.clutchPressed = cp.vl["Engine_Clutch_Data"]["CluPdlPos_Pc_Meas"] > 0
       if bool(cp.vl["BCM_Lamp_Stat_FD1"]["RvrseLghtOn_B_Stat"]):
