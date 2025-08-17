@@ -44,6 +44,7 @@ def long_control_state_trans(CP, active, long_control_state, v_ego,
         long_control_state = LongCtrlState.pid
   return long_control_state
 
+
 class LongControl:
   def __init__(self, CP):
     self.CP = CP
@@ -58,12 +59,25 @@ class LongControl:
 
   def update(self, active, CS, a_target, should_stop, accel_limits):
     """Update longitudinal control. This updates the state machine and runs a PID loop"""
+
+    # === ECO / 舒适模式限制逻辑 ===
+    try:
+      personality = CS.cruiseState.personality  # 0=Aggressive, 1=Standard, 2=Relaxed/ECO
+    except AttributeError:
+      personality = 1  # 默认 Standard
+
+    # 如果是 ECO/舒适模式，降低加速度上限，减少急加速和高转速
+    if personality == 2:  # relaxed / ECO
+      accel_limits = (accel_limits[0], min(accel_limits[1], 0.6))  # 限制最大加速
+      a_target *= 0.85  # feedforward 也减小，进一步柔化
+
     self.pid.neg_limit = accel_limits[0]
     self.pid.pos_limit = accel_limits[1]
 
     self.long_control_state = long_control_state_trans(self.CP, active, self.long_control_state, CS.vEgo,
                                                        should_stop, CS.brakePressed,
                                                        CS.cruiseState.standstill)
+
     if self.long_control_state == LongCtrlState.off:
       self.reset()
       output_accel = 0.
