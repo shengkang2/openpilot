@@ -134,8 +134,10 @@ class CarState(CarStateBase, MadsCarState):
         actl_pos = cp.vl["TransGearData"]["GearLvrPos_D_Actl"]        
         if actl_pos in (3, 4, 5):
           ret.gearShifter = GearShifter.drive
-        elif (cp.vl["TransGearData"]["GearLvrPos_D_Actl"] == 1):
-          ret.gearShifter = self.parse_gear_shifter(gear)
+        elif actl_pos == 1:
+          ret.gearShifter = GearShifter.reverse
+        else:
+          ret.gearShifter = GearShifter.unknown   # 避免未定义
           
     elif self.CP.transmissionType == TransmissionType.manual:
       ret.clutchPressed = cp.vl["Engine_Clutch_Data"]["CluPdlPos_Pc_Meas"] > 0
