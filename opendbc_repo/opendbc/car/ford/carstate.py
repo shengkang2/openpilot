@@ -15,7 +15,7 @@ from opendbc.car.ford.helpers import get_hev_power_flow_text, get_hev_engine_on_
 
 ButtonType = structs.CarState.ButtonEvent.Type
 GearShifter = structs.CarState.GearShifter
-TransmissionType = structs.CarParams.TransmissionType  # 修正拼写错误
+TransmissionType = structs.CarParams.TransmissionType
 
 
 class CarState(CarStateBase, MadsCarState):
@@ -26,7 +26,11 @@ class CarState(CarStateBase, MadsCarState):
         self.params = Params()
         # self.ford_can_parser = FordCanParser(CP)
 
-        self.bluecruise_cluster_present = FordConfig.BLUECRUISE_CLUSTER_PRESENT  # Sets the value of whether the car has the blue cruise cluster
+        # 8AT变速箱特定的初始化
+        self.is_8at_transmission = True
+        self.gear_debug_info = ""
+
+        self.bluecruise_cluster_present = FordConfig.BLUECRUISE_CLUSTER_PRESENT
         if CP.transmissionType == TransmissionType.automatic:
             if CP.flags & FordFlags.CANFD:
                 self.shifter_values = can_define.dv["Gear_Shift_by_Wire_FD1"]["TrnRng_D_RqGsm"]
@@ -123,33 +127,73 @@ class CarState(CarStateBase, MadsCarState):
         if not self.CP.openpilotLongitudinalControl:
             ret.accFaulted = ret.accFaulted or cp_cam.vl["ACCDATA"]["CmbbDeny_B_Actl"] == 1
 
-        # gear
+        # gear - 针对8AT变速箱的特殊处理
+        ret.gearShifter = GearShifter.unknown
+        self.gear_debug_info = "未知档位"
+
         if self.CP.transmissionType == TransmissionType.automatic:
-            # 检查 TransGearData 消息和 GearLvrPos_D_Actl 信号是否存在
+            # 方法1: 首先尝试 TransGearData 消息
             if "TransGearData" in cp.vl and "GearLvrPos_D_Actl" in cp.vl["TransGearData"]:
                 gear_position = cp.vl["TransGearData"]["GearLvrPos_D_Actl"]
-                if gear_position in (3, 4, 5):
-                    ret.gearShifter = GearShifter.drive
-                elif gear_position == 1:
+                self.gear_debug_info = f"TransGearData: {gear_position}"
+                
+                # 8AT变速箱的档位值映射
+                if gear_position == 1:  # P档
+                    ret.gearShifter = GearShifter.park
+                elif gear_position == 2:  # R档
                     ret.gearShifter = GearShifter.reverse
-            else:
-                # 备用方案：使用其他消息源判断档位
-                if self.CP.flags & FordFlags.CANFD:
-                    # CAN FD 车辆使用 Gear_Shift_by_Wire_FD1 消息
-                    if "Gear_Shift_by_Wire_FD1" in cp.vl and "TrnRng_D_RqGsm" in cp.vl["Gear_Shift_by_Wire_FD1"]:
-                        trn_rng = cp.vl["Gear_Shift_by_Wire_FD1"]["TrnRng_D_RqGsm"]
-                        if trn_rng in (8, 9):  # 驱动档位值
-                            ret.gearShifter = GearShifter.drive
-                        elif trn_rng == 7:  # 倒车档位值
-                            ret.gearShifter = GearShifter.reverse
-                else:
-                    # 非 CAN FD 车辆使用 PowertrainData_10 消息
-                    if "PowertrainData_10" in cp.vl and "TrnRng_D_Rq" in cp.vl["PowertrainData_10"]:
-                        trn_rng = cp.vl["PowertrainData_10"]["TrnRng_D_Rq"]
-                        if trn_rng in (8, 9):  # 驱动档位值
-                            ret.gearShifter = GearShifter.drive
-                        elif trn_rng == 7:  # 倒车档位值
-                            ret.gearShifter = GearShifter.reverse
+                elif gear_position == 3:  # N档
+                    ret.gearShifter = GearShifter.neutral
+                elif gear_position in (4, 5, 6, 7, 8):  # D档和各种驱动模式
+                    ret.gearShifter = GearShifter.drive
+
+            # 方法2: 如果上面没有检测到，尝试 Gear_Shift_by_Wire_FD1 (CAN FD车辆)
+            if ret.gearShifter == GearShifter.unknown and self.CP.flags & FordFlags.CANFD:
+                if "Gear_Shift_by_Wire_FD1" in cp.vl and "TrnRng_D_RqGsm" in cp.vl["Gear_Shift_by_Wire_FD1"]:
+                    trn_rng = cp.vl["Gear_Shift_by_Wire_FD1"]["TrnRng_D_RqGsm"]
+                    self.gear_debug_info = f"Gear_Shift_FD1: {trn_rng}"
+                    
+                    # 8AT变速箱的档位范围值
+                    if trn_rng == 5:  # P档
+                        ret.gearShifter = GearShifter.park
+                    elif trn_rng == 7:  # R档
+                        ret.gearShifter = GearShifter.reverse
+                    elif trn_rng == 6:  # N档
+                        ret.gearShifter = GearShifter.neutral
+                    elif trn_rng in (8, 9, 10, 11, 12, 13, 14, 15):  # D档和各种驱动模式
+                        ret.gearShifter = GearShifter.drive
+
+            # 方法3: 尝试 PowertrainData_10
+            if ret.gearShifter == GearShifter.unknown:
+                if "PowertrainData_10" in cp.vl and "TrnRng_D_Rq" in cp.vl["PowertrainData_10"]:
+                    trn_rng = cp.vl["PowertrainData_10"]["TrnRng_D_Rq"]
+                    self.gear_debug_info = f"PowertrainData: {trn_rng}"
+                    
+                    if trn_rng == 5:  # P档
+                        ret.gearShifter = GearShifter.park
+                    elif trn_rng == 7:  # R档
+                        ret.gearShifter = GearShifter.reverse
+                    elif trn_rng == 6:  # N档
+                        ret.gearShifter = GearShifter.neutral
+                    elif trn_rng in (8, 9):  # D档
+                        ret.gearShifter = GearShifter.drive
+
+            # 方法4: 额外的8AT特定检测
+            if ret.gearShifter == GearShifter.unknown:
+                # 检查是否有其他8AT特定的信号
+                if "Gear_Data" in cp.vl and "GearLvrPos_D_Actl" in cp.vl["Gear_Data"]:
+                    gear_pos = cp.vl["Gear_Data"]["GearLvrPos_D_Actl"]
+                    self.gear_debug_info = f"Gear_Data: {gear_pos}"
+                    
+                    # 8AT变速箱的档位值
+                    if gear_pos in range(4, 9):  # 4-8通常都是驱动档位
+                        ret.gearShifter = GearShifter.drive
+                    elif gear_pos == 1:
+                        ret.gearShifter = GearShifter.park
+                    elif gear_pos == 2:
+                        ret.gearShifter = GearShifter.reverse
+                    elif gear_pos == 3:
+                        ret.gearShifter = GearShifter.neutral
 
         elif self.CP.transmissionType == TransmissionType.manual:
             ret.clutchPressed = cp.vl["Engine_Clutch_Data"]["CluPdlPos_Pc_Meas"] > 0
@@ -157,6 +201,12 @@ class CarState(CarStateBase, MadsCarState):
                 ret.gearShifter = GearShifter.reverse
             else:
                 ret.gearShifter = GearShifter.drive
+
+        # 调试输出
+        if ret.gearShifter == GearShifter.unknown:
+            debug(f"档位检测失败: {self.gear_debug_info}")
+        else:
+            debug(f"检测到档位: {ret.gearShifter.name}, 原始数据: {self.gear_debug_info}")
 
         ret.engineRpm = cp.vl["EngVehicleSpThrottle"]["EngAout_N_Actl"]
 
