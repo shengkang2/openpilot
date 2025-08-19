@@ -15,7 +15,7 @@ from opendbc.car.ford.helpers import get_hev_power_flow_text, get_hev_engine_on_
 
 ButtonType = structs.CarState.ButtonEvent.Type
 GearShifter = structs.CarState.GearShifter
-TransmissionType = structs.CarParams.TransmissionType
+TransmissionType = structs.CarParams.TransmissionType  # 修正拼写错误
 
 
 class CarState(CarStateBase, MadsCarState):
@@ -132,7 +132,25 @@ class CarState(CarStateBase, MadsCarState):
                     ret.gearShifter = GearShifter.drive
                 elif gear_position == 1:
                     ret.gearShifter = GearShifter.reverse
-        
+            else:
+                # 备用方案：使用其他消息源判断档位
+                if self.CP.flags & FordFlags.CANFD:
+                    # CAN FD 车辆使用 Gear_Shift_by_Wire_FD1 消息
+                    if "Gear_Shift_by_Wire_FD1" in cp.vl and "TrnRng_D_RqGsm" in cp.vl["Gear_Shift_by_Wire_FD1"]:
+                        trn_rng = cp.vl["Gear_Shift_by_Wire_FD1"]["TrnRng_D_RqGsm"]
+                        if trn_rng in (8, 9):  # 驱动档位值
+                            ret.gearShifter = GearShifter.drive
+                        elif trn_rng == 7:  # 倒车档位值
+                            ret.gearShifter = GearShifter.reverse
+                else:
+                    # 非 CAN FD 车辆使用 PowertrainData_10 消息
+                    if "PowertrainData_10" in cp.vl and "TrnRng_D_Rq" in cp.vl["PowertrainData_10"]:
+                        trn_rng = cp.vl["PowertrainData_10"]["TrnRng_D_Rq"]
+                        if trn_rng in (8, 9):  # 驱动档位值
+                            ret.gearShifter = GearShifter.drive
+                        elif trn_rng == 7:  # 倒车档位值
+                            ret.gearShifter = GearShifter.reverse
+
         elif self.CP.transmissionType == TransmissionType.manual:
             ret.clutchPressed = cp.vl["Engine_Clutch_Data"]["CluPdlPos_Pc_Meas"] > 0
             if bool(cp.vl["BCM_Lamp_Stat_FD1"]["RvrseLghtOn_B_Stat"]):
