@@ -32,11 +32,15 @@
                   "value": "FORD_BRONCO_SPORT_MK1"
                 },
                 {
-                  "name": "Ford Edge (2018-2024)",
+                  "name": "Ford Focus 2019-2020",
+                  "value": "FORD_FOCUS_MK4"
+                },
+                {
+                  "name": "Ford Edge (2019-2024)",
                   "value": "FORD_EDGE_MK2"
                 },
                 {
-                  "name": "Lincoln Nautilus (2018-2024)",
+                  "name": "Lincoln Nautilus (2019-2024)",
                   "value": "FORD_EDGE_MK2"
                 },
                 {
@@ -351,6 +355,17 @@
           "title": "Lateral Controls:",
           "enableResetButton": true,
           "controls": [
+            {
+              "type": "toggle",
+              "param": "FordPrefDisableBP_lat_UI",
+              "title": "Disable BP Lateral Controls",
+              "desc": "Use stock openpilot lateral controls",
+              "hidden": false,
+              "conditions": {
+                "git_remote": ["any"],
+                "git_branch": []
+              }
+            },
             {
               "type": "toggle",
               "param": "FordPrefHumanTurnDetectionEnable",
