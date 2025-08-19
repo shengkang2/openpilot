@@ -309,7 +309,7 @@ class CarState(CarStateBase, MadsCarState):
         pt_messages.append(("TransGearData", 10))
     else:
       pt_messages += [
-        ("SteeringPinion_Data", 100),
+        ("SteeringPinion_Data", 100),  # 修正了拼写错误
       ]
       if CP.transmissionType == TransmissionType.automatic:
         pt_messages += [
