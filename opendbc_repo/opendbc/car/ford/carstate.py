@@ -19,402 +19,350 @@ TransmissionType = structs.CarParams.TransmissionType
 
 
 class CarState(CarStateBase, MadsCarState):
-    def __init__(self, CP, CP_SP):
-        CarStateBase.__init__(self, CP, CP_SP)
-        MadsCarState.__init__(self, CP, CP_SP)
-        can_define = CANDefine(DBC[CP.carFingerprint][Bus.pt])
-        self.params = Params()
-        # self.ford_can_parser = FordCanParser(CP)
+  def __init__(self, CP, CP_SP):
+    CarStateBase.__init__(self, CP, CP_SP)
+    MadsCarState.__init__(self, CP, CP_SP)
+    can_define = CANDefine(DBC[CP.carFingerprint][Bus.pt])
+    self.params = Params()
+    # self.ford_can_parser = FordCanParser(CP)
 
-        # 8AT变速箱特定的初始化
-        self.is_8at_transmission = True
-        self.gear_debug_info = ""
+    self.bluecruise_cluster_present = FordConfig.BLUECRUISE_CLUSTER_PRESENT # Sets the value of whether the car has the blue cruise cluster
+    if CP.transmissionType == TransmissionType.automatic:
+      if CP.flags & FordFlags.CANFD:
+        self.shifter_values = can_define.dv["Gear_Shift_by_Wire_FD1"]["TrnRng_D_RqGsm"]
+      elif CP.flags & FordFlags.ALT_STEER_ANGLE:
+        self.shifter_values = can_define.dv["TransGearData"]["GearLvrPos_D_Actl"]
+      else:
+        self.shifter_values = can_define.dv["PowertrainData_10"]["TrnRng_D_Rq"]
 
-        self.bluecruise_cluster_present = FordConfig.BLUECRUISE_CLUSTER_PRESENT
-        if CP.transmissionType == TransmissionType.automatic:
-            if CP.flags & FordFlags.CANFD:
-                self.shifter_values = can_define.dv["Gear_Shift_by_Wire_FD1"]["TrnRng_D_RqGsm"]
-            elif CP.flags & FordFlags.ALT_STEER_ANGLE:
-                self.shifter_values = can_define.dv["TransGearData"]["GearLvrPos_D_Actl"]
-            else:
-                self.shifter_values = can_define.dv["PowertrainData_10"]["TrnRng_D_Rq"]
+    self.cluster_min_speed = CV.KPH_TO_MS * 1.5
+    self.cluster_speed_hyst_gap = CV.KPH_TO_MS / 2.
+    self.distance_button = 0
+    self.lc_button = 0
 
-        self.cluster_min_speed = CV.KPH_TO_MS * 1.5
-        self.cluster_speed_hyst_gap = CV.KPH_TO_MS / 2.
-        self.distance_button = 0
-        self.lc_button = 0
+    # Save the HEV data available flag to a param
+    self.params.put_bool("FordPrefHevDataAvailable", True if CP.flags & FordFlags.HEV_CLUSTER_DATA else False)
+    self.params.put_bool("FordPrefHevBattDataAvailable", True if CP.flags & FordFlags.HEV_BATTERY_DATA else False)
+    self.hev_data_available = CP.flags & FordFlags.HEV_CLUSTER_DATA
 
-        # Save the HEV data available flag to a param
-        self.params.put_bool("FordPrefHevDataAvailable", True if CP.flags & FordFlags.HEV_CLUSTER_DATA else False)
-        self.params.put_bool("FordPrefHevBattDataAvailable", True if CP.flags & FordFlags.HEV_BATTERY_DATA else False)
-        self.hev_data_available = CP.flags & FordFlags.HEV_CLUSTER_DATA
 
-    def update(self, can_parsers) -> tuple[structs.CarState, structs.CarStateSP]:
-        cp = can_parsers[Bus.pt]
-        cp_cam = can_parsers[Bus.cam]
+  def update(self, can_parsers) -> tuple[structs.CarState, structs.CarStateSP]:
+    cp = can_parsers[Bus.pt]
+    cp_cam = can_parsers[Bus.cam]
 
-        # Publish CAN data first so any parsing errors don't affect critical CarState updates
-        # if(self.params.get_bool("FordPrefStreamCanData")):
-        #   try:
-        #     self.ford_can_parser.publish_can_data(cp, cp_cam, self.CP.carFingerprint)
-        #   except Exception as e:
-        #     print(f"Error publishing Ford CAN data: {e}")
+	# Publish CAN data first so any parsing errors don't affect critical CarState updates
+    # if(self.params.get_bool("FordPrefStreamCanData")):
+    #   try:
+    #     self.ford_can_parser.publish_can_data(cp, cp_cam, self.CP.carFingerprint)
+    #   except Exception as e:
+    #     print(f"Error publishing Ford CAN data: {e}")
 
-        ret = structs.CarState()
-        ret_sp = structs.CarStateSP()
+    ret = structs.CarState()
+    ret_sp = structs.CarStateSP()
 
-        if self.CP.flags & FordFlags.ALT_STEER_ANGLE:
-            self.vehicle_sensors_valid = (
-                int((cp.vl["ParkAid_Data"]["ExtSteeringAngleReq2"] + 1000) * 10) not in (32766, 32767)
-                and cp.vl["ParkAid_Data"]["EPASExtAngleStatReq"] == 0
-                and cp.vl["ParkAid_Data"]["ApaSys_D_Stat"] in (0, 1)
-            )
-        else:
-            # Occasionally on startup, the ABS module recalibrates the steering pinion offset, so we need to block engagement
-            # The vehicle usually recovers out of this state within a minute of normal driving
-            ret.vehicleSensorsInvalid = cp.vl["SteeringPinion_Data"]["StePinCompAnEst_D_Qf"] != 3
+    if self.CP.flags & FordFlags.ALT_STEER_ANGLE:
+      self.vehicle_sensors_valid = (
+        int((cp.vl["ParkAid_Data"]["ExtSteeringAngleReq2"] + 1000) * 10) not in (32766, 32767)
+        and cp.vl["ParkAid_Data"]["EPASExtAngleStatReq"] == 0
+        and cp.vl["ParkAid_Data"]["ApaSys_D_Stat"] in (0, 1)
+      )
+    else:
+   	  # Occasionally on startup, the ABS module recalibrates the steering pinion offset, so we need to block engagement
+      # The vehicle usually recovers out of this state within a minute of normal driving
+      ret.vehicleSensorsInvalid = cp.vl["SteeringPinion_Data"]["StePinCompAnEst_D_Qf"] != 3
 
-        # car speed
-        ret.vEgoRaw = cp.vl["BrakeSysFeatures"]["Veh_V_ActlBrk"] * CV.KPH_TO_MS
-        ret.vEgo, ret.aEgo = self.update_speed_kf(ret.vEgoRaw)
-        if self.CP.flags & FordFlags.CANFD:
-            ret.vEgoCluster = ((cp.vl["Cluster_Info_3_FD1"]["DISPLAY_SPEED_SCALING"] / 100) * cp.vl["EngVehicleSpThrottle2"]["Veh_V_ActlEng"] +
-                             cp.vl["Cluster_Info_3_FD1"]["DISPLAY_SPEED_OFFSET"]) * CV.KPH_TO_MS
+    # car speed
+    ret.vEgoRaw = cp.vl["BrakeSysFeatures"]["Veh_V_ActlBrk"] * CV.KPH_TO_MS
+    ret.vEgo, ret.aEgo = self.update_speed_kf(ret.vEgoRaw)
+    if self.CP.flags & FordFlags.CANFD:
+      ret.vEgoCluster = ((cp.vl["Cluster_Info_3_FD1"]["DISPLAY_SPEED_SCALING"]/100) * cp.vl["EngVehicleSpThrottle2"]["Veh_V_ActlEng"] +
+                         cp.vl["Cluster_Info_3_FD1"]["DISPLAY_SPEED_OFFSET"]) * CV.KPH_TO_MS
 
-        ret.yawRate = cp.vl["Yaw_Data_FD1"]["VehYaw_W_Actl"]
-        ret.standstill = cp.vl["DesiredTorqBrk"]["VehStop_D_Stat"] == 1
+    ret.yawRate = cp.vl["Yaw_Data_FD1"]["VehYaw_W_Actl"]
+    ret.standstill = cp.vl["DesiredTorqBrk"]["VehStop_D_Stat"] == 1
 
-        # gas pedal
-        ret.gas = cp.vl["EngVehicleSpThrottle"]["ApedPos_Pc_ActlArb"] / 100.
-        ret.gasPressed = ret.gas > 1e-6
+    # gas pedal
+    ret.gas = cp.vl["EngVehicleSpThrottle"]["ApedPos_Pc_ActlArb"] / 100.
+    ret.gasPressed = ret.gas > 1e-6
 
-        # brake pedal
-        ret.brake = cp.vl["BrakeSnData_4"]["BrkTot_Tq_Actl"] / 32756.  # torque in Nm
-        ret.brakePressed = cp.vl["EngBrakeData"]["BpedDrvAppl_D_Actl"] == 2
-        ret.parkingBrake = cp.vl["DesiredTorqBrk"]["PrkBrkStatus"] in (1, 2)
+    # brake pedal
+    ret.brake = cp.vl["BrakeSnData_4"]["BrkTot_Tq_Actl"] / 32756.  # torque in Nm
+    ret.brakePressed = cp.vl["EngBrakeData"]["BpedDrvAppl_D_Actl"] == 2
+    ret.parkingBrake = cp.vl["DesiredTorqBrk"]["PrkBrkStatus"] in (1, 2)
 
-        # steering wheel
-        if self.CP.flags & FordFlags.ALT_STEER_ANGLE:
-            steering_angle_init = cp.vl["SteeringPinion_Data_Alt"]["StePinRelInit_An_Sns"]
-            if self.vehicle_sensors_valid:
-                steering_angle_est = cp.vl["ParkAid_Data"]["ExtSteeringAngleReq2"]
-                self.steering_angle_offset_deg = steering_angle_est - steering_angle_init
-            ret.steeringAngleDeg = steering_angle_init + self.steering_angle_offset_deg
-        else:
-            ret.steeringAngleDeg = cp.vl["SteeringPinion_Data"]["StePinComp_An_Est"]
-        ret.steeringTorque = cp.vl["EPAS_INFO"]["SteeringColumnTorque"]
-        ret.steeringPressed = self.update_steering_pressed(abs(ret.steeringTorque) > CarControllerParams.STEER_DRIVER_ALLOWANCE, 5)
-        ret.steerFaultTemporary = cp.vl["EPAS_INFO"]["EPAS_Failure"] == 1
-        ret.steerFaultPermanent = cp.vl["EPAS_INFO"]["EPAS_Failure"] in (2, 3)
-        ret.espDisabled = cp.vl["Cluster_Info1_FD1"]["DrvSlipCtlMde_D_Rq"] != 0  # 0 is default mode
+    # steering wheel
+    if self.CP.flags & FordFlags.ALT_STEER_ANGLE:
+      steering_angle_init = cp.vl["SteeringPinion_Data_Alt"]["StePinRelInit_An_Sns"]
+      if self.vehicle_sensors_valid:
+        steering_angle_est = cp.vl["ParkAid_Data"]["ExtSteeringAngleReq2"]
+        self.steering_angle_offset_deg = steering_angle_est - steering_angle_init
+      ret.steeringAngleDeg = steering_angle_init + self.steering_angle_offset_deg
+    else:
+      ret.steeringAngleDeg = cp.vl["SteeringPinion_Data"]["StePinComp_An_Est"]
+    ret.steeringTorque = cp.vl["EPAS_INFO"]["SteeringColumnTorque"]
+    ret.steeringPressed = self.update_steering_pressed(abs(ret.steeringTorque) > CarControllerParams.STEER_DRIVER_ALLOWANCE, 5)
+    ret.steerFaultTemporary = cp.vl["EPAS_INFO"]["EPAS_Failure"] == 1
+    ret.steerFaultPermanent = cp.vl["EPAS_INFO"]["EPAS_Failure"] in (2, 3)
+    ret.espDisabled = cp.vl["Cluster_Info1_FD1"]["DrvSlipCtlMde_D_Rq"] != 0  # 0 is default mode
 
-        if self.CP.flags & FordFlags.CANFD:
-            # this signal is always 0 on non-CAN FD cars
-            ret.steerFaultTemporary |= cp.vl["Lane_Assist_Data3_FD1"]["LatCtlSte_D_Stat"] not in (1, 2, 3)
+    if self.CP.flags & FordFlags.CANFD:
+      # this signal is always 0 on non-CAN FD cars
+      ret.steerFaultTemporary |= cp.vl["Lane_Assist_Data3_FD1"]["LatCtlSte_D_Stat"] not in (1, 2, 3)
 
-        # cruise state
-        is_metric = (cp.vl["INSTRUMENT_PANEL"]["METRIC_UNITS"] == 1) if not (self.CP.flags & FordFlags.CANFD) else (cp_cam.vl["IPMA_Data2"]["IsaVLimUnit_D_Rq"] == 1)
-        ret.cruiseState.speed = cp.vl["EngBrakeData"]["Veh_V_DsplyCcSet"] * (CV.KPH_TO_MS if is_metric else CV.MPH_TO_MS)
-        ret.cruiseState.enabled = cp.vl["EngBrakeData"]["CcStat_D_Actl"] in (4, 5)
-        ret.cruiseState.available = cp.vl["EngBrakeData"]["CcStat_D_Actl"] in (3, 4, 5)
-        ret.cruiseState.nonAdaptive = cp.vl["Cluster_Info1_FD1"]["AccEnbl_B_RqDrv"] == 0
-        ret.cruiseState.standstill = cp.vl["EngBrakeData"]["AccStopMde_D_Rq"] == 3
-        ret.accFaulted = cp.vl["EngBrakeData"]["CcStat_D_Actl"] in (1, 2)
+    # cruise state
+    is_metric = cp.vl["INSTRUMENT_PANEL"]["METRIC_UNITS"] == 1 if not self.CP.flags & FordFlags.CANFD else cp_cam.vl["IPMA_Data2"]["IsaVLimUnit_D_Rq"] == 1
+    ret.cruiseState.speed = cp.vl["EngBrakeData"]["Veh_V_DsplyCcSet"] * (CV.KPH_TO_MS if is_metric else CV.MPH_TO_MS)
+    ret.cruiseState.enabled = cp.vl["EngBrakeData"]["CcStat_D_Actl"] in (4, 5)
+    ret.cruiseState.available = cp.vl["EngBrakeData"]["CcStat_D_Actl"] in (3, 4, 5)
+    ret.cruiseState.nonAdaptive = cp.vl["Cluster_Info1_FD1"]["AccEnbl_B_RqDrv"] == 0
+    ret.cruiseState.standstill = cp.vl["EngBrakeData"]["AccStopMde_D_Rq"] == 3
+    ret.accFaulted = cp.vl["EngBrakeData"]["CcStat_D_Actl"] in (1, 2)
 
-        if self.CP.flags & FordFlags.CANFD:
-            ret.cruiseState.speedLimit = self.update_traffic_signals(cp_cam)
+    if self.CP.flags & FordFlags.CANFD:
+      ret.cruiseState.speedLimit = self.update_traffic_signals(cp_cam)
 
-        if not self.CP.openpilotLongitudinalControl:
-            ret.accFaulted = ret.accFaulted or cp_cam.vl["ACCDATA"]["CmbbDeny_B_Actl"] == 1
+    if not self.CP.openpilotLongitudinalControl:
+      ret.accFaulted = ret.accFaulted or cp_cam.vl["ACCDATA"]["CmbbDeny_B_Actl"] == 1
 
-        # gear - 针对8AT变速箱的特殊处理
-        ret.gearShifter = GearShifter.unknown
-        self.gear_debug_info = "未知档位"
-
-        if self.CP.transmissionType == TransmissionType.automatic:
-            # 方法1: 首先尝试 TransGearData 消息
-            if "TransGearData" in cp.vl and "GearLvrPos_D_Actl" in cp.vl["TransGearData"]:
-                gear_position = cp.vl["TransGearData"]["GearLvrPos_D_Actl"]
-                self.gear_debug_info = f"TransGearData: {gear_position}"
-                
-                # 8AT变速箱的档位值映射
-                if gear_position == 1:  # P档
-                    ret.gearShifter = GearShifter.park
-                elif gear_position == 2:  # R档
-                    ret.gearShifter = GearShifter.reverse
-                elif gear_position == 3:  # N档
-                    ret.gearShifter = GearShifter.neutral
-                elif gear_position in (4, 5, 6, 7, 8):  # D档和各种驱动模式
-                    ret.gearShifter = GearShifter.drive
-
-            # 方法2: 如果上面没有检测到，尝试 Gear_Shift_by_Wire_FD1 (CAN FD车辆)
-            if ret.gearShifter == GearShifter.unknown and self.CP.flags & FordFlags.CANFD:
-                if "Gear_Shift_by_Wire_FD1" in cp.vl and "TrnRng_D_RqGsm" in cp.vl["Gear_Shift_by_Wire_FD1"]:
-                    trn_rng = cp.vl["Gear_Shift_by_Wire_FD1"]["TrnRng_D_RqGsm"]
-                    self.gear_debug_info = f"Gear_Shift_FD1: {trn_rng}"
-                    
-                    # 8AT变速箱的档位范围值
-                    if trn_rng == 5:  # P档
-                        ret.gearShifter = GearShifter.park
-                    elif trn_rng == 7:  # R档
-                        ret.gearShifter = GearShifter.reverse
-                    elif trn_rng == 6:  # N档
-                        ret.gearShifter = GearShifter.neutral
-                    elif trn_rng in (8, 9, 10, 11, 12, 13, 14, 15):  # D档和各种驱动模式
-                        ret.gearShifter = GearShifter.drive
-
-            # 方法3: 尝试 PowertrainData_10
-            if ret.gearShifter == GearShifter.unknown:
-                if "PowertrainData_10" in cp.vl and "TrnRng_D_Rq" in cp.vl["PowertrainData_10"]:
-                    trn_rng = cp.vl["PowertrainData_10"]["TrnRng_D_Rq"]
-                    self.gear_debug_info = f"PowertrainData: {trn_rng}"
-                    
-                    if trn_rng == 5:  # P档
-                        ret.gearShifter = GearShifter.park
-                    elif trn_rng == 7:  # R档
-                        ret.gearShifter = GearShifter.reverse
-                    elif trn_rng == 6:  # N档
-                        ret.gearShifter = GearShifter.neutral
-                    elif trn_rng in (8, 9):  # D档
-                        ret.gearShifter = GearShifter.drive
-
-            # 方法4: 额外的8AT特定检测
-            if ret.gearShifter == GearShifter.unknown:
-                # 检查是否有其他8AT特定的信号
-                if "Gear_Data" in cp.vl and "GearLvrPos_D_Actl" in cp.vl["Gear_Data"]:
-                    gear_pos = cp.vl["Gear_Data"]["GearLvrPos_D_Actl"]
-                    self.gear_debug_info = f"Gear_Data: {gear_pos}"
-                    
-                    # 8AT变速箱的档位值
-                    if gear_pos in range(4, 9):  # 4-8通常都是驱动档位
-                        ret.gearShifter = GearShifter.drive
-                    elif gear_pos == 1:
-                        ret.gearShifter = GearShifter.park
-                    elif gear_pos == 2:
-                        ret.gearShifter = GearShifter.reverse
-                    elif gear_pos == 3:
-                        ret.gearShifter = GearShifter.neutral
-
-        elif self.CP.transmissionType == TransmissionType.manual:
-            ret.clutchPressed = cp.vl["Engine_Clutch_Data"]["CluPdlPos_Pc_Meas"] > 0
-            if bool(cp.vl["BCM_Lamp_Stat_FD1"]["RvrseLghtOn_B_Stat"]):
-                ret.gearShifter = GearShifter.reverse
-            else:
+    # gear
+    if self.CP.transmissionType == TransmissionType.automatic:
+        # 检查 TransGearData 信号是否存在
+        if "TransGearData" in cp.vl and "GearLvrPos_D_Actl" in cp.vl["TransGearData"]:
+            gear_position = cp.vl["TransGearData"]["GearLvrPos_D_Actl"]
+            if gear_position in (3, 4, 5):
                 ret.gearShifter = GearShifter.drive
+            elif gear_position == 1:
+                ret.gearShifter = GearShifter.reverse
+        # 添加备用方案，检查其他可能的信号
+        elif "PowertrainData_10" in cp.vl and "TrnRng_D_Rq" in cp.vl["PowertrainData_10"]:
+            gear_position = cp.vl["PowertrainData_10"]["TrnRng_D_Rq"]
+            if gear_position in (8, 9):  # 可能需要根据实际值调整
+                ret.gearShifter = GearShifter.drive
+            elif gear_position == 7:  # 可能需要根据实际值调整
+                ret.gearShifter = GearShifter.reverse
+    
+    elif self.CP.transmissionType == TransmissionType.manual:
+      ret.clutchPressed = cp.vl["Engine_Clutch_Data"]["CluPdlPos_Pc_Meas"] > 0
+      if bool(cp.vl["BCM_Lamp_Stat_FD1"]["RvrseLghtOn_B_Stat"]):
+        ret.gearShifter = GearShifter.reverse
+      else:
+        ret.gearShifter = GearShifter.drive
 
-        # 调试输出
-        if ret.gearShifter == GearShifter.unknown:
-            debug(f"档位检测失败: {self.gear_debug_info}")
-        else:
-            debug(f"检测到档位: {ret.gearShifter.name}, 原始数据: {self.gear_debug_info}")
+    ret.engineRpm = cp.vl["EngVehicleSpThrottle"]["EngAout_N_Actl"]
 
-        ret.engineRpm = cp.vl["EngVehicleSpThrottle"]["EngAout_N_Actl"]
+    # safety
+    ret.stockFcw = bool(cp_cam.vl["ACCDATA_3"]["FcwVisblWarn_B_Rq"])
+    ret.stockAeb = bool(cp_cam.vl["ACCDATA_2"]["CmbbBrkDecel_B_Rq"])
 
-        # safety
-        ret.stockFcw = bool(cp_cam.vl["ACCDATA_3"]["FcwVisblWarn_B_Rq"])
-        ret.stockAeb = bool(cp_cam.vl["ACCDATA_2"]["CmbbBrkDecel_B_Rq"])
+    # button presses
+    ret.leftBlinker = cp.vl["Steering_Data_FD1"]["TurnLghtSwtch_D_Stat"] == 1
+    ret.rightBlinker = cp.vl["Steering_Data_FD1"]["TurnLghtSwtch_D_Stat"] == 2
+    # TODO: block this going to the camera otherwise it will enable stock TJA
+    ret.genericToggle = bool(cp.vl["Steering_Data_FD1"]["TjaButtnOnOffPress"])
+    prev_distance_button = self.distance_button
+    prev_lc_button = self.lc_button
+    self.distance_button = cp.vl["Steering_Data_FD1"]["AccButtnGapTogglePress"]
+    self.lc_button = bool(cp.vl["Steering_Data_FD1"]["TjaButtnOnOffPress"])
 
-        # button presses
-        ret.leftBlinker = cp.vl["Steering_Data_FD1"]["TurnLghtSwtch_D_Stat"] == 1
-        ret.rightBlinker = cp.vl["Steering_Data_FD1"]["TurnLghtSwtch_D_Stat"] == 2
-        # TODO: block this going to the camera otherwise it will enable stock TJA
-        ret.genericToggle = bool(cp.vl["Steering_Data_FD1"]["TjaButtnOnOffPress"])
-        prev_distance_button = self.distance_button
-        prev_lc_button = self.lc_button
-        self.distance_button = cp.vl["Steering_Data_FD1"]["AccButtnGapTogglePress"]
-        self.lc_button = bool(cp.vl["Steering_Data_FD1"]["TjaButtnOnOffPress"])
+    # lock info
+    ret.doorOpen = any([cp.vl["BodyInfo_3_FD1"]["DrStatDrv_B_Actl"], cp.vl["BodyInfo_3_FD1"]["DrStatPsngr_B_Actl"],
+                        cp.vl["BodyInfo_3_FD1"]["DrStatRl_B_Actl"], cp.vl["BodyInfo_3_FD1"]["DrStatRr_B_Actl"]])
+    ret.seatbeltUnlatched = cp.vl["RCMStatusMessage2_FD1"]["FirstRowBuckleDriver"] == 2
 
-        # lock info
-        ret.doorOpen = any([cp.vl["BodyInfo_3_FD1"]["DrStatDrv_B_Actl"], cp.vl["BodyInfo_3_FD1"]["DrStatPsngr_B_Actl"],
-                            cp.vl["BodyInfo_3_FD1"]["DrStatRl_B_Actl"], cp.vl["BodyInfo_3_FD1"]["DrStatRr_B_Actl"]])
-        ret.seatbeltUnlatched = cp.vl["RCMStatusMessage2_FD1"]["FirstRowBuckleDriver"] == 2
+    # blindspot sensors
+    if self.CP.enableBsm:
+      cp_bsm = cp_cam if self.CP.flags & FordFlags.CANFD else cp
+      ret.leftBlindspot = cp_bsm.vl["Side_Detect_L_Stat"]["SodDetctLeft_D_Stat"] != 0
+      ret.rightBlindspot = cp_bsm.vl["Side_Detect_R_Stat"]["SodDetctRight_D_Stat"] != 0
 
-        # blindspot sensors
-        if self.CP.enableBsm:
-            cp_bsm = cp_cam if self.CP.flags & FordFlags.CANFD else cp
-            ret.leftBlindspot = cp_bsm.vl["Side_Detect_L_Stat"]["SodDetctLeft_D_Stat"] != 0
-            ret.rightBlindspot = cp_bsm.vl["Side_Detect_R_Stat"]["SodDetctRight_D_Stat"] != 0
+    # Stock steering buttons so that we can passthru blinkers etc.
+    self.buttons_stock_values = cp.vl["Steering_Data_FD1"]
+    # Stock values from IPMA so that we can retain some stock functionality
+    self.acc_tja_status_stock_values = cp_cam.vl["ACCDATA_3"]
+    self.lkas_status_stock_values = cp_cam.vl["IPMA_Data"]
 
-        # Stock steering buttons so that we can passthru blinkers etc.
-        self.buttons_stock_values = cp.vl["Steering_Data_FD1"]
-        # Stock values from IPMA so that we can retain some stock functionality
-        self.acc_tja_status_stock_values = cp_cam.vl["ACCDATA_3"]
-        self.lkas_status_stock_values = cp_cam.vl["IPMA_Data"]
+    MadsCarState.update_mads(self, ret, can_parsers)
 
-        MadsCarState.update_mads(self, ret, can_parsers)
+    ret.buttonEvents = [
+      *create_button_events(self.distance_button, prev_distance_button, {1: ButtonType.gapAdjustCruise}),
+      *create_button_events(self.lc_button, prev_lc_button, {1: ButtonType.lkas}),
+    ]
 
-        ret.buttonEvents = [
-            *create_button_events(self.distance_button, prev_distance_button, {1: ButtonType.gapAdjustCruise}),
-            *create_button_events(self.lc_button, prev_lc_button, {1: ButtonType.lkas}),
+    self.car_state_bp_msg = self.update_car_state_bp(cp)
+    return ret, ret_sp
+
+  def update_car_state_bp(self, cp):
+    """Update the CarStateBP message for HEV/PHEV data"""
+    # Create a new message
+    dat = messaging.new_message("carStateBP")
+    dat.valid = True
+
+    # Get handles to the message structures
+    hybrid_drive = dat.carStateBP.hybridDrive
+    hybrid_battery = dat.carStateBP.hybridBattery
+
+    # Initialize with default values
+    hybrid_drive.dataAvailable = False
+    hybrid_drive.throttleDemandPercent = 0.0
+    hybrid_drive.throttleThresholdPercent = 0.0
+    hybrid_drive.powerFlowMode = ""
+    hybrid_drive.engineOnReason = ""
+
+    hybrid_battery.dataAvailable = False
+    hybrid_battery.voltHighLimit = 0.0
+    hybrid_battery.voltLowLimit = 0.0
+    hybrid_battery.voltActual = 0.0
+    hybrid_battery.ampsActual = 0.0
+    hybrid_battery.socMinPerc = 0.0
+    hybrid_battery.socMaxPerc = 0.0
+    hybrid_battery.socActual = 0.0
+
+    # HEV cluster data
+    try:
+        if self.CP.flags & FordFlags.HEV_CLUSTER_DATA:
+          hev_data = cp.vl["Cluster_HEV_Data2"]
+          if hev_data is not None:
+            hybrid_drive.dataAvailable = True
+            hybrid_drive.throttleDemandPercent = hev_data["EffWhlLvl2_Pc_Dsply"]
+            hybrid_drive.throttleThresholdPercent = hev_data[
+                "EffWhlThres_Pc_Dsply"
+            ]
+            hybrid_drive.powerFlowMode = get_hev_power_flow_text(
+                hev_data["PwrFlowTxt_D_Dsply"]
+            )
+            hybrid_drive.engineOnReason = get_hev_engine_on_reason_text(
+                hev_data["EngOnMsg1_D_Dsply"]
+            )
+    except (KeyError, AttributeError):
+      pass
+
+    # HEV battery data
+    try:
+      if self.CP.flags & FordFlags.HEV_BATTERY_DATA:
+        batt_data1 = cp.vl["Battery_Traction_1_FD1"]
+        batt_data3 = cp.vl["Battery_Traction_3_FD1"]
+        batt_data4 = cp.vl["Battery_Traction_4_FD1"]
+
+        if all(x is not None for x in [batt_data1, batt_data3, batt_data4]):
+          hybrid_battery.dataAvailable = True
+          hybrid_battery.voltHighLimit = batt_data1["BattTrac_U_LimHi"]
+          hybrid_battery.voltLowLimit = batt_data1["BattTrac_U_LimLo"]
+          hybrid_battery.voltActual = batt_data1["BattTrac_U_Actl"]
+          hybrid_battery.ampsActual = batt_data1["BattTrac_I_Actl"]
+          hybrid_battery.socMinPerc = batt_data3["BattTracSoc_Pc_MnPrtct"]
+          hybrid_battery.socMaxPerc = batt_data3["BattTracSoc_Pc_MxPrtct"]
+          hybrid_battery.socActual = batt_data4["BattTracSoc2_Pc_Actl"]
+    except (KeyError, AttributeError):
+        pass
+
+    return dat
+
+  def update_traffic_signals(self, cp_cam):
+    # TODO: Check if CAN platforms have the same signals
+    if self.CP.flags & FordFlags.CANFD:
+      self.v_limit = cp_cam.vl["Traffic_RecognitnData"]["TsrVLim1MsgTxt_D_Rq"]
+      v_limit_unit = cp_cam.vl["Traffic_RecognitnData"]["TsrVlUnitMsgTxt_D_Rq"]
+
+      speed_factor = CV.MPH_TO_MS if v_limit_unit == 2 else CV.KPH_TO_MS if v_limit_unit == 1 else 0
+
+      return self.v_limit * speed_factor if self.v_limit not in (0, 255) else 0
+
+  @staticmethod
+  def get_can_parsers(CP, CP_SP):
+    pt_messages = [
+      # sig_address, frequency
+      ("VehicleOperatingModes", 100),
+      ("BrakeSysFeatures", 50),
+      ("Yaw_Data_FD1", 100),
+      ("DesiredTorqBrk", 50),
+      ("EngVehicleSpThrottle", 100),
+      ("EngVehicleSpThrottle2", 50),
+      ("BrakeSnData_4", 50),
+      ("EngBrakeData", 10),
+      ("Cluster_Info1_FD1", 10),
+      ("EPAS_INFO", 50),
+      ("Steering_Data_FD1", 10),
+      ("BodyInfo_3_FD1", 2),
+      ("RCMStatusMessage2_FD1", 10),
+    ]
+
+    # Try to add HEV message to parser config
+    if CP.flags & FordFlags.HEV_CLUSTER_DATA:
+      print("Cluster_HEV_Data2 signal exists (get_can_parser)")
+      pt_messages.append(("Cluster_HEV_Data2", 10))
+
+    if CP.flags & FordFlags.HEV_BATTERY_DATA:
+      print("Battery_Traction_1_FD1 signal exists (get_can_parser)")
+      pt_messages.append(("Battery_Traction_1_FD1", 10))
+      print("Battery_Traction_3_FD1 signal exists (get_can_parser)")
+      pt_messages.append(("Battery_Traction_3_FD1", 10))
+      print("Battery_Traction_4_FD1 signal exists (get_can_parser)")
+      pt_messages.append(("Battery_Traction_4_FD1", 10))
+
+    if CP.flags & FordFlags.ALT_STEER_ANGLE:
+      pt_messages += [
+        ("SteeringPinion_Data_Alt", 100),
+        ("ParkAid_Data", 50),
+      ]
+      # 只有在变速箱为自动时才添加 TransGearData
+      if CP.transmissionType == TransmissionType.automatic:
+        pt_messages.append(("TransGearData", 10))
+    else:
+      pt_messages += [
+        ("SteeringPinion_Data", 100),
+      ]
+      if CP.transmissionType == TransmissionType.automatic:
+        pt_messages += [
+          ("PowertrainData_10", 10)
         ]
 
-        self.car_state_bp_msg = self.update_car_state_bp(cp)
-        return ret, ret_sp
+    if CP.flags & FordFlags.CANFD:
+      pt_messages += [
+        ("Lane_Assist_Data3_FD1", 33),
+        ("Cluster_Info_3_FD1", 10),
+      ]
+    else:
+      pt_messages += [
+        ("INSTRUMENT_PANEL", 1),
+      ]
 
-    def update_car_state_bp(self, cp):
-        """Update the CarStateBP message for HEV/PHEV data"""
-        # Create a new message
-        dat = messaging.new_message("carStateBP")
-        dat.valid = True
+    if CP.transmissionType == TransmissionType.automatic:
+      pt_messages += [
+        ("Gear_Shift_by_Wire_FD1", 10),
+      ]
+    elif CP.transmissionType == TransmissionType.manual:
+      pt_messages += [
+        ("Engine_Clutch_Data", 33),
+        ("BCM_Lamp_Stat_FD1", 1),
+      ]
 
-        # Get handles to the message structures
-        hybrid_drive = dat.carStateBP.hybridDrive
-        hybrid_battery = dat.carStateBP.hybridBattery
+    if CP.enableBsm and not (CP.flags & FordFlags.CANFD):
+      pt_messages += [
+        ("Side_Detect_L_Stat", 5),
+        ("Side_Detect_R_Stat", 5),
+      ]
 
-        # Initialize with default values
-        hybrid_drive.dataAvailable = False
-        hybrid_drive.throttleDemandPercent = 0.0
-        hybrid_drive.throttleThresholdPercent = 0.0
-        hybrid_drive.powerFlowMode = ""
-        hybrid_drive.engineOnReason = ""
+    cam_messages = [
+      # sig_address, frequency
+      ("ACCDATA", 50),
+      ("ACCDATA_2", 50),
+      ("ACCDATA_3", 5),
+      ("IPMA_Data", 1),
+    ]
 
-        hybrid_battery.dataAvailable = False
-        hybrid_battery.voltHighLimit = 0.0
-        hybrid_battery.voltLowLimit = 0.0
-        hybrid_battery.voltActual = 0.0
-        hybrid_battery.ampsActual = 0.0
-        hybrid_battery.socMinPerc = 0.0
-        hybrid_battery.socMaxPerc = 0.0
-        hybrid_battery.socActual = 0.0
+    if CP.flags & FordFlags.CANFD:
+      cam_messages += [
+        ("Traffic_RecognitnData", 1),
+        ("IPMA_Data2", 1),
+      ]
 
-        # HEV cluster data
-        try:
-            if self.CP.flags & FordFlags.HEV_CLUSTER_DATA:
-                hev_data = cp.vl["Cluster_HEV_Data2"]
-                if hev_data is not None:
-                    hybrid_drive.dataAvailable = True
-                    hybrid_drive.throttleDemandPercent = hev_data["EffWhlLvl2_Pc_Dsply"]
-                    hybrid_drive.throttleThresholdPercent = hev_data["EffWhlThres_Pc_Dsply"]
-                    hybrid_drive.powerFlowMode = get_hev_power_flow_text(hev_data["PwrFlowTxt_D_Dsply"])
-                    hybrid_drive.engineOnReason = get_hev_engine_on_reason_text(hev_data["EngOnMsg1_D_Dsply"])
-        except (KeyError, AttributeError):
-            pass
+    if CP.enableBsm and CP.flags & FordFlags.CANFD:
+      cam_messages += [
+        ("Side_Detect_L_Stat", 5),
+        ("Side_Detect_R_Stat", 5),
+      ]
 
-        # HEV battery data
-        try:
-            if self.CP.flags & FordFlags.HEV_BATTERY_DATA:
-                batt_data1 = cp.vl["Battery_Traction_1_FD1"]
-                batt_data3 = cp.vl["Battery_Traction_3_FD1"]
-                batt_data4 = cp.vl["Battery_Traction_4_FD1"]
-
-                if all(x is not None for x in [batt_data1, batt_data3, batt_data4]):
-                    hybrid_battery.dataAvailable = True
-                    hybrid_battery.voltHighLimit = batt_data1["BattTrac_U_LimHi"]
-                    hybrid_battery.voltLowLimit = batt_data1["BattTrac_U_LimLo"]
-                    hybrid_battery.voltActual = batt_data1["BattTrac_U_Actl"]
-                    hybrid_battery.ampsActual = batt_data1["BattTrac_I_Actl"]
-                    hybrid_battery.socMinPerc = batt_data3["BattTracSoc_Pc_MnPrtct"]
-                    hybrid_battery.socMaxPerc = batt_data3["BattTracSoc_Pc_MxPrtct"]
-                    hybrid_battery.socActual = batt_data4["BattTracSoc2_Pc_Actl"]
-        except (KeyError, AttributeError):
-            pass
-
-        return dat
-
-    def update_traffic_signals(self, cp_cam):
-        # TODO: Check if CAN platforms have the same signals
-        if self.CP.flags & FordFlags.CANFD:
-            self.v_limit = cp_cam.vl["Traffic_RecognitnData"]["TsrVLim1MsgTxt_D_Rq"]
-            v_limit_unit = cp_cam.vl["Traffic_RecognitnData"]["TsrVlUnitMsgTxt_D_Rq"]
-
-            speed_factor = CV.MPH_TO_MS if v_limit_unit == 2 else CV.KPH_TO_MS if v_limit_unit == 1 else 0
-
-            return self.v_limit * speed_factor if self.v_limit not in (0, 255) else 0
-
-    @staticmethod
-    def get_can_parsers(CP, CP_SP):
-        pt_messages = [
-            # sig_address, frequency
-            ("VehicleOperatingModes", 100),
-            ("BrakeSysFeatures", 50),
-            ("Yaw_Data_FD1", 100),
-            ("DesiredTorqBrk", 50),
-            ("EngVehicleSpThrottle", 100),
-            ("EngVehicleSpThrottle2", 50),
-            ("BrakeSnData_4", 50),
-            ("EngBrakeData", 10),
-            ("Cluster_Info1_FD1", 10),
-            ("EPAS_INFO", 50),
-            ("Steering_Data_FD1", 10),
-            ("BodyInfo_3_FD1", 2),
-            ("RCMStatusMessage2_FD1", 10),
-        ]
-
-        # Try to add HEV message to parser config
-        if CP.flags & FordFlags.HEV_CLUSTER_DATA:
-            print("Cluster_HEV_Data2 signal exists (get_can_parser)")
-            pt_messages.append(("Cluster_HEV_Data2", 10))
-
-        if CP.flags & FordFlags.HEV_BATTERY_DATA:
-            print("Battery_Traction_1_FD1 signal exists (get_can_parser)")
-            pt_messages.append(("Battery_Traction_1_FD1", 10))
-            print("Battery_Traction_3_FD1 signal exists (get_can_parser)")
-            pt_messages.append(("Battery_Traction_3_FD1", 10))
-            print("Battery_Traction_4_FD1 signal exists (get_can_parser)")
-            pt_messages.append(("Battery_Traction_4_FD1", 10))
-
-        if CP.flags & FordFlags.ALT_STEER_ANGLE:
-            pt_messages += [
-                ("SteeringPinion_Data_Alt", 100),
-                ("ParkAid_Data", 50),
-                ("TransGearData", 10),
-            ]
-        else:
-            pt_messages += [
-                ("SteeringPinion_Data", 100),
-            ]
-            if CP.transmissionType == TransmissionType.automatic:
-                pt_messages += [
-                    ("PowertrainData_10", 10)
-                ]
-
-        if CP.flags & FordFlags.CANFD:
-            pt_messages += [
-                ("Lane_Assist_Data3_FD1", 33),
-                ("Cluster_Info_3_FD1", 10),
-            ]
-        else:
-            pt_messages += [
-                ("INSTRUMENT_PANEL", 1),
-            ]
-
-        if CP.transmissionType == TransmissionType.automatic:
-            pt_messages += [
-                ("Gear_Shift_by_Wire_FD1", 10),
-            ]
-        elif CP.transmissionType == TransmissionType.manual:
-            pt_messages += [
-                ("Engine_Clutch_Data", 33),
-                ("BCM_Lamp_Stat_FD1", 1),
-            ]
-
-        if CP.enableBsm and not (CP.flags & FordFlags.CANFD):
-            pt_messages += [
-                ("Side_Detect_L_Stat", 5),
-                ("Side_Detect_R_Stat", 5),
-            ]
-
-        cam_messages = [
-            # sig_address, frequency
-            ("ACCDATA", 50),
-            ("ACCDATA_2", 50),
-            ("ACCDATA_3", 5),
-            ("IPMA_Data", 1),
-        ]
-
-        if CP.flags & FordFlags.CANFD:
-            cam_messages += [
-                ("Traffic_RecognitnData", 1),
-                ("IPMA_Data2", 1),
-            ]
-
-        if CP.enableBsm and CP.flags & FordFlags.CANFD:
-            cam_messages += [
-                ("Side_Detect_L_Stat", 5),
-                ("Side_Detect_R_Stat", 5),
-            ]
-
-        return {
-            Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], pt_messages, CanBus(CP).main),
-            Bus.cam: CANParser(DBC[CP.carFingerprint][Bus.pt], cam_messages, CanBus(CP).camera),
-        }
+    return {
+      Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], pt_messages, CanBus(CP).main),
+      Bus.cam: CANParser(DBC[CP.carFingerprint][Bus.pt], cam_messages, CanBus(CP).camera),
+    }
