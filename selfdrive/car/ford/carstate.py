@@ -131,7 +131,7 @@ class CarState(CarStateBase, MadsCarState):
             gear_position = cp.vl["TransGearData"]["GearLvrPos_D_Actl"]
             if gear_position in (3, 4, 5):
                 ret.gearShifter = GearShifter.drive
-            elif gear_position == 1:
+        elif gear_position == 1:
                 ret.gearShifter = GearShifter.reverse
         else:
             # 备用方案：使用其他消息源判断档位
