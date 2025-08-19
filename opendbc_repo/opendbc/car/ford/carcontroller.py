@@ -156,7 +156,7 @@ class CarController(CarControllerBase):
     self.LC_PID_speed_bp = [0.0, 9.0, 15.0]  # speed breakpoints in m/s
     self.LC_PID_speed_v = [0.0, 0.0, 1.0]  # corresponding k_p values
     self.LC_path_angle_ROC_bp = [5, 15, 25]  # speed breakpoints in m/s
-    self.LC_path_angle_ROC_v = [0.003, 0.0015, 0.002]  # match panda limits
+    self.LC_path_angle_ROC_v = [0.004, 0.0015, 0.002]  # match panda limits
     self.LC_path_angle_reset_counter = 0
     self.LC_path_angle_reset_duration = 1.5 # in seconds
 
