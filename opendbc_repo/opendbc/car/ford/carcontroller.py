@@ -201,7 +201,7 @@ class CarController(CarControllerBase):
     # Maximum allowed changes per frame
     self.max_path_angle_change = 0.00125
     self.max_path_offset_change = 0.00125
-    self.max_curvature_rate_change = 0.0001
+    self.max_curvature_rate_change = 0.00015
 
     self.sm = messaging.SubMaster(['modelV2', 'liveParameters', 'selfdriveState'])
     self.VM = VehicleModel(self.CP)
