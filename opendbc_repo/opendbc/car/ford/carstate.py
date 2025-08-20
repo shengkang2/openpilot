@@ -55,18 +55,12 @@ class CarState(CarStateBase, MadsCarState):
     self._last_gear_shifter = None
     self._last_gear_src = None
     self._last_gear_raw = None
+    self._gear_debug_counter = 0  # 调试计数器
 
 
   def update(self, can_parsers) -> tuple[structs.CarState, structs.CarStateSP]:
     cp = can_parsers[Bus.pt]
     cp_cam = can_parsers[Bus.cam]
-
-    # Publish CAN data first so any parsing errors don't affect critical CarState updates
-    # if(self.params.get_bool("FordPrefStreamCanData")):
-    #   try:
-    #     self.ford_can_parser.publish_can_data(cp, cp_cam, self.CP.carFingerprint)
-    #   except Exception as e:
-    #     print(f"Error publishing Ford CAN data: {e}")
 
     ret = structs.CarState()
     ret_sp = structs.CarStateSP()
@@ -77,11 +71,8 @@ class CarState(CarStateBase, MadsCarState):
         and cp.vl["ParkAid_Data"]["EPASExtAngleStatReq"] == 0
         and cp.vl["ParkAid_Data"]["ApaSys_D_Stat"] in (0, 1)
       )
-      # 与非 ALT 路径保持一致：给 CarState 的 invalid 字段赋值
       ret.vehicleSensorsInvalid = not self.vehicle_sensors_valid
     else:
-      # Occasionally on startup, the ABS module recalibrates the steering pinion offset, so we need to block engagement
-      # The vehicle usually recovers out of this state within a minute of normal driving
       ret.vehicleSensorsInvalid = cp.vl["SteeringPinion_Data"]["StePinCompAnEst_D_Qf"] != 3
 
     # car speed
@@ -116,10 +107,9 @@ class CarState(CarStateBase, MadsCarState):
     ret.steeringPressed = self.update_steering_pressed(abs(ret.steeringTorque) > CarControllerParams.STEER_DRIVER_ALLOWANCE, 5)
     ret.steerFaultTemporary = cp.vl["EPAS_INFO"]["EPAS_Failure"] == 1
     ret.steerFaultPermanent = cp.vl["EPAS_INFO"]["EPAS_Failure"] in (2, 3)
-    ret.espDisabled = cp.vl["Cluster_Info1_FD1"]["DrvSlipCtlMde_D_Rq"] != 0  # 0 is default mode
+    ret.espDisabled = cp.vl["Cluster_Info1_FD1"]["DrvSlipCtlMde_D_Rq"] != 0
 
     if self.CP.flags & FordFlags.CANFD:
-      # this signal is always 0 on non-CAN FD cars
       ret.steerFaultTemporary |= cp.vl["Lane_Assist_Data3_FD1"]["LatCtlSte_D_Stat"] not in (1, 2, 3)
 
     # cruise state
@@ -137,17 +127,28 @@ class CarState(CarStateBase, MadsCarState):
     if not self.CP.openpilotLongitudinalControl:
       ret.accFaulted = ret.accFaulted or cp_cam.vl["ACCDATA"]["CmbbDeny_B_Actl"] == 1
 
-    # ===== 档位逻辑（自动变速箱）：多源融合 + 全覆盖 P/R/N/D 映射 =====
+    # ===== 档位逻辑（自动变速箱）：调试模式 =====
     if self.CP.transmissionType == TransmissionType.automatic:
       gear_shifter_determined = False
       raw_val = None
       src = None
 
-      # 1) 优先：TransGearData.GearLvrPos_D_Actl（真实档杆位置，最可靠）
+      # 收集所有档位相关信号的值用于调试
+      gear_signals = {}
+      for msg_name in cp.vl:
+        if any(keyword in str(msg_name).lower() for keyword in ['gear', 'trn', 'trans', 'shift', 'rng', 'lvr']):
+          gear_signals[msg_name] = cp.vl[msg_name]
+
+      # 每10次更新打印一次档位信号值用于调试
+      self._gear_debug_counter += 1
+      if self._gear_debug_counter % 10 == 0:
+        debug(f"[CarState] 档位信号值: {gear_signals}")
+
+      # 1) 优先：TransGearData.GearLvrPos_D_Actl
       if "TransGearData" in cp.vl and "GearLvrPos_D_Actl" in cp.vl["TransGearData"]:
         raw_val = cp.vl["TransGearData"]["GearLvrPos_D_Actl"]
         src = "TransGearData.GearLvrPos_D_Actl"
-        # 常见 Ford 映射：P=0, R=1, N=2, D=3
+        # 根据实际测试调整映射
         if raw_val == 0:
           ret.gearShifter = GearShifter.park
           gear_shifter_determined = True
@@ -160,15 +161,15 @@ class CarState(CarStateBase, MadsCarState):
         elif raw_val == 3:
           ret.gearShifter = GearShifter.drive
           gear_shifter_determined = True
-        elif raw_val in (4, 5):  # 有些车型可能有更多档位
+        elif raw_val in (4, 5):
           ret.gearShifter = GearShifter.drive
           gear_shifter_determined = True
 
-      # 2) 次选（CAN FD 平台常见）：Gear_Shift_by_Wire_FD1.TrnRng_D_RqGsm
+      # 2) 次选：Gear_Shift_by_Wire_FD1.TrnRng_D_RqGsm
       if not gear_shifter_determined and "Gear_Shift_by_Wire_FD1" in cp.vl and "TrnRng_D_RqGsm" in cp.vl["Gear_Shift_by_Wire_FD1"]:
         raw_val = cp.vl["Gear_Shift_by_Wire_FD1"]["TrnRng_D_RqGsm"]
         src = "Gear_Shift_by_Wire_FD1.TrnRng_D_RqGsm"
-        # 常见 Ford CAN FD 映射：P=1, R=3, N=2, D=4
+        # 根据实际测试调整映射
         if raw_val == 1:
           ret.gearShifter = GearShifter.park
           gear_shifter_determined = True
@@ -181,15 +182,15 @@ class CarState(CarStateBase, MadsCarState):
         elif raw_val == 4:
           ret.gearShifter = GearShifter.drive
           gear_shifter_determined = True
-        elif raw_val in (5, 6):  # 扩展档位
+        elif raw_val in (5, 6):
           ret.gearShifter = GearShifter.drive
           gear_shifter_determined = True
 
-      # 3) 兜底：PowertrainData_10.TrnRng_D_Rq（ECU 请求/推断）
+      # 3) 兜底：PowertrainData_10.TrnRng_D_Rq
       if not gear_shifter_determined and "PowertrainData_10" in cp.vl and "TrnRng_D_Rq" in cp.vl["PowertrainData_10"]:
         raw_val = cp.vl["PowertrainData_10"]["TrnRng_D_Rq"]
         src = "PowertrainData_10.TrnRng_D_Rq"
-        # 常见旧平台映射：P=5, R=7, N=6, D=8
+        # 根据实际测试调整映射
         if raw_val == 5:
           ret.gearShifter = GearShifter.park
           gear_shifter_determined = True
@@ -202,25 +203,39 @@ class CarState(CarStateBase, MadsCarState):
         elif raw_val == 8:
           ret.gearShifter = GearShifter.drive
           gear_shifter_determined = True
-        elif raw_val == 9:  # 运动模式等
+        elif raw_val == 9:
           ret.gearShifter = GearShifter.drive
           gear_shifter_determined = True
 
-      # 4) 如果仍无法判定，标记 unknown，并打印所有档位相关信号的值用于调试
+      # 4) 如果仍无法判定，尝试反向映射（D档被识别为R档的问题）
+      if not gear_shifter_determined:
+        # 尝试所有可能的档位信号，找出D档对应的实际值
+        for signal_name, signal_value in gear_signals.items():
+          if signal_value in [3, 4, 8, 9]:  # 常见的D档值
+            ret.gearShifter = GearShifter.drive
+            src = f"auto_detect.{signal_name}"
+            raw_val = signal_value
+            gear_shifter_determined = True
+            debug(f"[CarState] 自动检测到D档: {signal_name}={signal_value}")
+            break
+          elif signal_value in [1, 7]:  # 常见的R档值
+            ret.gearShifter = GearShifter.reverse
+            src = f"auto_detect.{signal_name}"
+            raw_val = signal_value
+            gear_shifter_determined = True
+            debug(f"[CarState] 自动检测到R档: {signal_name}={signal_value}")
+            break
+
+      # 5) 最终兜底
       if not gear_shifter_determined:
         ret.gearShifter = GearShifter.unknown
-        # 收集所有档位相关信号的值
-        gear_signals = {}
-        for msg_name in cp.vl:
-          if any(keyword in str(msg_name).lower() for keyword in ['gear', 'trn', 'trans', 'shift']):
-            gear_signals[msg_name] = cp.vl[msg_name]
-        debug(f"[CarState] 无法确定档位，相关信号值: {gear_signals}")
+        debug(f"[CarState] 无法确定档位，所有相关信号: {gear_signals}")
         src = "unknown"
         raw_val = None
 
-      # 档位切换调试：仅在变更时打印，避免刷屏
+      # 档位切换调试
       if (ret.gearShifter != self._last_gear_shifter) or (src != self._last_gear_src) or (raw_val != self._last_gear_raw):
-        debug(f"[CarState] 档位: {src} raw={raw_val} -> {ret.gearShifter}")
+        debug(f"[CarState] 档位变化: {src} raw={raw_val} -> {ret.gearShifter}")
         self._last_gear_shifter = ret.gearShifter
         self._last_gear_src = src
         self._last_gear_raw = raw_val
@@ -241,7 +256,6 @@ class CarState(CarStateBase, MadsCarState):
     # button presses
     ret.leftBlinker = cp.vl["Steering_Data_FD1"]["TurnLghtSwtch_D_Stat"] == 1
     ret.rightBlinker = cp.vl["Steering_Data_FD1"]["TurnLghtSwtch_D_Stat"] == 2
-    # TODO: block this going to the camera otherwise it will enable stock TJA
     ret.genericToggle = bool(cp.vl["Steering_Data_FD1"]["TjaButtnOnOffPress"])
     prev_distance_button = self.distance_button
     prev_lc_button = self.lc_button
@@ -259,9 +273,8 @@ class CarState(CarStateBase, MadsCarState):
       ret.leftBlindspot = cp_bsm.vl["Side_Detect_L_Stat"]["SodDetctLeft_D_Stat"] != 0
       ret.rightBlindspot = cp_bsm.vl["Side_Detect_R_Stat"]["SodDetctRight_D_Stat"] != 0
 
-    # Stock steering buttons so that we can passthru blinkers etc.
+    # Stock steering buttons
     self.buttons_stock_values = cp.vl["Steering_Data_FD1"]
-    # Stock values from IPMA so that we can retain some stock functionality
     self.acc_tja_status_stock_values = cp_cam.vl["ACCDATA_3"]
     self.lkas_status_stock_values = cp_cam.vl["IPMA_Data"]
 
@@ -277,15 +290,12 @@ class CarState(CarStateBase, MadsCarState):
 
   def update_car_state_bp(self, cp):
     """Update the CarStateBP message for HEV/PHEV data"""
-    # Create a new message
     dat = messaging.new_message("carStateBP")
     dat.valid = True
 
-    # Get handles to the message structures
     hybrid_drive = dat.carStateBP.hybridDrive
     hybrid_battery = dat.carStateBP.hybridBattery
 
-    # Initialize with default values
     hybrid_drive.dataAvailable = False
     hybrid_drive.throttleDemandPercent = 0.0
     hybrid_drive.throttleThresholdPercent = 0.0
@@ -336,7 +346,6 @@ class CarState(CarStateBase, MadsCarState):
     return dat
 
   def update_traffic_signals(self, cp_cam):
-    # TODO: Check if CAN platforms have the same signals
     if self.CP.flags & FordFlags.CANFD:
       self.v_limit = cp_cam.vl["Traffic_RecognitnData"]["TsrVLim1MsgTxt_D_Rq"]
       v_limit_unit = cp_cam.vl["Traffic_RecognitnData"]["TsrVlUnitMsgTxt_D_Rq"]
@@ -348,7 +357,6 @@ class CarState(CarStateBase, MadsCarState):
   @staticmethod
   def get_can_parsers(CP, CP_SP):
     pt_messages = [
-      # sig_address, frequency
       ("VehicleOperatingModes", 100),
       ("BrakeSysFeatures", 50),
       ("Yaw_Data_FD1", 100),
@@ -364,17 +372,12 @@ class CarState(CarStateBase, MadsCarState):
       ("RCMStatusMessage2_FD1", 10),
     ]
 
-    # Try to add HEV message to parser config
     if CP.flags & FordFlags.HEV_CLUSTER_DATA:
-      print("Cluster_HEV_Data2 signal exists (get_can_parser)")
       pt_messages.append(("Cluster_HEV_Data2", 10))
 
     if CP.flags & FordFlags.HEV_BATTERY_DATA:
-      print("Battery_Traction_1_FD1 signal exists (get_can_parser)")
       pt_messages.append(("Battery_Traction_1_FD1", 10))
-      print("Battery_Traction_3_FD1 signal exists (get_can_parser)")
       pt_messages.append(("Battery_Traction_3_FD1", 10))
-      print("Battery_Traction_4_FD1 signal exists (get_can_parser)")
       pt_messages.append(("Battery_Traction_4_FD1", 10))
 
     if CP.flags & FordFlags.ALT_STEER_ANGLE:
@@ -382,7 +385,6 @@ class CarState(CarStateBase, MadsCarState):
         ("SteeringPinion_Data_Alt", 100),
         ("ParkAid_Data", 50),
       ]
-      # 只有在变速箱为自动时才添加 TransGearData
       if CP.transmissionType == TransmissionType.automatic:
         pt_messages.append(("TransGearData", 10))
     else:
@@ -421,7 +423,6 @@ class CarState(CarStateBase, MadsCarState):
       ]
 
     cam_messages = [
-      # sig_address, frequency
       ("ACCDATA", 50),
       ("ACCDATA_2", 50),
       ("ACCDATA_3", 5),
