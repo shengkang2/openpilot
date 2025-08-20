@@ -147,7 +147,7 @@ class CarState(CarStateBase, MadsCarState):
       if "TransGearData" in cp.vl and "GearLvrPos_D_Actl" in cp.vl["TransGearData"]:
         raw_val = cp.vl["TransGearData"]["GearLvrPos_D_Actl"]
         src = "TransGearData.GearLvrPos_D_Actl"
-        # 常见 Ford 映射
+        # 常见 Ford 映射：P=0, R=1, N=2, D=3
         if raw_val == 0:
           ret.gearShifter = GearShifter.park
           gear_shifter_determined = True
@@ -157,7 +157,10 @@ class CarState(CarStateBase, MadsCarState):
         elif raw_val == 2:
           ret.gearShifter = GearShifter.neutral
           gear_shifter_determined = True
-        elif raw_val in (3, 4, 5):
+        elif raw_val == 3:
+          ret.gearShifter = GearShifter.drive
+          gear_shifter_determined = True
+        elif raw_val in (4, 5):  # 有些车型可能有更多档位
           ret.gearShifter = GearShifter.drive
           gear_shifter_determined = True
 
@@ -165,7 +168,7 @@ class CarState(CarStateBase, MadsCarState):
       if not gear_shifter_determined and "Gear_Shift_by_Wire_FD1" in cp.vl and "TrnRng_D_RqGsm" in cp.vl["Gear_Shift_by_Wire_FD1"]:
         raw_val = cp.vl["Gear_Shift_by_Wire_FD1"]["TrnRng_D_RqGsm"]
         src = "Gear_Shift_by_Wire_FD1.TrnRng_D_RqGsm"
-        # 常见 Ford CAN FD 映射（如 P=1 N=2 R=3 D=4/5/6）
+        # 常见 Ford CAN FD 映射：P=1, R=3, N=2, D=4
         if raw_val == 1:
           ret.gearShifter = GearShifter.park
           gear_shifter_determined = True
@@ -175,7 +178,10 @@ class CarState(CarStateBase, MadsCarState):
         elif raw_val == 2:
           ret.gearShifter = GearShifter.neutral
           gear_shifter_determined = True
-        elif raw_val in (4, 5, 6):
+        elif raw_val == 4:
+          ret.gearShifter = GearShifter.drive
+          gear_shifter_determined = True
+        elif raw_val in (5, 6):  # 扩展档位
           ret.gearShifter = GearShifter.drive
           gear_shifter_determined = True
 
@@ -183,7 +189,7 @@ class CarState(CarStateBase, MadsCarState):
       if not gear_shifter_determined and "PowertrainData_10" in cp.vl and "TrnRng_D_Rq" in cp.vl["PowertrainData_10"]:
         raw_val = cp.vl["PowertrainData_10"]["TrnRng_D_Rq"]
         src = "PowertrainData_10.TrnRng_D_Rq"
-        # 常见旧平台映射 P=5 N=6 R=7 D=8/9
+        # 常见旧平台映射：P=5, R=7, N=6, D=8
         if raw_val == 5:
           ret.gearShifter = GearShifter.park
           gear_shifter_determined = True
@@ -193,14 +199,22 @@ class CarState(CarStateBase, MadsCarState):
         elif raw_val == 6:
           ret.gearShifter = GearShifter.neutral
           gear_shifter_determined = True
-        elif raw_val in (8, 9):
+        elif raw_val == 8:
+          ret.gearShifter = GearShifter.drive
+          gear_shifter_determined = True
+        elif raw_val == 9:  # 运动模式等
           ret.gearShifter = GearShifter.drive
           gear_shifter_determined = True
 
-      # 4) 如果仍无法判定，标记 unknown，并打印一次可用信号帮助调试
+      # 4) 如果仍无法判定，标记 unknown，并打印所有档位相关信号的值用于调试
       if not gear_shifter_determined:
         ret.gearShifter = GearShifter.unknown
-        debug(f"[CarState] 无法确定档位，可用相关信号: { [k for k in cp.vl.keys() if ('gear' in str(k).lower()) or ('trn' in str(k).lower())] }")
+        # 收集所有档位相关信号的值
+        gear_signals = {}
+        for msg_name in cp.vl:
+          if any(keyword in str(msg_name).lower() for keyword in ['gear', 'trn', 'trans', 'shift']):
+            gear_signals[msg_name] = cp.vl[msg_name]
+        debug(f"[CarState] 无法确定档位，相关信号值: {gear_signals}")
         src = "unknown"
         raw_val = None
 
