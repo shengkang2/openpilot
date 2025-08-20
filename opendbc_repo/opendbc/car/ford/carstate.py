@@ -200,7 +200,7 @@ class CarState(CarStateBase, MadsCarState):
       # 4) 如果仍无法判定，标记 unknown，并打印一次可用信号帮助调试
       if not gear_shifter_determined:
         ret.gearShifter = GearShifter.unknown
-        debug(f"[CarState] 无法确定档位，可用相关信号: { [k for k in cp.vl.keys() if ('gear' in k.lower()) or ('trn' in k.lower())] }")
+        debug(f"[CarState] 无法确定档位，可用相关信号: { [k for k in cp.vl.keys() if ('gear' in str(k).lower()) or ('trn' in str(k).lower())] }")
         src = "unknown"
         raw_val = None
 
