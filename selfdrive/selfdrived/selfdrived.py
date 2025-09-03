@@ -32,6 +32,13 @@ SIMULATION = "SIMULATION" in os.environ
 TESTING_CLOSET = "TESTING_CLOSET" in os.environ
 LONGITUDINAL_PERSONALITY_MAP = {v: k for k, v in log.LongitudinalPersonality.schema.enumerants.items()}
 
+# 兼容 personality=3 的情况，默认映射到 standard
+if 1 in LONGITUDINAL_PERSONALITY_MAP:
+  LONGITUDINAL_PERSONALITY_MAP[3] = LONGITUDINAL_PERSONALITY_MAP[1]
+else:
+  # 如果 schema 里没有 standard，就 fallback 到 eco
+  LONGITUDINAL_PERSONALITY_MAP[3] = LONGITUDINAL_PERSONALITY_MAP.get(0)
+
 ThermalStatus = log.DeviceState.ThermalStatus
 State = log.SelfdriveState.OpenpilotState
 PandaType = log.PandaState.PandaType
