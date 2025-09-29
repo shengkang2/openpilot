@@ -32,6 +32,10 @@ SIMULATION = "SIMULATION" in os.environ
 TESTING_CLOSET = "TESTING_CLOSET" in os.environ
 LONGITUDINAL_PERSONALITY_MAP = {v: k for k, v in log.LongitudinalPersonality.schema.enumerants.items()}
 
+# 兼容 personality=3 的情况，映射为 aggressive
+if 2 in LONGITUDINAL_PERSONALITY_MAP:
+  LONGITUDINAL_PERSONALITY_MAP[3] = LONGITUDINAL_PERSONALITY_MAP[2]
+
 ThermalStatus = log.DeviceState.ThermalStatus
 State = log.SelfdriveState.OpenpilotState
 PandaType = log.PandaState.PandaType
