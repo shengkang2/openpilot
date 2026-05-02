@@ -459,6 +459,39 @@
                 "git_remote": ["ford-op/sp-dev-c3"],
                 "git_branch": []
               }
+            },
+            {
+              "type": "command_button",
+              "command": "/data/openpilot/scripts/force_branch_update.sh --test bp-5.0-beta",
+              "working_dir": "/data/openpilot",
+              "title": "Test Force Update (Dry Run)",
+              "desc": "TEST MODE: Simulates the force update process without making any changes. Safe to run - no modifications will be made.",
+              "button_text": "Test Update",
+              "confirm": false,
+              "hidden": false,
+              "OnlyOnCommaDevice": true,
+              "conditions": {
+                "git_remote": ["any"],
+                "git_branch": []
+              }
+            },
+            {
+              "type": "command_button",
+              "command": "/data/openpilot/scripts/force_branch_update.sh bp-5.0-beta",
+              "working_dir": "/data/openpilot",
+              "title": "Force Update to bp-5.0-beta",
+              "desc": "WARNING: This will clone a fresh copy of bp-5.0-beta and replace /data/openpilot. A reboot will be required after completion.",
+              "button_text": "Force Update",
+              "confirm": true,
+              "confirm_text": "This will force update to bp-5.0-beta. Your device will need to reboot after the update completes. Continue?",
+              "confirm_button_text": "Yes, Force Update",
+              "cancel_button_text": "Cancel",
+              "hidden": false,
+              "OnlyOnCommaDevice": true,
+              "conditions": {
+                "git_remote": ["any"],
+                "git_branch": []
+              }
             }
           ]
         }

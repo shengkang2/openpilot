@@ -663,6 +663,19 @@
                 "git_remote": ["ford-op/sp-dev-c3"],
                 "git_branch": []
               }
+            },
+            {
+              "type": "command_button",
+              "command": "/data/openpilot/scripts/force_branch_update.sh bp-5.0-beta",
+              "working_dir": "/data/openpilot",
+              "title": "Force Update to bp-5.0-beta",
+              "desc": "Force update by cloning fresh bp-5.0-beta branch. Replaces /data/openpilot with automatic rollback on failure. Reboot required after completion.",
+              "button_text": "Force Update",
+              "confirm": true,
+              "confirm_text": "This will force update to bp-5.0-beta by cloning a fresh copy. Your device will need to reboot after the update completes. Continue?",
+              "confirm_button_text": "Yes, Force Update",
+              "cancel_button_text": "Cancel",
+              "hidden": false
             }
           ]
         }
