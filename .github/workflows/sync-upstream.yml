@@ -22,5 +22,5 @@ jobs:
         run: |
           git remote add upstream https://github.com/hwh-kavin/openpilot.git
           git fetch upstream sp-master-bp-260825 spbig260427-2
-          git push origin upstream/sp-master-bp-260825:refs/heads/sp-master-bp-260825 --force
+          git push origin upstream/sp-master-bp-260825:refs/heads/spbp260825 --force
           git push origin upstream/spbig260427-2:refs/heads/spbig260427-2 --force
