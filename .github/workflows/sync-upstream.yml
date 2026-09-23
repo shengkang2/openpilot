@@ -1,0 +1,26 @@
+name: Sync upstream branches
+
+on:
+  schedule:
+    # 每天 UTC 00:00（北京时间 08:00）自动同步
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync branches from hwh-kavin/openpilot
+        run: |
+          git remote add upstream https://github.com/hwh-kavin/openpilot.git
+          git fetch upstream sp-master260612 spbig260427-2
+          git push origin upstream/sp-master260612:refs/heads/sp-master260612 --force
+          git push origin upstream/spbig260427-2:refs/heads/spbig260427-2 --force
