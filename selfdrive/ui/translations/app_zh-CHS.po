@@ -2616,3 +2616,124 @@ msgstr "忽略负俯仰补偿，使下坡时不额外减速。"
 msgid "When enabled, sunnypilot will attempt to manage the built-in cruise control buttons by emulating button presses for limited longitudinal control."
 msgstr "启用后，sunnypilot 将尝试通过模拟按钮按压来管理内置巡航控制按键，以提供有限的纵向控制。"
 
+
+
+msgid "<b>WARNING: sunnypilot longitudinal control is in alpha for this car and may disable Automatic Emergency Braking (AEB).</b><br><br>On this car, sunnypilot defaults to the car's built-in ACC instead of sunnypilot's longitudinal control. Enable this to switch to sunnypilot longitudinal control. Enabling Experimental mode is recommended when enabling sunnypilot longitudinal control alpha. Changing this setting will restart sunnypilot if the car is powered on."
+msgstr "<b>警告：sunnypilot 纵向控制在本车上处于 alpha 阶段，可能禁用自动紧急制动（AEB）。</b><br><br>在本车上，sunnypilot 默认使用车辆内置的 ACC，而非 sunnypilot 纵向控制。启用此项可切换至 sunnypilot 纵向控制。启用 sunnypilot 纵向控制 alpha 时，建议同时启用实验模式。更改此设置将在车辆通电时重启 sunnypilot。"
+
+msgid "A chime and on-screen alert will play when the traffic light you are waiting for turns green and you have no vehicle in front of you.<br>Note: This chime is only designed as a notification. It is the driver's responsibility to observe their environment and make decisions accordingly."
+msgstr "当您等待的红绿灯变绿且前方无车辆时，将播放提示音并在屏幕上显示提醒。<br>注意：此提示音仅作为通知。驾驶员有责任观察周围环境并自行做出判断。"
+
+msgid "A chime and on-screen alert will play when you are stopped, and the vehicle in front of you start moving.<br>Note: This chime is only designed as a notification. It is the driver's responsibility to observe their environment and make decisions accordingly."
+msgstr "当您停车且前方车辆开始移动时，将播放提示音并在屏幕上显示提醒。<br>注意：此提示音仅作为通知。驾驶员有责任观察周围环境并自行做出判断。"
+
+msgid "ADB (Android Debug Bridge) allows connecting to your device over USB or over the network. See https://docs.comma.ai/how-to/connect-to-comma for more info."
+msgstr "ADB（Android 调试桥）允许通过 USB 或网络连接您的设备。更多信息请参阅 https://docs.comma.ai/how-to/connect-to-comma 。"
+
+msgid "An alpha version of sunnypilot longitudinal control can be tested, along with Experimental mode, on non-release branches."
+msgstr "可以在非发布分支上测试 sunnypilot 纵向控制的 alpha 版本，以及实验模式。"
+
+msgid "Apply a custom timeout for settings UI.<br>This is the time after which settings UI closes automatically if user is not interacting with the screen."
+msgstr "为设置界面应用自定义超时时间。<br>这是用户未操作屏幕时，设置界面自动关闭所需的时间。"
+
+msgid "BluePilot Portal is a web-based interface for viewing routes, logs, system metrics, and device settings. Connect to your comma device locally via its IP address (default port 80)."
+msgstr "BluePilot Portal 是一个基于网页的界面，用于查看路线、日志、系统指标和设备设置。请通过其 IP 地址（默认端口 80）在本地连接您的 comma 设备。"
+
+msgid "Device will automatically shutdown after set time once the engine is turned off.\n(30h is the default)"
+msgstr "发动机关闭后，设备将在设定时间后自动关机。\n（默认 30 小时）"
+
+msgid "Display useful metrics below the chevron that tracks the lead car only applicable to cars with sunnypilot longitudinal control."
+msgstr "在前车跟踪箭头下方显示有用的指标，仅适用于支持 sunnypilot 纵向控制的车辆。"
+
+msgid "Displays the name of the road the car is traveling on.<br>The OpenStreetMap database of the location must be downloaded from the OSM panel to fetch the road name."
+msgstr "显示车辆当前行驶道路的名称。<br>必须先从 OSM 面板下载该地点的 OpenStreetMap 数据库，才能获取道路名称。"
+
+msgid "Enable the beloved MADS feature. Disable toggle to revert back to stock sunnypilot engagement/disengagement."
+msgstr "启用备受喜爱的 MADS 功能。关闭开关可恢复为原版 sunnypilot 的介入/退出方式。"
+
+msgid "Enable this for the car to learn and adapt its steering response time. Disable to use a fixed steering response time. Keeping this on provides the stock openpilot experience."
+msgstr "启用此功能可让车辆学习并自适应转向响应时间。关闭则使用固定的转向响应时间。保持开启可提供原版 openpilot 体验。"
+
+msgid "Enables custom tuning for Torque lateral control. Modifying Lateral Acceleration Factor and Friction below will override the offline values indicated in the YAML files within \"opendbc/car/torque_data\". The values will also be used live when \"Manual Real-Time Tuning\" toggle is enabled."
+msgstr "为 Torque 横向控制启用自定义调校。修改下方的横向加速度因子和摩擦力，将覆盖 \"opendbc/car/torque_data\" 中 YAML 文件指示的离线值。当启用 \"手动实时调校\" 开关时，这些值也将实时生效。"
+
+msgid "Enables self-tune for Torque lateral control for platforms that do not use Torque lateral control by default."
+msgstr "为默认不使用 Torque 横向控制的平台启用 Torque 横向控制自调校。"
+
+msgid "Enforces the torque lateral controller to use the fixed values instead of the learned values from Self-Tune. Enabling this toggle overrides Self-Tune values."
+msgstr "强制 Torque 横向控制器使用固定值，而非自调校学习到的值。启用此开关将覆盖自调校值。"
+
+msgid "Experimental feature to enable stop and go for Subaru Global models with manual handbrake. Models with electric parking brake should keep this disabled. Thanks to martinl for this implementation!"
+msgstr "实验性功能：为带手动手刹的 Subaru Global 车型启用停走功能。带电子手刹的车型应保持此项关闭。感谢 martinl 实现此功能！"
+
+msgid "Failed to load the region list. Please retry, or contact support if it persists."
+msgstr "无法加载区域列表。请重试，若问题持续存在请联系支持。"
+
+msgid "For maximum effectiveness, bring your device inside and connect to a good USB-C adapter and Wi-Fi weekly.\n\nFirehose Mode can also work while you're driving if connected to a hotspot or unlimited SIM card.\n\n\nFrequently Asked Questions\n\nDoes it matter how or where I drive? Nope, just drive as you normally would.\n\nDo all of my segments get pulled in Firehose Mode? No, we selectively pull a subset of your segments.\n\nWhat's a good USB-C adapter? Any fast phone or laptop charger should be fine.\n\nDoes it matter which software I run? Yes, only upstream openpilot (and particular forks) are able to be used for training."
+msgstr "为获得最佳效果，请每周将设备带到室内，连接优质 USB-C 适配器和 Wi-Fi。\n\n如果连接到热点或无限流量 SIM 卡，Firehose 模式在驾驶时也可以工作。\n\n\n常见问题\n\n我如何或在哪里开车重要吗？不重要，正常驾驶即可。\n\nFirehose 模式会拉取我的所有片段吗？不会，我们会选择性拉取部分片段。\n\n什么是好的 USB-C 适配器？任何快速的手机或笔记本电脑充电器都可以。\n\n我运行什么软件重要吗？是的，只有上游 openpilot（以及特定分支）可用于训练。"
+
+msgid "If you're driving at 20 mph (32 km/h) or below and have your blinker on, the car will plan a turn in that direction at the nearest drivable path. This prevents situations (like at red lights) where the car might plan the wrong turn direction."
+msgstr "如果您以 20 mph（32 km/h）或更低速度行驶并打转向灯，车辆将规划向最近的可行驶路径方向转弯。这可以避免（如在红灯时）车辆可能规划错误转弯方向的情况。"
+
+msgid "Less strict settings when using Self-Tune. This allows torqued to be more forgiving when learning values."
+msgstr "使用自调校时采用较宽松的设置。这允许 torqued 在学习值时更加宽容。"
+
+msgid "Receive alerts to steer back into the lane when your vehicle drifts over a detected lane line without a turn signal activated while driving over 31 mph (50 km/h)."
+msgstr "当您的车辆在未打转向灯的情况下越过检测到的车道线，且行驶速度超过 31 mph（50 km/h）时，接收提醒以引导您回到车道。"
+
+msgid "Set a timer to delay the auto lane change operation when the blinker is used. No nudge on the steering wheel is required to auto lane change if a timer is set. Default is Nudge.<br>Please use caution when using this feature. Only use the blinker when traffic and road conditions permit."
+msgstr "设置一个定时器，以便在打转向灯时延迟自动变道操作。如果设置了定时器，无需轻推方向盘即可自动变道。默认为轻推。<br>请谨慎使用此功能。仅在交通和道路条件允许时使用转向灯。"
+
+msgid "Show an indicator on the left side of the screen to display real-time vehicle acceleration and deceleration. This displays what the car is currently doing, not what the planner is requesting."
+msgstr "在屏幕左侧显示指示器，以实时显示车辆的加速和减速。这显示的是车辆当前的实际状态，而非规划器请求的内容。"
+
+msgid "Standard is recommended. In aggressive mode, sunnypilot will follow lead cars closer and be more aggressive with the gas and brake. In relaxed mode sunnypilot will stay further away from lead cars. On supported cars, you can cycle through these personalities with your steering wheel distance button."
+msgstr "标准模式为推荐模式。在激进模式下，sunnypilot 将更紧密地跟随前车，并在油门和刹车上更加激进。在放松模式下，sunnypilot 将与前方车辆保持更远的距离。在支持的车辆上，您可以使用方向盘距离按钮在这些驾驶风格之间循环切换。"
+
+msgid "Toggle to enable a delay timer for seamless lane changes when blind spot monitoring (BSM) detects a obstructing vehicle, ensuring safe maneuvering."
+msgstr "启用延时定时器，当盲区监测（BSM）检测到障碍车辆时实现无缝变道，确保安全操控。"
+
+msgid "Toggle visibility of advanced sunnypilot controls.<br>This only changes the visibility of the toggles; it does not change the actual enabled/disabled state."
+msgstr "切换高级 sunnypilot 控制的可见性。<br>这只会更改开关的可见性，不会改变实际启用/禁用状态。"
+
+msgid "Use the sunnypilot system for adaptive cruise control and lane keep driver assistance. Your attention is required at all times to use this feature."
+msgstr "使用 sunnypilot 系统进行自适应巡航控制和车道保持驾驶辅助。使用此功能时您必须始终保持注意力。"
+
+msgid "Warning: This grants SSH access to all public keys in your GitHub settings. Never enter a GitHub username other than your own. A comma employee will NEVER ask you to add their GitHub username."
+msgstr "警告：这将授予您 GitHub 设置中所有公钥的 SSH 访问权限。切勿输入非您本人的 GitHub 用户名。comma 员工绝不会要求您添加其 GitHub 用户名。"
+
+msgid "When toggled on, this creates a prebuilt file to allow accelerated boot times. When toggled off, it removes the prebuilt file so compilation of locally edited cpp files can be made."
+msgstr "启用时，此选项会创建预构建文件以加快启动时间。关闭时，它会移除预构建文件，以便可以编译本地编辑的 cpp 文件。"
+
+msgid "sunnylink enables secured remote access to your comma device from anywhere, including settings management, remote monitoring, real-time dashboard, etc."
+msgstr "sunnylink 支持从任何地方对您的 comma 设备进行安全远程访问，包括设置管理、远程监控、实时仪表盘等。"
+
+msgid "sunnylink is designed to be enabled as part of sunnypilot's core functionality. If sunnylink is disabled, features such as settings management, remote monitoring, real-time dashboards will be unavailable."
+msgstr "sunnylink 设计为 sunnypilot 核心功能的一部分。如果禁用 sunnylink，设置管理、远程监控、实时仪表盘等功能将不可用。"
+
+msgid "sunnypilot defaults to driving in chill mode. Experimental mode enables alpha-level features that aren't ready for chill mode. Experimental features are listed below:<br><h4>End-to-End Longitudinal Control</h4><br>Let the driving model control the gas and brakes. sunnypilot will drive as it thinks a human would, including stopping for red lights and stop signs. Since the driving model decides the speed to drive, the set speed will only act as an upper bound. This is an alpha quality feature; mistakes should be expected.<br><h4>New Driving Visualization</h4><br>The driving visualization will transition to the road-facing wide-angle camera at low speeds to better show some turns. The Experimental mode logo will also be shown in the top right corner."
+msgstr "sunnypilot 默认以 chill 模式驾驶。实验模式启用了尚未准备好用于 chill 模式的 alpha 级功能。实验功能如下：<br><h4>端到端纵向控制</h4><br>让驾驶模型控制油门和刹车。sunnypilot 将按照它认为人类会驾驶的方式行驶，包括为红灯和停车标志停车。由于驾驶模型决定行驶速度，设定速度将仅作为上限。这是 alpha 级功能，应预期会出现错误。<br><h4>全新驾驶可视化</h4><br>驾驶可视化将在低速时切换到面向道路的广角摄像头，以更好地显示某些转弯。实验模式徽标也将显示在右上角。"
+
+msgid "sunnypilot is continuously calibrating, resetting is rarely required. Resetting calibration will restart sunnypilot if the car is powered on."
+msgstr "sunnypilot 会持续进行标定，很少需要重置。重置标定将在车辆通电时重启 sunnypilot。"
+
+msgid "sunnypilot learns to drive by watching humans, like you, drive.\n\nFirehose Mode allows you to maximize your training data uploads to improve openpilot's driving models. More data means bigger models, which means better Experimental Mode."
+msgstr "sunnypilot 通过观察像您这样的人类驾驶来学习驾驶。\n\nFirehose 模式允许您最大化训练数据上传，以改进 openpilot 的驾驶模型。更多数据意味着更大的模型，也就意味着更好的实验模式。"
+
+msgid "sunnypilot will allow some Toyota/Lexus cars to auto resume during stop and go traffic. This feature is only applicable to certain models that are able to use longitudinal control. This is an alpha feature. Use at your own risk."
+msgstr "sunnypilot 将允许部分 Toyota/Lexus 车辆在走走停停的交通中自动恢复。此功能仅适用于某些能够使用纵向控制的特定车型。这是 alpha 功能，请自行承担使用风险。"
+
+msgid "Backing up {}%"
+msgstr "正在备份 {}%"
+
+msgid "Restoring {}%"
+msgstr "正在恢复 {}%"
+
+msgid "Only works above {} {}."
+msgstr "仅在上述 {} {} 以上速度时有效。"
+
+msgid "Warning: May experience steering oscillations below {} {} during turns, recommend disabling this feature if you experience these."
+msgstr "警告：转弯时在低于 {} {} 的情况下可能经历转向振荡，若遇到此类情况建议禁用此功能。"
+
+msgid "Select {}"
+msgstr "选择 {}"
