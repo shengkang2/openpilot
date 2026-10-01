@@ -53,6 +53,10 @@ def _char_sets():
       continue
     if code in UNIFONT_LANGUAGES:
       lang_chars = set(base) | chars
+      if code == "zh-CHS":
+        gb = FONT_DIR / "gb2312_all.txt"
+        if gb.exists():
+          lang_chars |= set(gb.read_text(encoding="utf-8"))
       per_lang[code] = tuple(sorted(ord(c) for c in lang_chars))
     else:
       base.update(chars)
