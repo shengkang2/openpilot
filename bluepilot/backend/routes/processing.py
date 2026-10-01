@@ -1222,6 +1222,19 @@ def _list_route_bases_fast():
         processed_bases.add(base_name)
 
         route_dt = parse_route_datetime(base_name)
+        if route_dt is None:
+            try:
+                from datetime import datetime as _dt
+                best_mtime = 0.0
+                for cand in os.listdir(ROUTES_DIR):
+                    if cand == base_name or cand.startswith(base_name + '--'):
+                        cp = os.path.join(ROUTES_DIR, cand)
+                        if os.path.isdir(cp):
+                            best_mtime = max(best_mtime, os.path.getmtime(cp))
+                if best_mtime:
+                    route_dt = _dt.fromtimestamp(best_mtime)
+            except (OSError, ValueError):
+                route_dt = None
         segments = get_route_segments(base_name)
         if not segments:
             continue
