@@ -127,3 +127,47 @@ Match found: 6dae2984cc53cd7f/2023-12-10--11-53-15/17/s    FORD BRONCO SPORT 1ST
 Match found: 6dae2984cc53cd7f/2023-12-03--17-31-17/29/s    FORD BRONCO SPORT 1ST GEN              ['Rivian CAN Ign']
 Match found: 6dae2984cc53cd7f/2023-11-27--23-29-07/1/s     FORD BRONCO SPORT 1ST GEN              ['Rivian CAN Ign']
 ```
+
+### [tools/car_porting/check_fingerprint_ambiguity.py](/tools/car_porting/check_fingerprint_ambiguity.py)
+
+Checks whether a brand's CAN fingerprints can actually resolve to a **single** car.
+
+FPv1 identification does not ask "does this car match?". It asks "have we eliminated everyone
+else?" — `can_fingerprint()` only succeeds when exactly one candidate is left:
+
+```python
+if len(candidate_cars[b]) == 1 and frame > FRAME_FINGERPRINT:
+    car_fingerprint = candidate_cars[b][0]
+```
+
+So if one car's fingerprint is a **superset** of another's (copy-paste, or a "union of sibling
+platforms" used to fill in an unfinished port), the real sibling car keeps both candidates alive
+forever, `car_fingerprint` stays `None`, and the car silently falls back to `MOCK`. Listing *more*
+entries is safe for elimination but harmful for convergence — the opposite of the usual
+"more entries is safer" intuition.
+
+Example:
+```bash
+> python3 tools/car_porting/check_fingerprint_ambiguity.py --brand byd
+=== byd：21 款有指纹 ===
+  ✗ 无法唯一识别 BYD_TANG_DMI_21              剩 4 个候选
+  ✗ 无法唯一识别 BYD_TANG_DMI_24              剩 4 个候选
+  !! 指纹完全相同（183 条报文）: BYD_TANG_DMI_21, BYD_TANG_DMI_24, BYD_TANG_DMP_22, BYD_TANG_DMP_23
+```
+
+Pass `--extra path/to/file.py:VAR` to dry-run a proposed set of new fingerprints before merging:
+it reports which already-working cars the new entries would break.
+
+### [tools/car_porting/collect_live_fingerprints.py](/tools/car_porting/collect_live_fingerprints.py)
+
+Recovers the car's `{bus: {address: DLC}}` from real data and emits a paste-ready
+`CAR.XXX: [{...}],` block for `fingerprints.py`.
+
+* `--swaglog <files/dirs>` — scrapes `fingerprints=<dict>` out of the `fingerprinted` event in
+  `/data/log/swaglog.*` (no dependencies, easiest)
+* `--rlog <routes>` — counts addresses/DLCs straight from CAN messages (needs an openpilot env)
+* `--compare fingerprints.py --car BYD_HAN_DMI_22` — lists missing addresses (must add), harmless
+  extras (keep them), and DLC conflicts (must resolve)
+
+This is the only correct way to finish a port that is missing fingerprints. Do not fill in a
+missing car by unioning its siblings' fingerprints — see the checker above for why.
