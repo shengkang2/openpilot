@@ -6,6 +6,7 @@ from opendbc.car import Bus, CarSpecs, DbcDict, PlatformConfig, Platforms
 from opendbc.car.docs_definitions import CarDocs, CarHarness, CarParts
 from opendbc.car.fw_query_definitions import FwQueryConfig, Request
 from opendbc.car.structs import CarParams
+from opendbc.car.lateral import AngleSteeringLimits
 from opendbc.car.byd.params_compat import Params
 
 Ecu = CarParams.Ecu
@@ -75,6 +76,7 @@ class CanBus:
 
 class CarControllerParams:
   STEER_MAX = 300
+  STEER_STEP = 2  # LKAS 指令发送周期（帧），见 carcontroller.py 的 self.frame % STEER_STEP
   STEER_DELTA_UP = 17
   STEER_DELTA_DOWN = 17
   STEER_DRIVER_ALLOWANCE = 68
@@ -90,6 +92,20 @@ class CarControllerParams:
   K_jerk_xp = [4, 10, 20, 40, 80]
   K_jerk_base_lower_fp = [-2.0, -1.8, -1.4, -1.0, -0.4]
   K_jerk_base_upper_fp = [0.8, 0.7, 0.6, 0.3, 0.2]
+
+  # 角度控制路径（TORQUE_LAT_CAR 之外的车，见 carcontroller.update 的 else 分支）用的限幅。
+  # 必须符合 opendbc/car/lateral.py::AngleSteeringLimits 的新 schema：
+  #   ANGLE_RATE_LIMIT_{UP,DOWN} 是 (速度断点, 每帧角度变化上限) 二元组。
+  # 数值来源：移植包自带的 AngleSteeringLimits —— STEER_ANGLE_MAX=640、
+  # STEER_ANGLE_DELTA_UP=5、STEER_ANGLE_DELTA_DOWN=5。这里做 1:1 表达，
+  # 断点取 [0, 30] 使限幅与速度无关，与移植包原本的"标量"语义完全一致，
+  # 没有引入任何新的速度相关行为。若原移植作者本意是随速度变化，
+  # 应替换为实测曲线（参照 nissan/toyota 的 ANGLE_LIMITS 写法）。
+  ANGLE_LIMITS: AngleSteeringLimits = AngleSteeringLimits(
+    640,  # STEER_ANGLE_MAX (deg)，与 MAX_STEER_ANGLE 一致
+    ([0., 30.], [5., 5.]),  # ANGLE_RATE_LIMIT_UP
+    ([0., 30.], [5., 5.]),  # ANGLE_RATE_LIMIT_DOWN
+  )
 
   def __init__(self, CP):
     CanBus.checkPanda()

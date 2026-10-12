@@ -12,7 +12,8 @@ from opendbc.car.interfaces import CarStateBase
 from opendbc.car.byd.tuning import Tuning
 from opendbc.car.byd.values import (
   BydFlags, CanBus, CarControllerParams, DBC, LKASConfig, PLATFORM_HAN_DMI,
-  PLATFORM_QIN_SEAL06, PLATFORM_SEAL, PLATFORM_TENGSHI, PT_RADAR_CAR,
+  PLATFORM_QIN_PLUS_DMI, PLATFORM_QIN_SEAL06, PLATFORM_SEAL, PLATFORM_TENGSHI,
+  PT_RADAR_CAR,
 )
 from opendbc.car.byd.params_compat import Params
 
@@ -109,7 +110,14 @@ class CarState(CarStateBase):
     if old_gap != self.adas_set_dist:
       self.adas_set_dist_changed = True
       self.adas_set_dist_changed_notified = False
-    ret.pcmCruiseGap = self.adas_set_dist
+    # NOTE: 本分支的 CarState(capnp car.capnp) 和 CarStateSP(结构体 dataclass) 里
+    # 都**没有** pcmCruiseGap 字段，全仓库也只有这一处引用它（没有任何读取方）。
+    # 保留赋值会让每一台 BYD 车在 carstate.update() 里抛
+    #   AttributeError: struct has no such member; name = pcmCruiseGap
+    # （opendbc/car/tests/test_car_interfaces.py 可复现，29/29 款 BYD 全挂）。
+    # 跟车距离本身仍然计算并保留在 self.adas_set_dist / adas_set_dist_changed 里，
+    # 等确定该字段的落点（capnp CarState 还是 sunnypilot 的 CarStateSP）后再恢复上报。
+    # ret.pcmCruiseGap = self.adas_set_dist
 
     prev_btn_acc_cancel = self.btn_acc_cancel
     prev_btn_acc_set_reset = self.btn_acc_set_reset
@@ -207,10 +215,17 @@ class CarState(CarStateBase):
       self.esc_eps = copy.copy(eps_msg)
 
     ret.steeringPressed = self.update_steering_pressed(abs(ret.steeringTorque) > Tuning.STEER_PRESSED_THRESHOLD, 5)
-    ret.brake = int(cp.vl["CID_GDWRBP"]["sig_wrfhru"])
-    ret.brakePressed = ret.brake != 0
-    ret.gas = int(cp.vl["CID_GDWRBP"]["sig_oefitp"])
-    ret.gasPressed = ret.gas != 0
+    # NOTE: 本分支 car.capnp 把 gas/brake 收进了 `deprecated :group`，而 pycapnp 不会把
+    # group 的子字段扁平化到父结构上，所以必须写 ret.deprecated.gas / ret.deprecated.brake。
+    # 直接写 ret.gas / ret.brake 会让每一台 BYD 车在 carstate.update() 抛
+    #   AttributeError: struct has no such member; name = brake
+    # （opendbc/car/tests/test_car_interfaces.py 可复现，29/29 款 BYD 全挂）。
+    # 仓库自带约定见 honda/carstate.py:200 `ret.deprecated.brake = ...`（honda 测试通过）。
+    # 注意 deprecated.gas 是 Float32，与顶层同名 Bool 字段 gasPressed 不是一回事。
+    ret.deprecated.brake = int(cp.vl["CID_GDWRBP"]["sig_wrfhru"])
+    ret.brakePressed = ret.deprecated.brake != 0
+    ret.deprecated.gas = int(cp.vl["CID_GDWRBP"]["sig_oefitp"])
+    ret.gasPressed = ret.deprecated.gas != 0
 
     ret.cruiseState.available = lkas_enabled and not ret.steerFaultPermanent
     ret.cruiseState.enabled = ret.cruiseState.available and self.acc_state in (3, 5)
@@ -232,6 +247,19 @@ class CarState(CarStateBase):
     self.acc_mpc_state_counter = cp_cam.vl["CID_HGZKCQ"]["sig_fghgbq"]
     self.acc_cmd_counter = cp_cam.vl["CID_RJDCMR"]["sig_fghgbq"]
     self.cam_lkas = copy.copy(cp_cam.vl["CID_HGZKCQ"])
+    # NOTE: 角度转向车（PLATFORM_SEAL / PLATFORM_TENGSHI / PLATFORM_QIN_SEAL06，见 get_can_parsers）
+    # 的 LKAS 指令 bydcan.create_angle_control() 需要 CID_TCDUBH 上的 7 个信号
+    # （sig_hfquge / sig_tqntde / sig_uipsvp / sig_yjvxpi / sig_hcyhoo / sig_kqgoqc / sig_ausukb，
+    # 见 dbc/byd_generic_pt.dbc 的 BO_ 482，注意与 CID_HGZKCQ 上同名的 sig_kqgoqc/sig_ausukb 不是一回事）。
+    # 这些车的 cam 解析器注册了 CID_TCDUBH，但这里原本漏了捕获，导致 self.cam_lkas_seal
+    # 一直是 __init__ 里的 {}，carcontroller 里 `CS.cam_lkas_seal or CS.cam_lkas`
+    # 于是退化成 CID_HGZKCQ（没有那两个信号），bydcan._copy_values 抛
+    #   KeyError: 'sig_hfquge'
+    # test_car_interfaces.py 可复现，12 款角度车全挂。
+    # `in cp_cam.vl` 用的是普通 dict 语义（VLDict 只重写了 __getitem__），
+    # 所以这里能精确区分"该车是否注册了 CID_TCDUBH"，不会给扭矩车凭空加一条解析报文。
+    if "CID_TCDUBH" in cp_cam.vl:
+      self.cam_lkas_seal = copy.copy(cp_cam.vl["CID_TCDUBH"])
     self.cam_adas = copy.copy(cp_cam.vl["CID_XQYNBW"])
     self.cam_acc = copy.copy(cp_cam.vl["CID_RJDCMR"])
     self.esc_pcm = copy.copy(cp.vl["CID_YHMGPU"])
@@ -259,7 +287,15 @@ class CarState(CarStateBase):
       else:
         pt_messages.append(("CID_WMSVRZ", 20))
 
-    if CP.carFingerprint in (PLATFORM_SEAL | PLATFORM_TENGSHI | PLATFORM_QIN_SEAL06):
+    # NOTE: 这里必须与 interface.py:71 的角度模式平台清单保持一致。
+    # interface.py 把 PLATFORM_QIN_PLUS_DMI 也当成角度控制车
+    # （safetyParam |= BydSafetyFlags.ANGLE_MODE），且 BYD_QIN_PLUS_DMI_23
+    # 不在 TORQUE_LAT_CAR 里 → carcontroller 走角度分支 → 需要 CID_TCDUBH。
+    # 但这里原本漏了 PLATFORM_QIN_PLUS_DMI，于是该车既拿不到 CID_TCDUBH 解析，
+    # cam_lkas_seal 又一直是空，create_angle_control 抛 KeyError: 'sig_hfquge'
+    # （test_car_interfaces.py 可复现，且是原移植包就存在的缺陷：
+    # 归档里的 PLATFORM_QIN_PLUS_DMI 同样只被 interface.py 用到）。
+    if CP.carFingerprint in (PLATFORM_SEAL | PLATFORM_TENGSHI | PLATFORM_QIN_SEAL06 | PLATFORM_QIN_PLUS_DMI):
       pt_messages.append(("CID_KERMHK", 50))
       pt_messages.append(("CID_QSAUBE", 20))
       cam_messages.append(("CID_TCDUBH", 50))

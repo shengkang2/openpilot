@@ -21,7 +21,10 @@ LongCtrlState = structs.CarControl.Actuators.LongControlState
 ACC_STEP = 2
 PARAM_STEP = 500
 PCM_STEP = 5
-STEER_STEP = 2
+# 单一来源：CarControllerParams.STEER_STEP（test_lateral_limits.py 依赖该属性，
+# 其余 15 个品牌也都在 CarControllerParams 里定义）。这里引用而不是另写一个 2，
+# 避免两处数值漂移后 test_lateral_limits 算出的横向 jerk 与实际发送周期不符。
+STEER_STEP = CarControllerParams.STEER_STEP
 BYD_ACC_BUTTON_RELEASE = 0
 BYD_ACC_BUTTON_DECEL = 1
 BYD_ACC_BUTTON_ACCEL = 3
@@ -60,10 +63,15 @@ class BydJerk:
       self.cb_lower = np.clip(0.08 + accel * 0.02, 0, 0.15)
 
 
-class AngleSteeringLimits:
-  STEER_ANGLE_MAX = 640
-  STEER_ANGLE_DELTA_UP = 5
-  STEER_ANGLE_DELTA_DOWN = 5
+# NOTE: 这里原本有一份移自旧版 openpilot 的 AngleSteeringLimits
+#   class AngleSteeringLimits:
+#     STEER_ANGLE_MAX = 640
+#     STEER_ANGLE_DELTA_UP = 5
+#     STEER_ANGLE_DELTA_DOWN = 5
+# 它是旧版 apply_std_steer_angle_limits 的入参形态，在 byd/ 目录内没有任何引用
+# （唯一的使用点把它误写成了 self.params），属于死代码。现已改为统一使用
+# opendbc/car/lateral.py 的 AngleSteeringLimits，并把数值搬到
+# values.py::CarControllerParams.ANGLE_LIMITS。
 
 
 class CarController(CarControllerBase):
@@ -377,7 +385,17 @@ class CarController(CarControllerBase):
       new_actuators.torque = apply_torque / self.params.STEER_MAX
     else:
       requested_angle = actuators.steeringAngleDeg
-      requested_angle = apply_std_steer_angle_limits(requested_angle, self.apply_angle_last, CS.out.vEgoRaw, self.params)
+      # 本分支 lateral.py::apply_std_steer_angle_limits 的签名是
+      #   (apply_angle, apply_angle_last, v_ego, steering_angle, lat_active, limits)
+      # 移植包里写的是旧版 4 参形式，会抛
+      #   TypeError: missing 2 required positional arguments: 'lat_active' and 'limits'
+      # steering_angle 传当前方向盘角（含 offset），与 toyota/psa/nissan 的写法一致；
+      # limits 取 CarControllerParams.ANGLE_LIMITS。
+      requested_angle = apply_std_steer_angle_limits(
+        requested_angle, self.apply_angle_last, CS.out.vEgoRaw,
+        CS.out.steeringAngleDeg + CS.out.steeringAngleOffsetDeg,
+        lat_active, self.params.ANGLE_LIMITS,
+      )
       if not lat_active:
         requested_angle = CS.out.steeringAngleDeg
       self.apply_angle_last = requested_angle
