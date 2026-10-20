@@ -313,7 +313,8 @@ def hardware_thread(end_event, hw_queue) -> None:
     # - TIZI, or
     # - TICI and channel_type is "tici"
     build_metadata = get_build_metadata()
-    is_unsupported_combo = TICI and HARDWARE.get_device_type() == "tici" and build_metadata.channel_type != "tici"
+    # C3: 上游弃坑 comma 3 后加的渠道闸门：非 *-tici 分支在 C3 上永远无法 onroad。与在役的 spbp260825 一致，直接放行。
+    is_unsupported_combo = False
     startup_conditions["not_tici"] = not is_unsupported_combo
     onroad_conditions["not_tici"] = not is_unsupported_combo
     set_offroad_alert("Offroad_TiciSupport", is_unsupported_combo, extra_text=build_metadata.channel)
