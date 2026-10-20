@@ -217,6 +217,14 @@ msgstr "车内摄像头"
 msgid "Driving Personality"
 msgstr "驾驶风格"
 
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Driver Model Enable"
+msgstr "驾驶员模型使能"
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "When enabled, driver monitoring is disabled. Changing this setting will restart sunnypilot if the car is powered on."
+msgstr "启用后，将关闭驾驶员监控功能。若车辆已上电，更改此设置将重启 sunnypilot。"
+
 #: system/ui/widgets/network.py
 msgid "EDIT"
 msgstr "编辑"
