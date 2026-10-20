@@ -449,6 +449,25 @@ struct LiveMapDataSP @0xf416ec09499d9d19 {
 struct ModelDataV2SP @0xa1680744031fdb2d {
   laneTurnDirection @0 :TurnDirection;
 
+  # jetlink: an accelerator on the comma's USB-C port runs the large driving
+  # model off the device (a Jetson, a Linux PC, a Mac over USB, an iPhone over
+  # the cable), modeld keeps the camera, the warp, the parser and the control.
+  # acceleratorState is what the link is doing; JetlinkModelState.big_model_state
+  # names the same six states. bigModel is set while the large model is the one
+  # driving, as modelV2.big is on other forks. Both are set every frame modeld
+  # publishes, so a dead link reads as none on the next frame.
+  acceleratorState @1 :AcceleratorState;
+  bigModel @2 :Bool;
+
+  enum AcceleratorState {
+    none @0;         # no link, or nobody asked for one
+    joining @1;      # a host is there and the large model is being brought up
+    retrying @2;     # the last join failed; trying again after a backoff
+    ready @3;        # connected and waiting for a window: nothing is in control
+    running @4;      # the large model drives
+    unavailable @5;  # the link cannot run here (no warp, no gadget, no model)
+  }
+
   enum TurnDirection {
     none @0;
     turnLeft @1;

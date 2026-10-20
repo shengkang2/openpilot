@@ -856,6 +856,37 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
 }
 
 
+# jetlink: an accelerator on the comma's USB-C port runs the large model off the
+# comma and joins mid-drive, so these are the driver's only signal that it is
+# ready (re-engage), that it took over, and that it handed back
+EVENTS.update({
+  EventName.bigModelLoading: {
+    ET.NO_ENTRY: NoEntryAlert("Big Model Loading"),
+  },
+  EventName.bigModelReady: {
+    ET.PERMANENT: Alert(
+      "Big Model Active",
+      "",
+      AlertStatus.normal, AlertSize.none,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 1),
+  },
+  EventName.bigModelAvailable: {
+    ET.WARNING: Alert(
+      "Big Model Ready",
+      "Re-engage to use it",
+      AlertStatus.normal, AlertSize.mid,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, 1),
+  },
+  EventName.bigModelLinkLost: {
+    ET.WARNING: Alert(
+      "Big Model Lost",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, 1),
+  },
+})
+
+
 if HARDWARE.get_device_type() == 'mici':
   EVENTS.update({
     EventName.driverDistracted1: {

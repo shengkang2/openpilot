@@ -135,6 +135,19 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"UsbGpuCompiled", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},
     {"Version", {PERSISTENT, STRING}},
 
+    // jetlink: an accelerator on the comma's USB-C port runs the large driving
+    // model off the device. JetlinkLink is the setting, an index into
+    // jetlink.openpilot.MODES (0 off, 1 usb, 2 ios); jetlinkd reads it as a file.
+    // The rest are jetlink's own bookkeeping: the provisioning/join progress for
+    // the UI, the built model's spec, the catalog's LFS pointers, and the picked
+    // big model ({ref, displayName}; unset = follow whatever the far end has).
+    {"JetlinkLink", {PERSISTENT | BACKUP, INT, "0"}},
+    {"JetlinkSpec", {PERSISTENT, JSON}},
+    {"JetlinkModelPointers", {PERSISTENT, JSON}},
+    {"JetlinkCatalog", {PERSISTENT, JSON}},
+    {"JetlinkBigModel", {PERSISTENT, JSON}},
+    {"AcceleratorProgress", {CLEAR_ON_MANAGER_START, JSON}},
+
     // --- sunnypilot params --- //
     {"ApiCache_DriveStats", {PERSISTENT, JSON}},
     {"AutoLaneChangeBsmDelay", {PERSISTENT | BACKUP, BOOL, "0"}},

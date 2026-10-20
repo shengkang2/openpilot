@@ -6,7 +6,7 @@ import time
 import pickle
 import numpy as np
 import cereal.messaging as messaging
-from cereal import car, log
+from cereal import car, custom, log
 from cereal.messaging import PubMaster, SubMaster
 from msgq.visionipc import VisionIpcClient, VisionStreamType, VisionBuf
 from opendbc.car.car_helpers import get_demo_car_params
@@ -28,6 +28,15 @@ from openpilot.selfdrive.modeld.helpers import usbgpu_present, modeld_pkl_path, 
 
 from openpilot.sunnypilot.livedelay.helpers import get_lat_delay
 from openpilot.sunnypilot.modeld_v2.modeld_base import ModelStateBase
+
+# jetlink: an accelerator on the comma's USB-C port runs the policy off the
+# device. Importing the adapter is cheap (its top level is the standard library)
+# and answers as if the link were off when jetlink is not in this tree.
+from openpilot.bluepilot import jetlink_adapter as jetlink
+
+# what JetlinkModelState.big_model_state names, as modelDataV2SP.acceleratorState
+ACCELERATOR_STATES = {name: getattr(custom.ModelDataV2SP.AcceleratorState, name)
+                      for name in ('none', 'joining', 'retrying', 'ready', 'running', 'unavailable')}
 
 PROCESS_NAME = "selfdrive.modeld.modeld"
 SEND_RAW_PRED = os.getenv('SEND_RAW_PRED')
@@ -158,7 +167,13 @@ def main(demo=False):
   params.put_bool("UsbGpuPresent", _present)
   params.put_bool("UsbGpuCompiled", _compiled)
 
-  if not USBGPU:
+  # jetlink, before realtime: tinygrad's device thread and its compile pool have
+  # to exist before modeld pins itself to core 7 at SCHED_FIFO, or the threads
+  # they spawn inherit both and preempt the frame loop. False unless the link is
+  # on, a gadget exists and this camera has a warp, which is also the last veto.
+  jetlink_prepared = jetlink.prepare()
+
+  if not USBGPU and not jetlink_prepared:
     # USB GPU currently saturates a core so can't do this yet,
     # also need to move the aux USB interrupts for good timings
     config_realtime_process(7, 54)
@@ -188,12 +203,22 @@ def main(demo=False):
 
   st = time.monotonic()
   cloudlog.warning("loading model")
-  model = ModelState(vipc_client_main.width, vipc_client_main.height, USBGPU)
+  small_model = ModelState(vipc_client_main.width, vipc_client_main.height, USBGPU)
+  # jetlink: the small model drives until a host on the USB-C port has joined,
+  # then the joining model swaps the large one in underneath (it returns the
+  # small model itself when the link is off or said no in prepare())
+  model = jetlink.attach(small_model, vipc_client_main.width, vipc_client_main.height)
+  model = small_model if model is None else model
+  JOINED = model is not small_model
   cloudlog.warning(f"models loaded in {time.monotonic() - st:.1f}s, modeld starting")
 
   # messaging
   pm = PubMaster(["modelV2", "drivingModelData", "cameraOdometry", "modelDataV2SP"])
-  sm = SubMaster(["deviceState", "carState", "roadCameraState", "liveCalibration", "driverMonitoringState", "carControl", "liveDelay"])
+  # carControl/carControlSP are jetlink's: the joining model asks whether
+  # anything is in control before every frame, off this SubMaster
+  sm = SubMaster(["deviceState", "carState", "roadCameraState", "liveCalibration", "driverMonitoringState",
+                  "carControl", "carControlSP", "liveDelay"])
+  jetlink.use_submaster(sm)
 
   publish_state = PublishState()
   params = Params()
@@ -203,6 +228,7 @@ def main(demo=False):
   frame_id = 0
   last_vipc_frame_id = 0
   run_count = 0
+  last_handovers = 0  # jetlink: swaps of the model that drives, as model.last_handovers counts them
 
   model_transform_main = np.zeros((3, 3), dtype=np.float32)
   model_transform_extra = np.zeros((3, 3), dtype=np.float32)
@@ -287,10 +313,24 @@ def main(demo=False):
       frames_dropped = 0.
     run_count = run_count + 1
 
+    # jetlink: a swap in or a hand-back stalls modeld for a frame or two, and a
+    # dropped camera frame is an invalid pose and a locationd soft disable on
+    # the next tick. So the frame the model changed on is forgiven, and the
+    # filter starts over rather than counting the handover as lag
+    handovers = getattr(model, 'handovers', 0)
+    if handovers != last_handovers:
+      last_handovers = handovers
+      frame_dropped_filter.x = 0.
+      frames_dropped = 0.
+      vipc_dropped_frames = 0
+
     frame_drop_ratio = frames_dropped / (1 + frames_dropped)
     prepare_only = vipc_dropped_frames > 0
     if prepare_only:
       cloudlog.error(f"skipping model eval. Dropped {vipc_dropped_frames} frames")
+    # jetlink: modeld's share of dropped camera frames, which the large model
+    # reads before every frame and hands back past its own limit
+    model.frame_drop_ratio = frame_drop_ratio
 
     bufs = {name: buf_extra if 'big' in name else buf_main for name in model.vision_input_names}
     transforms = {name: model_transform_extra if 'big' in name else model_transform_main for name in model.vision_input_names}
@@ -305,7 +345,14 @@ def main(demo=False):
     }
 
     mt1 = time.perf_counter()
-    model_output = model.run(bufs, transforms, inputs, prepare_only)
+    if JOINED:
+      # jetlink's joining model takes after_enqueue where this ModelState takes
+      # prepare_only, so a dropped camera frame is simply not sent to it: the
+      # large model's history lives on the host, and a fallback resets the small
+      # model's anyway
+      model_output = None if prepare_only else model.run(bufs, transforms, inputs)
+    else:
+      model_output = model.run(bufs, transforms, inputs, prepare_only)
     mt2 = time.perf_counter()
     model_execution_time = mt2 - mt1
 
@@ -329,6 +376,12 @@ def main(demo=False):
       modelv2_send.modelV2.meta.laneChangeState = DH.lane_change_state
       modelv2_send.modelV2.meta.laneChangeDirection = DH.lane_change_direction
       mdv2sp_send.modelDataV2SP.laneTurnDirection = DH.lane_turn_direction
+      # jetlink: what the link is doing, for the UI and selfdrived's events, read
+      # after run() so a swap or a demote in this frame is already reflected. Set
+      # on every published frame, so a dead link reads as none the frame after
+      mdv2sp_send.modelDataV2SP.acceleratorState = ACCELERATOR_STATES.get(
+        str(getattr(model, 'big_model_state', 'none')), custom.ModelDataV2SP.AcceleratorState.none)
+      mdv2sp_send.modelDataV2SP.bigModel = bool(getattr(model, 'chestnut', False))
       drivingdata_send.drivingModelData.meta.laneChangeState = DH.lane_change_state
       drivingdata_send.drivingModelData.meta.laneChangeDirection = DH.lane_change_direction
 

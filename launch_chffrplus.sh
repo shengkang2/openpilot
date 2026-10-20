@@ -89,6 +89,11 @@ function launch {
   ln -sfn $(pwd) /data/pythonpath
   export PYTHONPATH="$PWD"
 
+  # jetlink: the vendored package links into the tree's root so `import jetlink`
+  # finds it, as this tree's own packages are found by name. Rebuilt every boot
+  # because a symlink is the one thing a git checkout does not guarantee
+  ln -sfn "$PWD/jetlink_repo/jetlink" "$PWD/jetlink"
+
   # hardware specific init
   if [ -f /AGNOS ]; then
     agnos_init

@@ -23,6 +23,7 @@ from openpilot.system.statsd import statlog
 from openpilot.common.swaglog import cloudlog
 from openpilot.system.hardware.power_monitoring import PowerMonitoring
 from openpilot.system.hardware.fan_controller import FanController
+from openpilot.bluepilot import jetlink_adapter as jetlink
 from openpilot.system.version import terms_version, training_version, get_build_metadata, terms_version_sp
 
 ThermalStatus = log.DeviceState.ThermalStatus
@@ -184,6 +185,9 @@ def hardware_thread(end_event, hw_queue) -> None:
   engaged_prev = False
   pwrsave = False
   offroad_cycle_count = 0
+  # jetlink: whether the power-off has already asked the far end to go down, so
+  # the request is made once and DoShutdown waits for it (or its timeout)
+  shutdown_requested = False
 
   params = Params()
   power_monitor = PowerMonitoring()
@@ -319,6 +323,14 @@ def hardware_thread(end_event, hw_queue) -> None:
     onroad_conditions["not_tici"] = not is_unsupported_combo
     set_offroad_alert("Offroad_TiciSupport", is_unsupported_combo, extra_text=build_metadata.channel)
 
+    # jetlink: the link the user turned on cannot run here (no warp built for this
+    # camera, no usable gadget, a jetlink package this build cannot use). Nothing
+    # else says so: the setting is on and modeld quietly stays on the small model.
+    # None with the link off, and it is a file check, so this is cheap per loop
+    jetlink_reason = jetlink.reason()
+    set_offroad_alert_if_changed("Offroad_AcceleratorUnavailable", jetlink_reason is not None,
+                                 extra_text=jetlink_reason)
+
     # if the temperature enters the danger zone, go offroad to cool down
     onroad_conditions["device_temp_good"] = thermal_status < ThermalStatus.critical
     extra_text = f"{offroad_comp_temp:.1f}C"
@@ -394,8 +406,17 @@ def hardware_thread(end_event, hw_queue) -> None:
 
     # Check if we need to shut down
     if power_monitor.should_shutdown(onroad_conditions["ignition"], in_car, off_ts, started_seen):
-      cloudlog.warning(f"shutting device down, offroad since {off_ts}")
-      params.put_bool("DoShutdown", True, block=True)
+      if not shutdown_requested:
+        cloudlog.warning(f"shutting device down, offroad since {off_ts}")
+        # jetlink: a host on the USB-C port rides the ignition rail, so it browns
+        # out with the car unless it is asked to go down first. The request is a
+        # file the gadget owner picks up; shutdown_pending() follows it and gives
+        # up after 25 s, so a host that never answers cannot hold the comma up
+        shutdown_requested = jetlink.request_shutdown("comma powering off")
+        if not shutdown_requested:
+          params.put_bool("DoShutdown", True, block=True)
+      elif not jetlink.shutdown_pending():
+        params.put_bool("DoShutdown", True, block=True)
 
     msg.deviceState.started = started_ts is not None and not offroad_mode
     msg.deviceState.startedMonoTime = int(1e9*(started_ts or 0))

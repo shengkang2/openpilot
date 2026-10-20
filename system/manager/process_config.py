@@ -5,6 +5,7 @@ import platform
 from cereal import car, custom
 from openpilot.common.params import Params
 from openpilot.common.bluepilot import is_bluepilot
+from openpilot.bluepilot import jetlink_adapter
 from openpilot.system.hardware import PC, TICI
 from openpilot.system.manager.process import PythonProcess, NativeProcess, DaemonProcess
 from openpilot.system.hardware.hw import Paths
@@ -92,6 +93,13 @@ def is_stock_model(started, params, CP: car.CarParams) -> bool:
   """Check if the active model runner is stock."""
   return bool(get_active_model_runner(params, not started) == custom.ModelManagerSP.Runner.stock)
 
+def jetlink(started, params, CP: car.CarParams) -> bool:
+  """jetlinkd, the resident USB gadget owner for an accelerator on the USB-C
+  port. It runs onroad too: a gadget whose owner exits leaves the bus. Off
+  while the setting is off, and beside a USB GPU, which runs the big model
+  itself and owns the port."""
+  return jetlink_adapter.should_run(started, params, CP)
+
 def mapd_ready(started: bool, params: Params, CP: car.CarParams) -> bool:
   return bool(os.path.exists(Paths.mapd_root()))
 
@@ -123,6 +131,10 @@ procs = [
   PythonProcess("timed", "system.timed", always_run, enabled=not PC),
 
   PythonProcess("modeld", "selfdrive.modeld.modeld", and_(only_onroad, is_stock_model)),
+  # jetlink: the gadget owner. No restart_if_crash: it is a resident process whose
+  # should_run follows the setting, so manager starts it again on its own, and a
+  # link that cannot run says so once (the offroad alert) rather than per restart
+  PythonProcess("jetlinkd", "bluepilot.jetlink_adapter", jetlink, enabled=not PC),
   PythonProcess("dmonitoringmodeld", "selfdrive.modeld.dmonitoringmodeld", driverview, enabled=(WEBCAM or not PC)),
 
   PythonProcess("sensord", "system.sensord.sensord", only_onroad, enabled=not PC),

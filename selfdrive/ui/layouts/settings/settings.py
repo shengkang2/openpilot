@@ -7,6 +7,7 @@ from openpilot.selfdrive.ui.layouts.settings.device import DeviceLayout
 from openpilot.selfdrive.ui.layouts.settings.firehose import FirehoseLayout
 from openpilot.selfdrive.ui.layouts.settings.software import SoftwareLayout
 from openpilot.selfdrive.ui.layouts.settings.toggles import TogglesLayout
+from openpilot.bluepilot.ui.layouts.jetlink import JetlinkLayout
 from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos
 from openpilot.system.ui.lib.multilang import tr, tr_noop
 from openpilot.system.ui.lib.text_measure import measure_text_cached
@@ -37,6 +38,7 @@ class PanelType(IntEnum):
   SOFTWARE = 3
   FIREHOSE = 4
   DEVELOPER = 5
+  JETLINK = 6
 
 
 @dataclass
@@ -59,6 +61,8 @@ class SettingsLayout(Widget):
       PanelType.DEVICE: PanelInfo(tr_noop("Device"), DeviceLayout()),
       PanelType.NETWORK: PanelInfo(tr_noop("Network"), NetworkUI(wifi_manager)),
       PanelType.TOGGLES: PanelInfo(tr_noop("Toggles"), TogglesLayout()),
+      # jetlink: the accelerator on the comma's USB-C port
+      PanelType.JETLINK: PanelInfo(tr_noop("Jetlink"), JetlinkLayout()),
       PanelType.SOFTWARE: PanelInfo(tr_noop("Software"), SoftwareLayout()),
       PanelType.FIREHOSE: PanelInfo(tr_noop("Firehose"), FirehoseLayout()),
       PanelType.DEVELOPER: PanelInfo(tr_noop("Developer"), DeveloperLayout()),
@@ -114,10 +118,12 @@ class SettingsLayout(Widget):
     # Store close button rect for click detection
     self._close_btn_rect = close_btn_rect
 
-    # Navigation buttons
+    # Navigation buttons. Seven panels no longer fit at NAV_BTN_HEIGHT on every
+    # screen, so the rows shrink to whatever the sidebar has left
+    nav_btn_height = min(NAV_BTN_HEIGHT, int((rect.height - 320) / max(1, len(self._panels))))
     y = rect.y + 300
     for panel_type, panel_info in self._panels.items():
-      button_rect = rl.Rectangle(rect.x + 50, y, rect.width - 150, NAV_BTN_HEIGHT)
+      button_rect = rl.Rectangle(rect.x + 50, y, rect.width - 150, nav_btn_height)
 
       # Button styling
       is_selected = panel_type == self._current_panel
@@ -133,7 +139,7 @@ class SettingsLayout(Widget):
       # Store button rect for click detection
       panel_info.button_rect = button_rect
 
-      y += NAV_BTN_HEIGHT
+      y += nav_btn_height
 
   def _draw_current_panel(self, rect: rl.Rectangle):
     rl.draw_rectangle_rounded(

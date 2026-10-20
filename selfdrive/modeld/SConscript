@@ -139,3 +139,9 @@ def tg_compile(flags, model_name):
   )
 
 tg_compile(tg_flags, 'dmonitoring_model')
+
+# jetlink: the driving warp pickle the external device's large model runs, which
+# this tree's modeld has fused into its own warp_enqueue JIT. Built here so it
+# is a build product of the same tree and camera configs; the script itself
+# builds nothing unless the tree has jetlink_repo and this is a comma.
+SConscript(File("#bluepilot/jetlink_adapter/SConscript").abspath, exports={'env': env, 'arch': arch})
