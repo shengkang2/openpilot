@@ -59,6 +59,7 @@ allowed_system_libs = {
   "EGL", "GLESv2", "GL",
   "Qt5Charts", "Qt5Core", "Qt5Gui", "Qt5Widgets",
   "dl", "drm", "gbm", "m", "pthread",
+  "usb-1.0",  # C3: 内部 DOS(F4) panda 走 USB 通道
 }
 
 def _resolve_lib(env, name):

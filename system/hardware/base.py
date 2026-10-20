@@ -211,6 +211,14 @@ class HardwareBase(ABC):
   def recover_internal_panda(self):
     pass
 
+  def defer_modem_usb(self):
+    """C3: panda 就绪前不枚举 LTE 模组 USB，避免共享 hub 抢电。"""
+    pass
+
+  def allow_modem_usb(self):
+    """C3: panda 稳定后放行 LTE 模组 USB。"""
+    pass
+
   def get_modem_data_usage(self):
     return -1, -1
 

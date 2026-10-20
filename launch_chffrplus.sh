@@ -93,6 +93,8 @@ function launch {
   if [ -f /AGNOS ]; then
     agnos_init
     fix_egl_adreno
+    # C3: 共享 USB hub 上先压住 LTE 模组，等 pandad 连上 panda 再放行
+    python3 -c "from openpilot.system.hardware.tici.modem_usb import defer_modem_usb; defer_modem_usb()" || true
   fi
 
   # write tmux scrollback to a file

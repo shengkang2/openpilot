@@ -15,20 +15,25 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.sunnypilot.selfdrive.pandad.rivian_long_flasher import flash_rivian_long
 
 
-def get_expected_signature() -> bytes:
-  fn = os.path.join(FW_PATH, McuType.H7.config.app_fn)
+def get_expected_signature(panda: Panda) -> bytes:
+  # C3: DOS(F4) 内部 panda 用 F4 固件，其余（RED_PANDA/TRES/CUATRO）用 H7
+  hw_type = panda.get_type()
+  mcu_type = McuType.F4 if hw_type == Panda.HW_TYPE_DOS else McuType.H7
+  fn = os.path.join(FW_PATH, mcu_type.config.app_fn)
   return Panda.get_signature_from_firmware(fn)
 
 def flash_panda(panda_serial: str):
   panda = Panda(panda_serial)
 
   # skip flashing if the detected panda is not supported
-  if panda.get_type() not in Panda.SUPPORTED_DEVICES:
+  # C3: DOS(F4) 虽然不在 SUPPORTED_DEVICES 里，但必须允许刷写
+  if panda.get_type() not in Panda.SUPPORTED_DEVICES \
+     and panda.get_type() != Panda.HW_TYPE_DOS:
     cloudlog.warning(f"Panda {panda_serial} is not supported (hw_type: {panda.get_type()}), skipping flash...")
     panda.close()
     return
 
-  fw_signature = get_expected_signature()
+  fw_signature = get_expected_signature(panda)
   internal_panda = panda.is_internal()
 
   panda_version = "bootstub" if panda.bootstub else panda.get_version()
@@ -130,6 +135,13 @@ def main() -> None:
         # run real pandad
         os.environ['MANAGER_DAEMON'] = 'pandad'
         process = subprocess.Popen(["./pandad"], cwd=os.path.join(BASEDIR, "selfdrive/pandad"))
+        # C3: panda 起来并稳定后，再放行 LTE 模组 USB（共享 hub 抢电保护）
+        try:
+          time.sleep(1.0)
+          HARDWARE.allow_modem_usb()
+          cloudlog.event("pandad.modem_usb_enabled")
+        except Exception:
+          cloudlog.exception("pandad.modem_usb_enable_failed")
         process.wait()
     # TODO: wrap all panda exceptions in a base panda exception
     except (usb1.USBErrorNoDevice, usb1.USBErrorPipe):

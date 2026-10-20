@@ -433,6 +433,14 @@ class Tici(HardwareBase):
     time.sleep(0.01)
     gpio_set(GPIO.STM_RST_N, 0)
 
+  def defer_modem_usb(self):
+    from openpilot.system.hardware.tici.modem_usb import defer_modem_usb
+    defer_modem_usb()
+
+  def allow_modem_usb(self):
+    from openpilot.system.hardware.tici.modem_usb import allow_modem_usb
+    allow_modem_usb()
+
   def recover_internal_panda(self):
     gpio_init(GPIO.STM_RST_N, True)
     gpio_init(GPIO.STM_BOOT0, True)
