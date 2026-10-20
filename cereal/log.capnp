@@ -133,6 +133,17 @@ struct OnroadEvent @0xc4fa6047f024e718 {
     excessiveActuation @96;
     audioFeedback @97;
 
+    # jetlink: an accelerator on the comma's USB-C port (Jetson / PC / Mac over
+    # USB, iPhone over the cable) runs the large driving model off the comma.
+    # It joins mid-drive, only while nothing is in control, so the driver is
+    # told when it is ready and re-engages to use it; loading and ready are the
+    # second after a swap in (a no-entry, then the chime), available the offer
+    # to re-engage, and linkLost the hand-back to the small model.
+    bigModelLoading @98;
+    bigModelReady @99;
+    bigModelAvailable @100;
+    bigModelLinkLost @101;
+
     soundsUnavailableDEPRECATED @47;
   }
 }

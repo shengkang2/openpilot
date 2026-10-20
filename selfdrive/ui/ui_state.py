@@ -27,6 +27,19 @@ class UIStatus(Enum):
   LONG_ONLY = "long_only"
 
 
+class JetlinkState(Enum):
+  """What an accelerator on the comma's USB-C port is doing, as the panels and
+  the icons show it. The names are jetlink.openpilot.Status.icon's, so a state
+  read off the link maps straight onto one of these."""
+  DISCONNECTED = "disconnected"   # nothing on the port, or the setting is off
+  UNCOMPILED = "uncompiled"       # a host is there but its engine is not built
+  LOADING = "loading"             # provisioning, or the large model coming up
+  READY = "ready"                 # connected and built, waiting for a host
+  WAITING = "waiting"             # ready and only the swap window is missing
+  ACTIVE = "active"               # the large model drives
+  FAILED = "failed"               # the link cannot run (the reason says why)
+
+
 class UIState(UIStateSP):
   _instance: 'UIState | None' = None
 
@@ -64,6 +77,8 @@ class UIState(UIStateSP):
         "liveParameters",
         "testJoystick",
         "rawAudioData",
+        # jetlink: acceleratorState and bigModel, which the large model's state is read off
+        "modelDataV2SP",
       ] + self.sm_services_ext
     )
 
@@ -83,6 +98,11 @@ class UIState(UIStateSP):
     self.experimental_mode: bool = self.params.get_bool("ExperimentalMode")
     self.usbgpu: bool = self.params.get_bool("UsbGpuPresent")
     self.usbgpu_compiled: bool = self.params.get_bool("UsbGpuCompiled")
+    # jetlink: the link's snapshot, taken with the params at 5 Hz, and the state
+    # the panels and icons draw. None without jetlink in this tree
+    self.jetlink = None
+    self.jetlink_state: JetlinkState = JetlinkState.DISCONNECTED
+    self.adb_blocked: bool = False
     self.started: bool = False
     self.ignition: bool = False
     self.recording_audio: bool = False
@@ -215,7 +235,43 @@ class UIState(UIStateSP):
     self.usbgpu = self.params.get_bool("UsbGpuPresent")
     self.usbgpu_compiled = self.params.get_bool("UsbGpuCompiled")
 
+    self._update_jetlink()
+
     UIStateSP.update_params(self)
+
+  def _update_jetlink(self) -> None:
+    """The accelerator's snapshot, off the params and the link's own records at
+    the params rate: the panels and the icons read this, never the link, which
+    is another process's USB device."""
+    try:
+      from openpilot.bluepilot import jetlink_adapter
+      self.jetlink = jetlink_adapter.status()
+    except Exception:
+      self.jetlink = None
+
+    state = JetlinkState.DISCONNECTED
+    if self.jetlink is not None:
+      # onroad the link's state is modeld's, offroad the records'
+      model_seen = self.started and bool(self.sm.seen.get("modelV2", False))
+      running_big = False
+      accelerator_state = "none"
+      if self.sm.seen.get("modelDataV2SP", False):
+        mdv2 = self.sm["modelDataV2SP"]
+        running_big = bool(mdv2.bigModel) and bool(self.sm.alive.get("modelDataV2SP", False))
+        accelerator_state = str(mdv2.acceleratorState)
+      try:
+        state = JetlinkState(self.jetlink.icon(self.started, model_seen, running_big, accelerator_state))
+      except Exception:
+        state = JetlinkState.DISCONNECTED
+    self.jetlink_state = state
+
+    # the gadget holds the USB controller's device side, which ADB needs
+    try:
+      mode = int(self.params.get("JetlinkLink") or 0)
+    except (TypeError, ValueError):
+      mode = 0
+    self.adb_blocked = mode > 0
+
 
 
 class Device(DeviceSP):

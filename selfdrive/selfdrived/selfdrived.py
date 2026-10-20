@@ -17,6 +17,7 @@ from openpilot.common.gps import get_gps_location_service
 from openpilot.selfdrive.car.car_specific import CarSpecificEvents
 from openpilot.selfdrive.locationd.helpers import PoseCalibrator, Pose
 from openpilot.selfdrive.selfdrived.events import Events, ET
+from openpilot.bluepilot.selfdrive.selfdrived.accelerator_events import AcceleratorEvents
 from openpilot.selfdrive.selfdrived.helpers import ExcessiveActuationCheck
 from openpilot.selfdrive.selfdrived.state import StateMachine
 from openpilot.selfdrive.selfdrived.alertmanager import AlertManager, set_offroad_alert
@@ -115,7 +116,9 @@ class SelfdriveD(CruiseHelper):
                                    'carOutput', 'driverMonitoringState', 'longitudinalPlan', 'livePose', 'liveDelay',
                                    'managerState', 'liveParameters', 'radarState', 'liveTorqueParameters',
                                    'controlsState', 'carControl', 'driverAssistance', 'alertDebug', 'userBookmark', 'audioFeedback',
-                                   'lateralManeuverPlan', 'modelDataV2SP', 'longitudinalPlanSP', 'carStateSP'] + \
+                                   'lateralManeuverPlan', 'modelDataV2SP', 'longitudinalPlanSP', 'carStateSP',
+                                   # jetlink: is MADS in control, for the accelerator's events
+                                   'carControlSP'] + \
                                    self.camera_packets + self.sensor_packets + self.gps_packets,
                                   ignore_alive=ignore, ignore_avg_freq=ignore,
                                   ignore_valid=ignore, frequency=int(1/DT_CTRL))
@@ -171,7 +174,11 @@ class SelfdriveD(CruiseHelper):
     # BluePilot: one-shot diagnostic for deviceState publishing stalls (hardwared freeze)
     self.ds_stall_logged = False
 
-    self.ignored_processes = {'mapd', }
+    # jetlink: an accelerator that joins mid-drive, and the second of settling
+    # after each switch during which the checks below are held back
+    self.accelerator = AcceleratorEvents()
+
+    self.ignored_processes = {'mapd', } | set(AcceleratorEvents.OPTIONAL_PROCESSES)
 
     # Determine startup event
     self.startup_event = EventName.startup
@@ -226,6 +233,10 @@ class SelfdriveD(CruiseHelper):
     if not self.initialized:
       self.events.add(EventName.selfdriveInitializing)
       return
+
+    # jetlink: the accelerator's events. "In control" is MADS enabled, which counts
+    # while paused, as the adapter's swap gate reads it
+    self.accelerator.update(self.sm, self.enabled or self.sm['carControlSP'].mads.enabled, self.events)
 
     # Check for user bookmark press (bookmark button or end of LKAS button feedback)
     if self.sm.updated['userBookmark']:
@@ -432,7 +443,8 @@ class SelfdriveD(CruiseHelper):
     # briefly after returning to D — must not surface as "Communication Issue Between Processes".
     has_disable_events = self.events.contains(ET.NO_ENTRY) and (self.events.contains(ET.SOFT_DISABLE) or self.events.contains(ET.IMMEDIATE_DISABLE))
     no_system_errors = (not has_disable_events) or (len(self.events) == num_events)
-    if not self.sm.all_checks() and no_system_errors and not ignore_gear_faults:
+    # jetlink: a switch costs modeld a frame or two, which reads as a comm issue
+    if not self.sm.all_checks() and no_system_errors and not ignore_gear_faults and not self.accelerator.settling:
       if not self.sm.all_alive():
         self.events.add(EventName.commIssue)
       elif not self.sm.all_freq_ok():
@@ -460,7 +472,8 @@ class SelfdriveD(CruiseHelper):
     else:
       self.logged_comm_issue = None
 
-    if not self.CP.notCar:
+    # jetlink: the frame the model changed on has no pose and no locationd inputs
+    if not self.CP.notCar and not self.accelerator.settling:
       if not self.sm['livePose'].posenetOK:
         self.events.add(EventName.posenetInvalid)
       locationd_error = not self.sm['livePose'].inputsOK

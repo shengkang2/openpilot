@@ -54,5 +54,10 @@
     "text": "<b>Unsupported branch detected</b> - The current version of <b><u>%1</u></b> branch is no longer supported on the comma three. Please go to <b>[Device > Software]</b> and install a supported branch with <b><u>-tici</u></b> in the branch name for the comma three.",
     "severity": 1,
     "_comment": "Set extra field to the current branch name."
+  },
+  "Offroad_AcceleratorUnavailable": {
+    "text": "<b>Jetlink unavailable</b> - the link is on but cannot run on this device. %1\n\nTurn Jetlink off in <b>[Settings > Jetlink]</b> to stop this.",
+    "severity": 0,
+    "_comment": "Jetlink (external accelerator on the comma's USB-C port). Set extra field to the reason: no warp built for this camera, no usable gadget, or a jetlink package this build cannot use."
   }
 }
