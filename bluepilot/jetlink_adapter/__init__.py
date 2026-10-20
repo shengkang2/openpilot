@@ -26,8 +26,8 @@ bp-7.0 (sunnypilot base) divergences from the dragonpilot port (search "bp:"):
     ALKA_HOLD_SECONDS: MADS stays paused through bigModelLoading by itself.
   - modelDataV2SP exists: acceleratorState and bigModel ride on sunnypilot's
     own ModelDataV2SP, which modeld already publishes, instead of a new
-    ModelExt struct. The onroad events stay native (EventName @98-@101 there,
-    which bp-7.0 leaves free).
+    ModelExt struct. The onroad events stay native (EventName @102-@105,
+    the first ordinals bp-7.0 leaves free after 98/99).
   - model manager: sunnypilot's ModelManagerSP and Paths.model_root() exist,
     so the big-model catalog can be folded into sunnypilot's own list later
     (should_extend_catalog/extend_catalog below). For this version the pick

@@ -139,10 +139,10 @@ struct OnroadEvent @0xc4fa6047f024e718 {
     # told when it is ready and re-engages to use it; loading and ready are the
     # second after a swap in (a no-entry, then the chime), available the offer
     # to re-engage, and linkLost the hand-back to the small model.
-    bigModelLoading @98;
-    bigModelReady @99;
-    bigModelAvailable @100;
-    bigModelLinkLost @101;
+    bigModelLoading @102;
+    bigModelReady @103;
+    bigModelAvailable @104;
+    bigModelLinkLost @105;
 
     soundsUnavailableDEPRECATED @47;
   }
