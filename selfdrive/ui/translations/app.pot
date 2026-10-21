@@ -869,3 +869,15 @@ msgstr ""
 msgid "camera starting"
 msgstr ""
 
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Driver Model Enable"
+msgstr ""
+
+#: openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "When enabled, driver monitoring is disabled. Changing this setting will restart sunnypilot if the car is powered on."
+msgstr ""
+
+#: openpilot/selfdrive/ui/onroad/driver_camera_dialog.py
+msgid "driver monitoring is off, camera unavailable"
+msgstr ""
