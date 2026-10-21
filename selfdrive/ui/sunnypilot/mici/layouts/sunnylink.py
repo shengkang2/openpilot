@@ -180,7 +180,7 @@ class SunnylinkLayoutMici(NavScroller):
       if backup_status == custom.BackupManagerSP.Status.inProgress:
         self._backup_in_progress = True
         self._backup_btn.set_text(tr("backing up"))
-        text = tr(f"{backup_progress}%")
+        text = f"{backup_progress}%"
         self._backup_btn.set_value(text)
 
       elif backup_status == custom.BackupManagerSP.Status.failed:
@@ -202,7 +202,7 @@ class SunnylinkLayoutMici(NavScroller):
       if restore_status == custom.BackupManagerSP.Status.inProgress:
         self._restore_in_progress = True
         self._restore_btn.set_text(tr("restoring"))
-        text = tr(f"{restore_progress}%")
+        text = f"{restore_progress}%"
         self._restore_btn.set_value(text)
 
       elif restore_status == custom.BackupManagerSP.Status.failed:
@@ -210,13 +210,13 @@ class SunnylinkLayoutMici(NavScroller):
         self._restore_btn.set_enabled(not ui_state.is_onroad())
         self._restore_btn.set_text(tr("restore"))
         self._restore_btn.set_value(tr("failed"))
-        gui_app.push_widget(BigDialog(title=tr("unable to restore"), description="try again later."))
+        gui_app.push_widget(BigDialog(title=tr("unable to restore"), description=tr("try again later.")))
 
       elif (restore_status == custom.BackupManagerSP.Status.completed or
             (restore_status == custom.BackupManagerSP.Status.idle and restore_progress == 100.0)):
         self._restore_in_progress = False
         gui_app.push_widget(BigConfirmationDialog(
-          title="slide to restart", icon=gui_app.texture("icons_mici/settings/device/reboot.png", 64, 64),
+          title=tr("slide to restart"), icon=gui_app.texture("icons_mici/settings/device/reboot.png", 64, 64),
           confirm_callback=lambda: gui_app.request_close()))
 
     else:

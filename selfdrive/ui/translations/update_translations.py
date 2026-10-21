@@ -1,23 +1,37 @@
 #!/usr/bin/env python3
-from itertools import chain
 import os
 from openpilot.common.basedir import BASEDIR
-from openpilot.system.ui.lib.multilang import SYSTEM_UI_DIR, UI_DIR, TRANSLATIONS_DIR, multilang
+from openpilot.system.ui.lib.multilang import TRANSLATIONS_DIR, multilang
 from openpilot.selfdrive.ui.translations.potools import extract_strings, generate_pot, merge_po, init_po
 
 LANGUAGES_FILE = os.path.join(str(TRANSLATIONS_DIR), "languages.json")
 POT_FILE = os.path.join(str(TRANSLATIONS_DIR), "app.pot")
 
+# Directories that may contain tr()/trn()/tr_noop() calls. Every UI tree that
+# ships user-visible text must be listed here, otherwise its strings never make
+# it into app.pot and get dropped from the .po files on the next merge.
+SCAN_DIRS = [
+  "system/ui",
+  os.path.join("selfdrive", "ui", "widgets"),
+  os.path.join("selfdrive", "ui", "layouts"),
+  os.path.join("selfdrive", "ui", "onroad"),
+  os.path.join("selfdrive", "ui", "sunnypilot"),
+  os.path.join("selfdrive", "ui", "mici"),
+  os.path.join("selfdrive", "ui", "bp"),
+  os.path.join("selfdrive", "ui", "body"),
+  os.path.join("selfdrive", "ui", "feedback"),
+  os.path.join("selfdrive", "ui", "installer"),
+  "bluepilot",
+]
+
 
 def update_translations():
   files = []
-  for root, _, filenames in chain(os.walk(SYSTEM_UI_DIR),
-                                  os.walk(os.path.join(UI_DIR, "widgets")),
-                                  os.walk(os.path.join(UI_DIR, "layouts")),
-                                  os.walk(os.path.join(UI_DIR, "onroad"))):
-    for filename in filenames:
-      if filename.endswith(".py"):
-        files.append(os.path.relpath(os.path.join(root, filename), BASEDIR))
+  for rel in SCAN_DIRS:
+    for root, _, filenames in os.walk(os.path.join(BASEDIR, rel)):
+      for filename in filenames:
+        if filename.endswith(".py"):
+          files.append(os.path.relpath(os.path.join(root, filename), BASEDIR))
 
   # Extract translatable strings and generate .pot template
   entries = extract_strings(files, BASEDIR)

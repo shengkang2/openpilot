@@ -88,7 +88,7 @@ class OSMLayout(Widget):
 
   def _on_confirm_delete_maps(self):
     self._delete_maps_btn.action_item.set_enabled(False)
-    self._delete_maps_btn.action_item.set_text("DELETING...")
+    self._delete_maps_btn.action_item.set_text(tr("DELETING..."))
     threading.Thread(target=self._do_delete_maps).start()
 
   def _delete_maps(self):
@@ -148,7 +148,8 @@ class OSMLayout(Widget):
     key = "OsmLocation" if region_type == "Country" else "OsmState"
     current = ui_state.params.get(f"{key}Name") or ""
 
-    dialog = TreeOptionDialog(tr(f"Select {region_type}"), [TreeFolder(folder="", nodes=locations)], current_ref=current, search_prompt="Perform a search")
+    region_label = tr("Country") if region_type == "Country" else tr("State")
+    dialog = TreeOptionDialog(tr("Select {}").format(region_label), [TreeFolder(folder="", nodes=locations)], current_ref=current, search_prompt=tr("Perform a search"))
     dialog.on_exit = lambda res: self._handle_region_selection(region_type, locations, key, res, dialog.selection_ref)
     gui_app.push_widget(dialog)
 

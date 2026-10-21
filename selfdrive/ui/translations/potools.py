@@ -188,6 +188,34 @@ def write_po(path: str | Path, header: POEntry | None, entries: list[POEntry]) -
 
 # ──── String extraction (replaces xgettext) ────
 
+def _const_strs(node: ast.AST) -> list[str]:
+  """Collect the possible constant strings an expression can evaluate to.
+
+  Covers the wrapping styles used for long descriptions, all of which used to be
+  skipped and therefore stayed English at runtime:
+    tr("a " + "b")            -> explicit concatenation (BinOp)
+    tr("a " "b")              -> folded to one Constant by the parser
+    tr(f"a {x}") with no vars -> JoinedStr made only of constants
+    tr("a" if c else "b")     -> IfExp, both branches are extracted
+  """
+  if isinstance(node, ast.Constant):
+    return [node.value] if isinstance(node.value, str) else []
+  if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+    left, right = _const_strs(node.left), _const_strs(node.right)
+    return [l + r for l in left for r in right]
+  if isinstance(node, ast.JoinedStr):
+    parts: list[str] = []
+    for v in node.values:
+      if isinstance(v, ast.Constant) and isinstance(v.value, str):
+        parts.append(v.value)
+      else:
+        return []
+    return [''.join(parts)]
+  if isinstance(node, ast.IfExp):
+    return _const_strs(node.body) + _const_strs(node.orelse)
+  return []
+
+
 def extract_strings(files: list[str], basedir: str) -> list[POEntry]:
   """Extract tr/trn/tr_noop calls from Python source files."""
   seen: dict[str, POEntry] = {}
@@ -220,25 +248,24 @@ def extract_strings(files: list[str], basedir: str) -> list[POEntry]:
       is_flagged = name in ('tr', 'trn')
 
       if name in ('tr', 'tr_noop'):
-        if not node.args or not isinstance(node.args[0], ast.Constant) or not isinstance(node.args[0].value, str):
+        if not node.args:
           continue
-        msgid = node.args[0].value
-        if msgid in seen:
-          if ref not in seen[msgid].source_refs:
-            seen[msgid].source_refs.append(ref)
-        else:
-          flags = ['python-format'] if is_flagged else []
-          seen[msgid] = POEntry(msgid=msgid, source_refs=[ref], flags=flags)
+        for msgid in _const_strs(node.args[0]):
+          if msgid in seen:
+            if ref not in seen[msgid].source_refs:
+              seen[msgid].source_refs.append(ref)
+          else:
+            flags = ['python-format'] if is_flagged else []
+            seen[msgid] = POEntry(msgid=msgid, source_refs=[ref], flags=flags)
 
       elif name == 'trn':
         if len(node.args) < 2:
           continue
-        a1, a2 = node.args[0], node.args[1]
-        if not (isinstance(a1, ast.Constant) and isinstance(a1.value, str)):
+        ids = _const_strs(node.args[0])
+        plurals = _const_strs(node.args[1])
+        if len(ids) != 1 or len(plurals) != 1:
           continue
-        if not (isinstance(a2, ast.Constant) and isinstance(a2.value, str)):
-          continue
-        msgid, msgid_plural = a1.value, a2.value
+        msgid, msgid_plural = ids[0], plurals[0]
         if msgid in seen:
           if ref not in seen[msgid].source_refs:
             seen[msgid].source_refs.append(ref)
