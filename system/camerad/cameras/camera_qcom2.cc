@@ -212,6 +212,9 @@ void CameraState::set_camera_exposure(float grey_frac) {
 }
 
 void CameraState::sendState() {
+  // pm only exists when init() got past the enabled check
+  if (!camera.enabled) return;
+
   camera.buf.sendFrameToVipc();
 
   MessageBuilder msg;

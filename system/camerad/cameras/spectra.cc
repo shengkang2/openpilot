@@ -1035,7 +1035,14 @@ void SpectraCamera::camera_map_bufs() {
 
 bool SpectraCamera::openSensor() {
   sensor_fd = open_v4l_by_name_and_index("cam-sensor-driver", cc.camera_num);
-  assert(sensor_fd >= 0);
+  if (sensor_fd < 0) {
+    // No subdev at all, e.g. a unit shipped without the driver camera (3XL). Aborting
+    // here would put camerad in a crash loop and take the road cameras down with it,
+    // so degrade to "this camera is off" like any other bringup failure.
+    LOGE("** sensor %d has no v4l subdev, disabling", cc.camera_num);
+    enabled = false;
+    return false;
+  }
   LOGD("opened sensor for %d", cc.camera_num);
 
   LOGD("-- Probing sensor %d", cc.camera_num);
