@@ -4,6 +4,7 @@ from openpilot.selfdrive.ui.mici.layouts.settings.network.wifi_ui import WifiIco
 from openpilot.selfdrive.ui.mici.widgets.button import BigButton
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.lib.wifi_manager import WifiManager, ConnectStatus, SecurityType, normalize_ssid
+from openpilot.system.ui.lib.multilang import tr
 
 
 class WifiNetworkButton(BigButton):
@@ -35,7 +36,7 @@ class WifiNetworkButton(BigButton):
     else:
       display_network = None
       self.set_text("wi-fi")
-      self.set_value("not connected")
+      self.set_value(tr("not connected"))
 
     if display_network is not None:
       strength = WifiIcon.get_strength_icon_idx(display_network.strength)

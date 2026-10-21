@@ -7,6 +7,7 @@ from openpilot.system.ui.lib.application import gui_app
 from openpilot.selfdrive.ui.layouts.settings.common import restart_needed_callback
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.selfdrive.ui.widgets.ssh_key import SshKeyFetcher
+from openpilot.system.ui.lib.multilang import tr
 
 
 class AlphaLongConfirmPage(NavScroller):
@@ -36,7 +37,7 @@ class DeveloperLayoutMici(NavScroller):
 
     def github_username_callback(username: str):
       if username:
-        self._ssh_keys_btn.set_value("Loading...")
+        self._ssh_keys_btn.set_value(tr("Loading..."))
         self._ssh_keys_btn.set_enabled(False)
 
         def on_response(error):
@@ -44,13 +45,13 @@ class DeveloperLayoutMici(NavScroller):
           if error is None:
             self._ssh_keys_btn.set_value(username)
           else:
-            self._ssh_keys_btn.set_value("Not set")
+            self._ssh_keys_btn.set_value(tr("Not set"))
             gui_app.push_widget(BigDialog("", error))
 
         self._ssh_fetcher.fetch(username, on_response)
       else:
         self._ssh_fetcher.clear()
-        self._ssh_keys_btn.set_value("Not set")
+        self._ssh_keys_btn.set_value(tr("Not set"))
 
     def ssh_keys_callback():
       github_username = ui_state.params.get("GithubUsername") or ""

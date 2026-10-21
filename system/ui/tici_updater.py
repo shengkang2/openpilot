@@ -12,6 +12,7 @@ from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.button import Button, ButtonStyle
 from openpilot.system.ui.widgets.label import gui_text_box, gui_label
 from openpilot.system.ui.widgets.network import WifiManagerUI
+from openpilot.system.ui.lib.multilang import tr
 
 # Constants
 MARGIN = 50
@@ -46,10 +47,10 @@ class Updater(Widget):
     self.wifi_manager_ui = WifiManagerUI(WifiManager())
 
     # Buttons
-    self._wifi_button = Button("Connect to Wi-Fi", click_callback=lambda: self.set_current_screen(Screen.WIFI))
-    self._install_button = Button("Install", click_callback=self.install_update, button_style=ButtonStyle.PRIMARY)
-    self._back_button = Button("Back", click_callback=lambda: self.set_current_screen(Screen.PROMPT))
-    self._reboot_button = Button("Reboot", click_callback=lambda: HARDWARE.reboot())
+    self._wifi_button = Button(tr("Connect to Wi-Fi"), click_callback=lambda: self.set_current_screen(Screen.WIFI))
+    self._install_button = Button(tr("Install"), click_callback=self.install_update, button_style=ButtonStyle.PRIMARY)
+    self._back_button = Button(tr("Back"), click_callback=lambda: self.set_current_screen(Screen.PROMPT))
+    self._reboot_button = Button(tr("Reboot"), click_callback=lambda: HARDWARE.reboot())
 
   def set_current_screen(self, screen: Screen):
     self.current_screen = screen

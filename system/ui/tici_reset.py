@@ -12,6 +12,7 @@ from openpilot.system.ui.lib.application import gui_app, FontWeight, FONT_SCALE
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.button import Button, ButtonStyle
 from openpilot.system.ui.widgets.label import gui_label, gui_text_box
+from openpilot.system.ui.lib.multilang import tr
 
 USERDATA = "/dev/disk/by-partlabel/userdata"
 TIMEOUT = 3*60
@@ -35,9 +36,9 @@ class Reset(Widget):
     self._mode = mode
     self._previous_reset_state = None
     self._reset_state = ResetState.NONE
-    self._cancel_button = Button("Cancel", gui_app.request_close)
-    self._confirm_button = Button("Confirm", self._confirm, button_style=ButtonStyle.PRIMARY)
-    self._reboot_button = Button("Reboot", lambda: os.system("sudo reboot"))
+    self._cancel_button = Button(tr("Cancel"), gui_app.request_close)
+    self._confirm_button = Button(tr("Confirm"), self._confirm, button_style=ButtonStyle.PRIMARY)
+    self._reboot_button = Button(tr("Reboot"), lambda: os.system("sudo reboot"))
 
   def _do_erase(self):
     if PC:

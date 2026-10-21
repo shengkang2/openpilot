@@ -17,6 +17,7 @@ from openpilot.common.filter_simple import BounceFilter
 from openpilot.common.transformations.camera import DEVICE_CAMERAS, DeviceCameraConfig, view_frame_from_device_frame
 from openpilot.common.transformations.orientation import rot_from_euler
 from enum import IntEnum
+from openpilot.system.ui.lib.multilang import tr
 
 if gui_app.sunnypilot_ui():
   from openpilot.selfdrive.ui.sunnypilot.mici.onroad.hud_renderer import HudRendererSP as HudRenderer
@@ -171,11 +172,11 @@ class AugmentedRoadView(CameraView):
 
     # update offroad label
     if ui_state.panda_type == log.PandaState.PandaType.unknown:
-      self._offroad_label.set_text("system booting")
+      self._offroad_label.set_text(tr("system booting"))
     elif ui_state.ignition and not ui_state.started:
-      self._offroad_label.set_text("openpilot can't start\ncheck alerts")
+      self._offroad_label.set_text(tr("openpilot can't start\ncheck alerts"))
     else:
-      self._offroad_label.set_text("start the car to\nuse sunnypilot")
+      self._offroad_label.set_text(tr("start the car to\nuse sunnypilot"))
 
   def _handle_mouse_release(self, mouse_pos: MousePos):
     # Don't trigger click callback if bookmark was triggered

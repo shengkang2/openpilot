@@ -13,12 +13,13 @@ from openpilot.system.ui.widgets.scroller import Scroller
 from openpilot.system.ui.widgets.label import UnifiedLabel
 from openpilot.system.ui.mici_setup import (NetworkSetupPage, FailedPage, NetworkConnectivityMonitor,
                                             GreyBigButton, BigPillButton)
+from openpilot.system.ui.lib.multilang import tr
 
 
 class UpdaterNetworkSetupPage(NetworkSetupPage):
   def __init__(self, network_monitor, continue_callback):
     super().__init__(network_monitor, continue_callback, back_callback=None)
-    self._continue_button.set_text("download\n& install")
+    self._continue_button.set_text(tr("download\n& install"))
     self._continue_button.set_green(False)
 
 
@@ -80,7 +81,7 @@ class Updater(Scroller):
 
     self._progress_page = ProgressPage()
 
-    self._failed_page = FailedPage(self._retry, title="update failed")
+    self._failed_page = FailedPage(self._retry, title=tr("update failed"))
 
     self._continue_button = BigPillButton("next")
     self._continue_button.set_click_callback(lambda: gui_app.push_widget(self._network_setup_page))

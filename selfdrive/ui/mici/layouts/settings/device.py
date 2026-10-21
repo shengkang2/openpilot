@@ -139,14 +139,14 @@ class PairBigButton(BigButton):
     super()._update_state()
 
     if ui_state.prime_state.is_paired():
-      self.set_text("paired")
+      self.set_text(tr("paired"))
       if ui_state.prime_state.is_prime():
-        self.set_value("subscribed")
+        self.set_value(tr("subscribed"))
       else:
-        self.set_value("upgrade to prime")
+        self.set_value(tr("upgrade to prime"))
     else:
-      self.set_text("pair")
-      self.set_value("connect.comma.ai")
+      self.set_text(tr("pair"))
+      self.set_value(tr("connect.comma.ai"))
 
   def _handle_mouse_release(self, mouse_pos: MousePos):
     super()._handle_mouse_release(mouse_pos)
@@ -211,7 +211,7 @@ class UpdateOpenpilotBigButton(BigButton):
     if value:
       self.set_text("")
     else:
-      self.set_text("update sunnypilot")
+      self.set_text(tr("update sunnypilot"))
 
   def _update_state(self):
     super()._update_state()
@@ -228,7 +228,7 @@ class UpdateOpenpilotBigButton(BigButton):
       self.set_rotate_icon(False)
       self.set_enabled(True)
       if self.get_value() != "update now":
-        self.set_value("update now")
+        self.set_value(tr("update now"))
         self.set_icon(self._txt_reboot_icon)
 
     elif self._state == UpdaterState.WAITING_FOR_UPDATER:
@@ -242,7 +242,7 @@ class UpdateOpenpilotBigButton(BigButton):
 
       if self._waiting_for_updater_t is not None and rl.get_time() - self._waiting_for_updater_t > UPDATER_TIMEOUT:
         self.set_rotate_icon(False)
-        self.set_value("updater failed\nto respond")
+        self.set_value(tr("updater failed\nto respond"))
         self._state = UpdaterState.IDLE
         self._hide_value_t = rl.get_time()
 
@@ -260,17 +260,17 @@ class UpdateOpenpilotBigButton(BigButton):
       if failed:
         self.set_enabled(True)  # allow retry when failure came from updater param
         if self.get_value() != "failed to update":
-          self.set_value("failed to update")
+          self.set_value(tr("failed to update"))
 
       elif ui_state.params.get_bool("UpdaterFetchAvailable"):
         self.set_enabled(True)
         if self.get_value() != "download update":
-          self.set_value("download update")
+          self.set_value(tr("download update"))
 
       elif self._hide_value_t is not None:
         self.set_enabled(True)
         if self.get_value() == "checking...":
-          self.set_value("up to date")
+          self.set_value(tr("up to date"))
           self.set_icon(self._txt_up_to_date_icon)
 
         # Hide previous text after short amount of time (up to date or failed)

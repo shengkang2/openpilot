@@ -10,6 +10,7 @@ from openpilot.system.ui.lib.application import gui_app, MousePos, FontWeight
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.scroller import NavScroller
 from openpilot.system.ui.lib.wifi_manager import WifiManager, Network, SecurityType, normalize_ssid
+from openpilot.system.ui.lib.multilang import tr
 
 
 class LoadingAnimation(Widget):
@@ -214,16 +215,16 @@ class WifiButton(BigButton):
       self._sub_label.set_font_weight(FontWeight.ROMAN)
 
       if self._network_forgetting:
-        self.set_value("forgetting...")
+        self.set_value(tr("forgetting..."))
       elif self._is_connecting:
         self.set_value("starting..." if self._network.is_tethering else "connecting...")
       elif self._is_connected:
         self.set_value("tethering" if self._network.is_tethering else "connected")
       elif self._network_missing:
         # after connecting/connected since NM will still attempt to connect/stay connected for a while
-        self.set_value("not in range")
+        self.set_value(tr("not in range"))
       else:
-        self.set_value("unsupported")
+        self.set_value(tr("unsupported"))
 
     else:  # saved, wrong password, or unknown
       self.set_value("wrong password" if self._wrong_password else "connect")

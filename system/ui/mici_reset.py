@@ -12,6 +12,7 @@ from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.widgets.scroller import Scroller
 from openpilot.system.ui.mici_setup import GreyBigButton, FailedPage
 from openpilot.selfdrive.ui.mici.widgets.dialog import BigDialog, BigConfirmationCircleButton
+from openpilot.system.ui.lib.multilang import tr
 
 USERDATA = "/dev/disk/by-partlabel/userdata"
 TIMEOUT = 3*60
@@ -87,9 +88,9 @@ class Reset(Scroller):
     if mode != ResetMode.USER_RESET:
       self._scroller.add_widget(GreyBigButton("", "Resetting erases all user content & data."))
       if mode == ResetMode.RECOVER:
-        main_card.set_value("user data partition\ncould not be mounted")
+        main_card.set_value(tr("user data partition\ncould not be mounted"))
       elif mode == ResetMode.TAP_RESET:
-        main_card.set_value("reset triggered by\ntapping the screen")
+        main_card.set_value(tr("reset triggered by\ntapping the screen"))
 
     self._scroller.add_widgets([
       GreyBigButton("", "For a deeper reset, go to\nhttps://flash.comma.ai"),
