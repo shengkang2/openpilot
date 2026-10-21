@@ -1,0 +1,526 @@
+VERSION "reconstructed from runtime/exported assets"
+
+NS_ :
+  NS_DESC_
+  CM_
+  BA_DEF_
+  BA_
+  VAL_
+  CAT_DEF_
+  CAT_
+  FILTER
+  BA_DEF_DEF_
+  EV_DATA_
+  ENVVAR_DATA_
+  SGTYPE_
+  SGTYPE_VAL_
+  BA_DEF_SGTYPE_
+  BA_SGTYPE_
+  SIG_TYPE_REF_
+  VAL_TABLE_
+  SIG_GROUP_
+  SIG_VALTYPE_
+  SIGTYPE_VALTYPE_
+  BO_TX_BU_
+  BA_DEF_REL_
+  BA_REL_
+  BA_DEF_DEF_REL_
+  BU_SG_REL_
+  BU_EV_REL_
+  BU_BO_REL_
+  SG_MUL_VAL_
+
+BS_:
+
+BU_: BYD EPS ADAS RADAR CAMERA BCM VCU BMS
+
+CM_ "This DBC is a reconstruction scaffold generated from recovered BYD assets. Signal definitions must be validated against live CAN logs.";
+
+BO_ 85 MSG_85: 8 XXX
+ SG_ SIG_85_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 140 MSG_140: 8 XXX
+ SG_ SIG_140_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 204 MSG_204: 20 XXX
+ SG_ SIG_204_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 213 MSG_213: 8 XXX
+ SG_ SIG_213_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 234 MSG_234: 8 XXX
+ SG_ SIG_234_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 235 MSG_235: 8 XXX
+ SG_ SIG_235_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 256 MSG_256: 8 XXX
+ SG_ SIG_256_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 257 MSG_257: 8 XXX
+ SG_ SIG_257_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 258 MSG_258: 8 XXX
+ SG_ SIG_258_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 259 MSG_259: 8 XXX
+ SG_ SIG_259_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 260 MSG_260: 8 XXX
+ SG_ SIG_260_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 261 MSG_261: 8 XXX
+ SG_ SIG_261_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 262 MSG_262: 8 XXX
+ SG_ SIG_262_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 263 MSG_263: 8 XXX
+ SG_ SIG_263_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 264 MSG_264: 8 XXX
+ SG_ SIG_264_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 265 MSG_265: 8 XXX
+ SG_ SIG_265_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 266 MSG_266: 8 XXX
+ SG_ SIG_266_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 269 MSG_269: 8 XXX
+ SG_ SIG_269_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 270 MSG_270: 8 XXX
+ SG_ SIG_270_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 287 MSG_287: 5 XXX
+ SG_ SIG_287_RAW : 0|40@1+ (1,0) [0|0] "" XXX
+
+BO_ 289 MSG_289: 8 XXX
+ SG_ SIG_289_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 290 MSG_290: 8 XXX
+ SG_ SIG_290_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 291 MSG_291: 8 XXX
+ SG_ SIG_291_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 296 MSG_296: 8 XXX
+ SG_ SIG_296_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 300 MSG_300: 8 XXX
+ SG_ SIG_300_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 301 MSG_301: 8 XXX
+ SG_ SIG_301_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 303 MSG_303: 8 XXX
+ SG_ SIG_303_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 307 MSG_307: 8 XXX
+ SG_ SIG_307_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 308 MSG_308: 8 XXX
+ SG_ SIG_308_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 309 MSG_309: 8 XXX
+ SG_ SIG_309_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 311 MSG_311: 8 XXX
+ SG_ SIG_311_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 312 MSG_312: 8 XXX
+ SG_ SIG_312_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 315 MSG_315: 8 XXX
+ SG_ SIG_315_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 319 MSG_319: 8 XXX
+ SG_ SIG_319_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 324 MSG_324: 8 XXX
+ SG_ SIG_324_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 327 MSG_327: 8 XXX
+ SG_ SIG_327_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 330 MSG_330: 8 XXX
+ SG_ SIG_330_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 337 MSG_337: 8 XXX
+ SG_ SIG_337_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 352 MSG_352: 8 XXX
+ SG_ SIG_352_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 353 MSG_353: 8 XXX
+ SG_ SIG_353_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 356 MSG_356: 8 XXX
+ SG_ SIG_356_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 357 MSG_357: 8 XXX
+ SG_ SIG_357_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 359 MSG_359: 8 XXX
+ SG_ SIG_359_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 360 MSG_360: 8 XXX
+ SG_ SIG_360_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 361 MSG_361: 8 XXX
+ SG_ SIG_361_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 364 MSG_364: 8 XXX
+ SG_ SIG_364_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 368 MSG_368: 8 XXX
+ SG_ SIG_368_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 369 MSG_369: 8 XXX
+ SG_ SIG_369_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 370 MSG_370: 8 XXX
+ SG_ SIG_370_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 371 MSG_371: 8 XXX
+ SG_ SIG_371_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 372 MSG_372: 8 XXX
+ SG_ SIG_372_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 373 MSG_373: 8 XXX
+ SG_ SIG_373_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 374 MSG_374: 8 XXX
+ SG_ SIG_374_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 376 MSG_376: 8 XXX
+ SG_ SIG_376_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 377 MSG_377: 8 XXX
+ SG_ SIG_377_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 378 MSG_378: 8 XXX
+ SG_ SIG_378_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 380 MSG_380: 8 XXX
+ SG_ SIG_380_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 381 MSG_381: 8 XXX
+ SG_ SIG_381_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 382 MSG_382: 8 XXX
+ SG_ SIG_382_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 384 MSG_384: 8 XXX
+ SG_ SIG_384_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 385 MSG_385: 8 XXX
+ SG_ SIG_385_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 386 MSG_386: 8 XXX
+ SG_ SIG_386_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 388 MSG_388: 8 XXX
+ SG_ SIG_388_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 389 MSG_389: 8 XXX
+ SG_ SIG_389_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 390 MSG_390: 8 XXX
+ SG_ SIG_390_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 392 MSG_392: 8 XXX
+ SG_ SIG_392_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 393 MSG_393: 8 XXX
+ SG_ SIG_393_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 394 MSG_394: 8 XXX
+ SG_ SIG_394_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 396 MSG_396: 8 XXX
+ SG_ SIG_396_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 397 MSG_397: 8 XXX
+ SG_ SIG_397_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 398 MSG_398: 8 XXX
+ SG_ SIG_398_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 400 MSG_400: 8 XXX
+ SG_ SIG_400_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 401 MSG_401: 8 XXX
+ SG_ SIG_401_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 402 MSG_402: 8 XXX
+ SG_ SIG_402_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 404 MSG_404: 8 XXX
+ SG_ SIG_404_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 405 MSG_405: 8 XXX
+ SG_ SIG_405_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 406 MSG_406: 8 XXX
+ SG_ SIG_406_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 408 MSG_408: 8 XXX
+ SG_ SIG_408_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 409 MSG_409: 8 XXX
+ SG_ SIG_409_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 410 MSG_410: 8 XXX
+ SG_ SIG_410_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 412 MSG_412: 8 XXX
+ SG_ SIG_412_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 413 MSG_413: 8 XXX
+ SG_ SIG_413_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 414 MSG_414: 8 XXX
+ SG_ SIG_414_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 416 MSG_416: 8 XXX
+ SG_ SIG_416_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 417 MSG_417: 8 XXX
+ SG_ SIG_417_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 418 MSG_418: 8 XXX
+ SG_ SIG_418_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 420 MSG_420: 8 XXX
+ SG_ SIG_420_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 421 MSG_421: 8 XXX
+ SG_ SIG_421_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 422 MSG_422: 8 XXX
+ SG_ SIG_422_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 424 MSG_424: 8 XXX
+ SG_ SIG_424_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 425 MSG_425: 8 XXX
+ SG_ SIG_425_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 426 MSG_426: 8 XXX
+ SG_ SIG_426_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 427 MSG_427: 8 XXX
+ SG_ SIG_427_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 428 MSG_428: 8 XXX
+ SG_ SIG_428_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 429 MSG_429: 8 XXX
+ SG_ SIG_429_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 430 MSG_430: 8 XXX
+ SG_ SIG_430_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 432 MSG_432: 8 XXX
+ SG_ SIG_432_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 433 MSG_433: 8 XXX
+ SG_ SIG_433_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 434 MSG_434: 8 XXX
+ SG_ SIG_434_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 436 MSG_436: 8 XXX
+ SG_ SIG_436_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 437 MSG_437: 8 XXX
+ SG_ SIG_437_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 438 MSG_438: 8 XXX
+ SG_ SIG_438_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 440 MSG_440: 8 XXX
+ SG_ SIG_440_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 441 MSG_441: 8 XXX
+ SG_ SIG_441_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 442 MSG_442: 8 XXX
+ SG_ SIG_442_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 444 MSG_444: 8 XXX
+ SG_ SIG_444_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 445 MSG_445: 8 XXX
+ SG_ SIG_445_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 446 MSG_446: 8 XXX
+ SG_ SIG_446_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 448 MSG_448: 8 XXX
+ SG_ SIG_448_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 449 MSG_449: 8 XXX
+ SG_ SIG_449_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 450 MSG_450: 8 XXX
+ SG_ SIG_450_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 452 MSG_452: 8 XXX
+ SG_ SIG_452_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 453 MSG_453: 8 XXX
+ SG_ SIG_453_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 454 MSG_454: 8 XXX
+ SG_ SIG_454_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 455 MSG_455: 8 XXX
+ SG_ SIG_455_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 456 MSG_456: 8 XXX
+ SG_ SIG_456_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 457 MSG_457: 8 XXX
+ SG_ SIG_457_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 458 MSG_458: 8 XXX
+ SG_ SIG_458_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 459 MSG_459: 64 XXX
+ SG_ SIG_459_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+BO_ 460 MSG_460: 8 XXX
+ SG_ SIG_460_RAW : 0|64@1+ (1,0) [0|0] "" XXX
+
+CM_ "Recovered candidate cars using this mapping:";
+CM_ "- BYD_ATTO_3";
+CM_ "- BYD_TANG_GAS";
+CM_ "- BYD_TANG_DM";
+CM_ "- BYD_TANG_DM_ALT";
+CM_ "- BYD_TANG_DMI_21";
+CM_ "- BYD_TANG_DMI_21_ALT";
+CM_ "- BYD_TANG_DMI_23";
+CM_ "- BYD_TANG_DMI_24";
+CM_ "- BYD_TANG_DMI_24_ALT";
+CM_ "- BYD_TANG_DMP_22";
+CM_ "- BYD_SONG_PLUS_EV_21_22";
+CM_ "- BYD_SONG_PLUS_DMI_21";
+CM_ "- BYD_SONG_PLUS_DMI_22";
+CM_ "- BYD_SONG_PLUS_5G_DMI_22";
+CM_ "- BYD_SONG_PLUS_DMI_23";
+CM_ "- BYD_SONG_PLUS_DMI_23_ALT";
+CM_ "- BYD_SONG_PRO_DMI_22";
+CM_ "- BYD_SONG_PRO_DMI_23";
+CM_ "- BYD_SONG_L_DMI";
+CM_ "- BYD_HAN_DM_20_21";
+CM_ "- BYD_HAN_EV_20_21";
+CM_ "- BYD_HAN_EV_22";
+CM_ "- BYD_HAN_EV_25";
+CM_ "- BYD_HAN_DMI_22";
+CM_ "- BYD_QIN_PRO_DM";
+CM_ "- BYD_QIN_PLUS_DMI";
+CM_ "- BYD_QIN_L_DMI";
+CM_ "- BYD_QZJ_05_DMI";
+CM_ "- BYD_HWJ_07_DMI";
+CM_ "- BYD_DOLPHIN_EV";
+CM_ "- BYD_SEAL_06_DMI";
+CM_ "- BYD_SEAL_07_DMI_22";
+CM_ "- BYD_SEAL_07_DMI_24";
+CM_ "- BYD_YUAN_PLUS_DMI_22";
+CM_ "- BYD_YUAN_PLUS_EV_22";
+CM_ "- BYD_YUAN_UP_EV";
+CM_ "- BYD_DENZA_D9_DMI";
+CM_ "- BYD_FORWARD_MOCK";
+
+CM_ "Recovered DBC mapping context:";
+CM_ "BYD_ATTO_3: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_TANG_GAS: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_TANG_DM: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_TANG_DM_ALT: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_TANG_DMI_21: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_TANG_DMI_21_ALT: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_TANG_DMI_23: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_TANG_DMI_24: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_TANG_DMI_24_ALT: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_TANG_DMP_22: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_SONG_PLUS_EV_21_22: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_SONG_PLUS_DMI_21: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_SONG_PLUS_DMI_22: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_SONG_PLUS_5G_DMI_22: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_SONG_PLUS_DMI_23: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_SONG_PLUS_DMI_23_ALT: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_SONG_PRO_DMI_22: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_SONG_PRO_DMI_23: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_SONG_L_DMI: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_HAN_DM_20_21: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_HAN_EV_20_21: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_HAN_EV_22: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_HAN_EV_25: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_HAN_DMI_22: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_QIN_PRO_DM: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_QIN_PLUS_DMI: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_QIN_L_DMI: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_QZJ_05_DMI: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_HWJ_07_DMI: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_DOLPHIN_EV: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_SEAL_06_DMI: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_SEAL_07_DMI_22: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_SEAL_07_DMI_24: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_YUAN_PLUS_DMI_22: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_YUAN_PLUS_EV_22: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_YUAN_UP_EV: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_DENZA_D9_DMI: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+CM_ "BYD_FORWARD_MOCK: {"pt": "byd_tang_dm_18_19", "radar": null, "chassis": null, "body": null}";
+
+CM_ "Recovered parameter hints:";
+CM_ "BYDFlags: {"BYD_LONGITUDINAL": 1, "BYD_REVERSE_ACC_CAN": 2, "BYD_TORQUE_WITH_FACTOR": 4, "BYD_LOW_TORQUE": 8, "BYD_TORQUE_CONTROL_ALT": 16, "BYD_ANGLE_CONTROL": 32, "BYD_ANGLE_CONTROL_ALT": 64, "BYD_FORWARD_TEST": 128, "BYD_FORCE_TORQUE_FIX": 256, "BYD_TORQ...";
+CM_ "CanBus: "<class 'selfdrive.car.byd.values.CanBus'>"";
+CM_ "BYD_LM_PARAMS: {"BYD_TANG_GAS": "{'input_std': [[6.551159], [0.5432278], [0.9764262], [0.018350046], [0.55787957], [0.5537494], [0.5481121], [0.53532237], [0.53216213], [0.52796394], [0.5206027], [0.016701503], [0.016681341], [0.016805124], [0.0166884], [0.01675...";
+CM_ "NON_LINEAR_TORQUE_PARAMS: {"BYD_TANG_GAS": [14.96408325, -1.55892073, 0.04732893, 13.53883183, 2.99871362, 1.49537676, 0.02018998], "BYD_TANG_DM": [14.96408325, -1.55892073, 0.04732893, 13.53883183, 2.99871362, 1.49537676, 0.02018998], "BYD_TANG_DM_ALT": [14.96408325, -1.5...";
+
+
+CM_ "=== UNVERIFIED SIGNAL TEMPLATES BELOW ===";
+CM_ "These signals are placeholders for future Cabana/log validation. Do not treat bit positions as confirmed.";
+
+BO_ 65500 RECOVERED_STEERING_TEMPLATE: 8 XXX
+ SG_ STEERING_ANGLE_TODO : 0|16@1- (0.1,0) [-780|780] "deg" XXX
+ SG_ STEER_TORQUE_TODO : 16|16@1- (0.1,0) [-100|100] "Nm" XXX
+ SG_ STEER_ACTIVE_TODO : 32|1@1+ (1,0) [0|1] "" XXX
+ SG_ STEER_COUNTER_TODO : 36|4@1+ (1,0) [0|15] "" XXX
+ SG_ STEER_CHECKSUM_TODO : 40|8@1+ (1,0) [0|255] "" XXX
+
+CM_ BO_ 65500 "Unverified steering-related template message";
+CM_ SG_ 65500 STEERING_ANGLE_TODO "TODO: validate against real logs";
+CM_ SG_ 65500 STEER_TORQUE_TODO "TODO: validate against real logs";
+CM_ SG_ 65500 STEER_ACTIVE_TODO "TODO: validate against real logs";
+CM_ SG_ 65500 STEER_COUNTER_TODO "TODO: validate against real logs";
+CM_ SG_ 65500 STEER_CHECKSUM_TODO "TODO: validate against real logs";
+
+BO_ 65501 RECOVERED_SPEED_TEMPLATE: 8 XXX
+ SG_ VEGO_TODO : 0|16@1+ (0.01,0) [0|300] "m/s" XXX
+ SG_ WHEEL_SPEED_FL_TODO : 16|12@1+ (0.01,0) [0|300] "m/s" XXX
+ SG_ WHEEL_SPEED_FR_TODO : 28|12@1+ (0.01,0) [0|300] "m/s" XXX
+ SG_ WHEEL_SPEED_RL_TODO : 40|12@1+ (0.01,0) [0|300] "m/s" XXX
+ SG_ WHEEL_SPEED_RR_TODO : 52|12@1+ (0.01,0) [0|300] "m/s" XXX
+
+CM_ BO_ 65501 "Unverified speed/wheel-speed template message";
+
+BO_ 65502 RECOVERED_PEDAL_TEMPLATE: 8 XXX
+ SG_ ACCEL_PEDAL_TODO : 0|12@1+ (0.1,0) [0|100] "%" XXX
+ SG_ BRAKE_PRESSURE_TODO : 12|12@1+ (0.1,0) [0|200] "bar" XXX
+ SG_ GAS_PRESSED_TODO : 24|1@1+ (1,0) [0|1] "" XXX
+ SG_ BRAKE_PRESSED_TODO : 25|1@1+ (1,0) [0|1] "" XXX
+
+CM_ BO_ 65502 "Unverified pedal/brake template message";
+
+BO_ 65503 RECOVERED_BODY_TEMPLATE: 8 XXX
+ SG_ DOOR_OPEN_TODO : 0|1@1+ (1,0) [0|1] "" XXX
+ SG_ SEATBELT_TODO : 1|1@1+ (1,0) [0|1] "" XXX
+ SG_ LEFT_BLINKER_TODO : 2|1@1+ (1,0) [0|1] "" XXX
+ SG_ RIGHT_BLINKER_TODO : 3|1@1+ (1,0) [0|1] "" XXX
+
+CM_ BO_ 65503 "Unverified body/status template message";

@@ -37,3 +37,27 @@ class Tuning:
   EPS_ANGLE_EXCEED_WARNING_CNT = 3
   EPS_ANGLE_SPEED_WARNING_CNT = 3
   EPS_STATE_WARNING_CNT = 20
+
+  # =========================================================================
+  # 社区移植增强开关（opendbc/car/byd/enhance.py），默认全部关闭
+  # 这些实现来自社区 mypilot 移植包的 byd源码/ 与 byd2/ 两套代码，
+  # 参数为汉/宋/唐实车调校，本分支未做实车验证，请逐项开启验证。
+  # =========================================================================
+
+  # 横向：归一化力矩平滑管线（滑动均值+速度死区+直路锁定+低通+迟滞）
+  # 仅在力矩模式（TORQUE_LAT_CAR）生效；角度模式不走这条路径。
+  ENABLE_LAT_SMOOTHING = False
+
+  # 横向：曲率前馈。社区原始写法把 curvature*v^2（横向加速度）直接叠加到
+  # 归一化力矩上，量纲不一致，这里额外做了幅值钳制，开启前务必实测。
+  ENABLE_CURVATURE_FF = False
+  LAT_CURVATURE_FF_GAIN = 0.8
+  LAT_CURVATURE_FF_LIMIT = 0.15   # 归一化力矩上的最大叠加量
+
+  # 纵向：0 帧起步 + PI 跟车 + TTC 预测制动 + 加速度平滑
+  # 仅在 openpilot 纵向（未启用 BydModifiedStockLong）且 CC.longActive 时生效。
+  ENABLE_LONG_ENHANCE = False
+
+  # 横向：驾驶员踩刹车时短暂抑制 LKAS，规避偶发 LKS 报错
+  ENABLE_LKAS_BRAKE_INHIBIT = False
+

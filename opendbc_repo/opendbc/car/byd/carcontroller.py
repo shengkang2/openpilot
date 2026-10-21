@@ -4,11 +4,12 @@ import math
 
 import numpy as np
 from opendbc.can.packer import CANPacker
-from opendbc.car import Bus, structs
+from opendbc.car import Bus, DT_CTRL, structs
 from opendbc.car.lateral import apply_driver_steer_torque_limits, apply_std_steer_angle_limits
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.interfaces import CarControllerBase
 from opendbc.car.byd import bydcan
+from opendbc.car.byd.enhance import BrakeInhibit, LateralSmoother, LongitudinalEnhancer
 from opendbc.car.byd.tuning import Tuning
 from opendbc.car.byd.values import (
   BydFlags, CanBus, CarControllerParams, PLATFORM_QIN_SEAL06, PLATFORM_SONG_PLUS_DMI,
@@ -118,6 +119,10 @@ class CarController(CarControllerBase):
     self.apply_accel_last = 0
     self.use_torque_lat = self.CP.carFingerprint in TORQUE_LAT_CAR
     self.send_fake_1e2 = self.CP.carFingerprint in PLATFORM_SONG_PLUS_DMI
+    # 社区移植增强（tuning.Tuning 开关控制，默认关闭）
+    self.lat_smoother = LateralSmoother(self.params)
+    self.long_enhancer = LongitudinalEnhancer()
+    self.brake_inhibit = BrakeInhibit()
     self.keep_lkas_passive = False
     self.angle_driver_override_release = bool(self.CP.flags & BydFlags.ANGLE_DRIVER_OVERRIDE_RELEASE)
     self.LateralAngleSpdUp0 = self.param_s.get_int("LateralAngleSpdUp0") * 0.01
@@ -370,14 +375,47 @@ class CarController(CarControllerBase):
     lat_active = CC.latActive
     long_active = CC.longActive
 
+    # 踩刹车时短暂抑制 LKAS（社区移植，默认关闭）
+    if Tuning.ENABLE_LKAS_BRAKE_INHIBIT:
+      if self.brake_inhibit.update(bool(CS.out.brakePressed)):
+        lat_active = False
+    else:
+      self.brake_inhibit.reset()
+
     new_actuators = actuators.as_builder()
     apply_accel = float(np.clip(actuators.accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX))
+
+    # 纵向增强（社区移植，默认关闭）：0 帧起步 + PI 跟车 + TTC 预测制动 + 加速度平滑。
+    # 只在 openpilot 纵向（未启用 modified stock long）时接管，避免干扰原车 ACC 按键同步。
+    if Tuning.ENABLE_LONG_ENHANCE and long_active and not self.modified_stock_long:
+      apply_accel, self.rfss, self.sss = self.long_enhancer.update(
+        CS, apply_accel, actuators.longControlState, DT_CTRL)
+      apply_accel = float(np.clip(apply_accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX))
+    else:
+      self.long_enhancer.reset()
+
     self.byd_jerk.make_jerk(CS, apply_accel, actuators)
     self._update_auto_gas_sync_target(CC, CS)
     self._update_auto_stock_acc_target(CC, CS, hud_control)
 
     if self.use_torque_lat:
-      apply_torque = int(round(actuators.torque * self.params.STEER_MAX))
+      requested_torque = float(actuators.torque)
+
+      # 曲率前馈（社区移植，默认关闭）。社区原始公式把 curvature*v^2 直接叠加到
+      # 归一化力矩上（量纲不一致），这里保留原公式但加了幅值钳制，开启前需实测标定。
+      if Tuning.ENABLE_CURVATURE_FF:
+        ff = float(actuators.curvature) * Tuning.LAT_CURVATURE_FF_GAIN * (CS.out.vEgo ** 2)
+        requested_torque = float(np.clip(
+          requested_torque + np.clip(ff, -Tuning.LAT_CURVATURE_FF_LIMIT, Tuning.LAT_CURVATURE_FF_LIMIT),
+          -1.0, 1.0))
+
+      # 横向平滑管线（社区移植，默认关闭）
+      if Tuning.ENABLE_LAT_SMOOTHING:
+        requested_torque = self.lat_smoother.update(requested_torque, CS.out.vEgo)
+      else:
+        self.lat_smoother.reset()
+
+      apply_torque = int(round(requested_torque * self.params.STEER_MAX))
       apply_torque = apply_driver_steer_torque_limits(apply_torque, self.apply_torque_last, CS.out.steeringTorque, self.params)
       if not lat_active:
         apply_torque = 0
