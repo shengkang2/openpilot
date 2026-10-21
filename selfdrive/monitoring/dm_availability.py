@@ -30,6 +30,7 @@ DRIVER_CAM_SUBDEV_PREFIX = "cam-sensor-driver"
 CAM_SENSOR_COUNT = 3
 
 _driver_cam_present: bool | None = None
+_pinned_switch = False
 
 
 def has_driver_camera() -> bool:
@@ -58,5 +59,24 @@ def has_driver_camera() -> bool:
 
 
 def driver_monitoring_disabled(params) -> bool:
-  """True when no DM code should run at all."""
-  return params.get_bool(DM_DISABLE_PARAM) or not has_driver_camera()
+  """True when no DM code should run at all.
+
+  Everything DM-related (dmonitoringmodeld, dmonitoringd, the driver camera pipeline
+  in camerad, and every consumer of driverMonitoringState / driverCameraState) is
+  gated on this one answer, so the switch is the single source of truth.
+
+  A unit without a driver camera is pinned to "disabled" on the switch itself rather
+  than diverging from it: that way what the settings screen shows is what the device
+  actually does, and the rest of the code only ever has to look at the param.
+  """
+  global _pinned_switch
+  if params.get_bool(DM_DISABLE_PARAM):
+    return True
+
+  if has_driver_camera():
+    return False
+
+  if not _pinned_switch:
+    _pinned_switch = True
+    params.put_bool(DM_DISABLE_PARAM, True, block=True)
+  return True

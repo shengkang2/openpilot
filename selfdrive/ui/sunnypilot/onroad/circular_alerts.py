@@ -4,9 +4,12 @@ Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
 This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
+import time
+
 import pyray as rl
 
 from cereal import log
+from openpilot.selfdrive.monitoring.dm_availability import driver_monitoring_disabled
 from openpilot.selfdrive.ui import UI_BORDER_SIZE
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.selfdrive.ui.sunnypilot.onroad.developer_ui import DeveloperUiState
@@ -28,6 +31,17 @@ class CircularAlertsRenderer:
     self._alert_text = ""
     self._alert_img = None
     self._allow_e2e_alerts = False
+    # driverStateV2 is used below as a "DM is up" signal; with DM switched off it never
+    # arrives, so re-read the switch (1 Hz, not per frame) to tell "off" from "not ready"
+    self._dm_disabled = False
+    self._dm_check_t = 0.0
+
+  def _dm_ready(self) -> bool:
+    now = time.monotonic()
+    if now - self._dm_check_t > 1.0:
+      self._dm_check_t = now
+      self._dm_disabled = driver_monitoring_disabled(ui_state.params)
+    return self._dm_disabled or ui_state.sm.recv_frame['driverStateV2'] > ui_state.started_frame
 
   def update(self) -> None:
     sm = ui_state.sm
@@ -41,7 +55,7 @@ class CircularAlertsRenderer:
       self._standstill_elapsed_time = 0.0
 
     self._allow_e2e_alerts = sm['selfdriveState'].alertSize == log.SelfdriveState.AlertSize.none and \
-                             sm.recv_frame['driverStateV2'] > ui_state.started_frame
+                             self._dm_ready()
 
     if self._green_light_alert or self._lead_depart_alert:
       self._e2e_alert_display_timer = 3 * gui_app.target_fps

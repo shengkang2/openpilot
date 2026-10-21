@@ -1,6 +1,7 @@
 import pyray as rl
 from cereal import car, log, messaging
 from msgq.visionipc import VisionStreamType
+from openpilot.selfdrive.monitoring.dm_availability import driver_monitoring_disabled
 from openpilot.selfdrive.ui.mici.onroad.cameraview import CameraView
 from openpilot.selfdrive.ui.mici.onroad.driver_state import DriverStateRenderer
 from openpilot.selfdrive.ui.ui_state import ui_state, device
@@ -75,7 +76,10 @@ class BaseDriverCameraDialog(Widget):
     self._camera_view._render(rect)
 
     if not self._camera_view.frame:
-      gui_label(rect, tr("camera starting"), font_size=54, font_weight=FontWeight.BOLD,
+      # With DM off, camerad is started with DISABLE_DRIVER, so this stream never shows up
+      text = tr("driver monitoring is off, camera unavailable") if driver_monitoring_disabled(ui_state.params) \
+        else tr("camera starting")
+      gui_label(rect, text, font_size=54, font_weight=FontWeight.BOLD,
                 alignment=rl.GuiTextAlignment.TEXT_ALIGN_CENTER)
       rl.end_scissor_mode()
       self._publish_alert_sound(None)

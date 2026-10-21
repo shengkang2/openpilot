@@ -177,6 +177,13 @@ class DriverStateRenderer(Widget):
     return driver_data
 
   def _update_state(self):
+    # DM off (or a unit without a driver camera): nothing is publishing, and the
+    # last packet would be reused forever. Keep the overlay dark instead.
+    if not ui_state.sm.alive["driverMonitoringState"]:
+      self._is_active = False
+      self._face_detected = False
+      return
+
     # Get monitoring state
     _ = self.get_driver_data()
     pitch = self._pitch_filter.update(self._face_pitch)
