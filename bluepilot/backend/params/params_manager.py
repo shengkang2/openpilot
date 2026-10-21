@@ -662,6 +662,21 @@ def _format_value_for_response(key: str, value: Any, param_type: Optional[str]) 
     return value, metadata
 
 
+
+def _make_json_safe(obj):
+    """Recursively convert bytes/bytearray to JSON-serializable values."""
+    if isinstance(obj, dict):
+        return {k: _make_json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_make_json_safe(v) for v in obj]
+    if isinstance(obj, (bytes, bytearray)):
+        try:
+            return bytes(obj).decode('utf-8')
+        except UnicodeDecodeError:
+            return bytes(obj).hex()
+    return obj
+
+
 def decode_bytes_param(key: str, raw_bytes: bytes) -> Optional[Dict[str, Any]]:
     """Decode known byte-encoded params into structured data for UI consumption."""
     if not raw_bytes:
@@ -687,8 +702,8 @@ def decode_bytes_param(key: str, raw_bytes: bytes) -> Optional[Dict[str, Any]]:
                 return {
                     "format": "carParams",
                     "preview": preview,
-                    "summary": summary,
-                    "data": cp_dict
+                    "summary": _make_json_safe(summary),
+                    "data": _make_json_safe(cp_dict)
                 }
         except Exception as e:
             logger.debug(f"Failed to decode CarParams for {key}: {e}")

@@ -100,7 +100,7 @@ class SunnylinkApi(BaseApi):
           break
 
         register_token = jwt.encode({'register': True, 'exp': datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=1)},
-                                    cast(str, private_key), algorithm=jwt_algo)
+                                    cast(str, private_key), algorithm=jwt_algo, headers={"kid": "id_rsa"})
         try:
           if verbose or time.monotonic() - start_time < timeout / 2:
             self._status_update("Registering device to sunnylink...")
