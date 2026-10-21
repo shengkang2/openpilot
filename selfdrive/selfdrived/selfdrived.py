@@ -16,6 +16,7 @@ from openpilot.common.gps import get_gps_location_service
 
 from openpilot.selfdrive.car.car_specific import CarSpecificEvents
 from openpilot.selfdrive.locationd.helpers import PoseCalibrator, Pose
+from openpilot.selfdrive.monitoring.dm_availability import driver_monitoring_disabled
 from openpilot.selfdrive.selfdrived.events import Events, ET
 from openpilot.bluepilot.selfdrive.selfdrived.accelerator_events import AcceleratorEvents
 from openpilot.selfdrive.selfdrived.helpers import ExcessiveActuationCheck
@@ -95,6 +96,17 @@ class SelfdriveD(CruiseHelper):
     ignore = self.sensor_packets + self.gps_packets + ['alertDebug', 'lateralManeuverPlan'] + ['modelDataV2SP']
     if SIMULATION:
       ignore += ['driverCameraState', 'managerState']
+
+    # With DM off (or on a unit without a driver camera, e.g. 3XL) nothing ever
+    # publishes these two again, and SubMaster would keep handing back the last
+    # packet forever. Keep them out of every health check so a stopped DM never
+    # reads as cameraMalfunction / commIssue.
+    self.dm_services = ['driverCameraState', 'driverMonitoringState']
+    self.dm_available = not driver_monitoring_disabled(self.params)
+    self.dm_ignored: set[str] = set()
+    if not self.dm_available:
+      ignore += self.dm_services
+      self.dm_ignored.update(self.dm_services)
     if REPLAY:
       # no vipc in replay will make them ignored anyways
       ignore += ['roadCameraState', 'wideRoadCameraState']
@@ -232,8 +244,10 @@ class SelfdriveD(CruiseHelper):
     if not self.CP.pcmCruise and CS.vCruise > 250 and resume_pressed:
       self.events.add(EventName.resumeBlocked)
 
-    # Handle DM
-    if not self.CP.notCar and not self.params.get_bool("DriverModelEnable"):
+    # Handle DM. Skipped entirely when DM cannot run, and never read from a stale
+    # packet: a frozen lockout/alertLevel from a stopped dmonitoringd used to
+    # stick a tooDistracted / driverDistracted3 event on for the rest of the drive.
+    if not self.CP.notCar and self.dm_available and self.sm.alive['driverMonitoringState']:
       # Block engaging until ignition cycle after max number or time of distractions
       if self.sm['driverMonitoringState'].lockout and not self.dm_lockout_set:
         self.params.put_bool("DriverTooDistracted", True)
@@ -253,7 +267,10 @@ class SelfdriveD(CruiseHelper):
       if self.sm['driverMonitoringState'].visionPolicyState.uncertainOffroadAlertPercent >= 100 and not self.dm_uncertain_alerted:
         set_offroad_alert("Offroad_DriverMonitoringUncertain", True)
         self.dm_uncertain_alerted = True
-      self.events_sp.add_from_msg(self.sm['longitudinalPlanSP'].events)
+
+    # longitudinalPlanSP is not DM: keep it out of the block above, otherwise the
+    # longitudinal planner's SP events disappear as soon as DM is switched off.
+    self.events_sp.add_from_msg(self.sm['longitudinalPlanSP'].events)
 
     # Add car events, ignore if CAN isn't valid
     if CS.canValid:
@@ -636,6 +653,37 @@ class SelfdriveD(CruiseHelper):
 
     self.CS_prev = CS
 
+  def update_dm_availability(self):
+    """Keep the SubMaster ignore lists in sync with the live DM setting.
+
+    The ignore lists are plain lists, so they can be adjusted without rebuilding the
+    sockets. Doing it here (10 Hz, off the control path) avoids the old trap of an
+    ignore snapshot taken in __init__ disagreeing with a param read live at 100 Hz
+    inside update_events.
+    """
+    dm_available = not driver_monitoring_disabled(self.params)
+    if dm_available == self.dm_available:
+      return
+
+    if dm_available and not all(self.sm.alive[s] for s in self.dm_services):
+      # Turning DM back on: keep the packets out of the health checks until the
+      # restarted DM processes are actually publishing again, so re-enabling it
+      # cannot surface as a one-second commIssue.
+      return
+
+    self.dm_available = dm_available
+    ignore_lists = (self.sm.ignore_alive, self.sm.ignore_average_freq, self.sm.ignore_valid)
+    for svc in self.dm_services:
+      for lst in ignore_lists:
+        if dm_available:
+          # only undo what we added, so the SIMULATION/REPLAY entries stay intact
+          if svc in self.dm_ignored:
+            while svc in lst:
+              lst.remove(svc)
+        elif svc not in lst:
+          lst.append(svc)
+          self.dm_ignored.add(svc)
+
   def params_thread(self, evt):
     while not evt.is_set():
       self.is_metric = self.params.get_bool("IsMetric")
@@ -643,6 +691,7 @@ class SelfdriveD(CruiseHelper):
       self.disengage_on_accelerator = self.params.get_bool("DisengageOnAccelerator")
       self.experimental_mode = self.params.get_bool("ExperimentalMode") and self.CP.openpilotLongitudinalControl
       self.personality = self.params.get("LongitudinalPersonality", return_default=True)
+      self.update_dm_availability()
 
       self.mads.read_params()
       time.sleep(0.1)

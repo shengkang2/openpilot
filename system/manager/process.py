@@ -43,8 +43,15 @@ def launcher(proc: str, name: str) -> None:
     raise
 
 
-def nativelauncher(pargs: list[str], cwd: str, name: str) -> None:
+def nativelauncher(pargs: list[str], cwd: str, name: str, env: dict | None = None) -> None:
   os.environ['MANAGER_DAEMON'] = name
+  # a None value means "make sure this is unset"; this only touches the child,
+  # since we are already running inside the forked process
+  for k, v in (env or {}).items():
+    if v is None:
+      os.environ.pop(k, None)
+    else:
+      os.environ[k] = v
 
   # exec the process
   os.chdir(cwd)
@@ -140,13 +147,18 @@ class ManagerProcess(ABC):
 
 
 class NativeProcess(ManagerProcess):
-  def __init__(self, name, cwd, cmdline, should_run, enabled=True, sigkill=False):
+  def __init__(self, name, cwd, cmdline, should_run, enabled=True, sigkill=False, env=None):
     self.name = name
     self.cwd = cwd
     self.cmdline = cmdline
     self.should_run = should_run
     self.enabled = enabled
     self.sigkill = sigkill
+    # env is either a dict, or a callable(params) -> dict that ensure_running()
+    # resolves right before the launch. A process that is already up keeps the
+    # env it was started with, so a change lands on the next start.
+    self.env_fn = env
+    self.env = None
     self.launcher = nativelauncher
 
   def prepare(self) -> None:
@@ -162,7 +174,7 @@ class NativeProcess(ManagerProcess):
 
     cwd = os.path.join(BASEDIR, self.cwd)
     cloudlog.info(f"starting process {self.name}")
-    self.proc = Process(name=self.name, target=self.launcher, args=(self.cmdline, cwd, self.name))
+    self.proc = Process(name=self.name, target=self.launcher, args=(self.cmdline, cwd, self.name, self.env))
     self.proc.start()
     self.shutting_down = False
 
@@ -258,6 +270,10 @@ def ensure_running(procs: ValuesView[ManagerProcess], started: bool, params=None
       p.stop(block=False)
 
   for p in running:
+    # late-bind the launch env: it can depend on params and CP
+    env_fn = getattr(p, 'env_fn', None)
+    if env_fn is not None:
+      p.env = env_fn(params)
     p.start()
 
   return running

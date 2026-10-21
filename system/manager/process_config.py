@@ -6,6 +6,7 @@ from cereal import car, custom
 from openpilot.common.params import Params
 from openpilot.common.bluepilot import is_bluepilot
 from openpilot.bluepilot import jetlink_adapter
+from openpilot.selfdrive.monitoring.dm_availability import driver_monitoring_disabled
 from openpilot.system.hardware import PC, TICI
 from openpilot.system.manager.process import PythonProcess, NativeProcess, DaemonProcess
 from openpilot.system.hardware.hw import Paths
@@ -21,7 +22,23 @@ def driverview(started: bool, params: Params, CP: car.CarParams) -> bool:
   return started or params.get_bool("IsDriverViewEnabled")
 
 def dmonitoringmodeld_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
-  return (WEBCAM or not PC) and driverview(started, params, CP) and not params.get_bool("DriverModelEnable")
+  return (WEBCAM or not PC) and driverview(started, params, CP) and not driver_monitoring_disabled(params)
+
+def dmonitoringd_enabled(started: bool, params: Params, CP: car.CarParams) -> bool:
+  # This one used to run whenever driverview did, i.e. its 1-2 s param re-check
+  # could surface a stale DM alert after DriverModelEnable was flipped. Gate it on
+  # the same predicate as the model so both stop together.
+  return (WEBCAM or not PC) and driverview(started, params, CP) and not driver_monitoring_disabled(params)
+
+def camerad_env(params: Params) -> dict:
+  # Stop the driver camera pipeline itself (sensor stream, CSIPHY, ISP, ICP, and the
+  # 1080p VIPC buffers) so the SoC does not pay for it while DM is off. camerad reads
+  # DISABLE_DRIVER once at launch, so flipping the setting only takes effect on the
+  # next camerad start -- an offroad cycle. The driver view preview in the UI still
+  # needs the camera, so keep it alive when that is explicitly requested.
+  if driver_monitoring_disabled(params) and not params.get_bool("IsDriverViewEnabled"):
+    return {"DISABLE_DRIVER": "1"}
+  return {"DISABLE_DRIVER": None}
 
 def notcar(started: bool, params: Params, CP: car.CarParams) -> bool:
   return started and CP.notCar
@@ -126,7 +143,7 @@ procs = [
   NativeProcess("stream_encoderd", "system/loggerd", ["./encoderd", "--stream"], notcar),
   PythonProcess("logmessaged", "system.logmessaged", always_run),
 
-  NativeProcess("camerad", "system/camerad", ["./camerad"], driverview, enabled=not WEBCAM),
+  NativeProcess("camerad", "system/camerad", ["./camerad"], driverview, enabled=not WEBCAM, env=camerad_env),
   PythonProcess("webcamerad", "tools.webcam.camerad", driverview, enabled=WEBCAM),
   PythonProcess("proclogd", "system.proclogd", only_onroad, enabled=platform.system() != "Darwin"),
   PythonProcess("journald", "system.journald", only_onroad, platform.system() != "Darwin"),
@@ -154,7 +171,7 @@ procs = [
   PythonProcess("selfdrived", "selfdrive.selfdrived.selfdrived", only_onroad),
   PythonProcess("card", "selfdrive.car.card", only_onroad),
   PythonProcess("deleter", "system.loggerd.deleter", always_run),
-  PythonProcess("dmonitoringd", "selfdrive.monitoring.dmonitoringd", driverview, enabled=(WEBCAM or not PC)),
+  PythonProcess("dmonitoringd", "selfdrive.monitoring.dmonitoringd", dmonitoringd_enabled, enabled=(WEBCAM or not PC)),
   # BluePilot: restart_if_crash -- a diag-port serial fault (see qcomgpsd.py's reconnect
   # handling) is now recovered in-process, but this is a backstop for anything else that
   # still takes the process down; without it a crash meant no GPS for the rest of the drive.

@@ -112,6 +112,13 @@ class DriverStateRenderer(Widget):
     if not self.is_visible:
       return
 
+    # DM off, or a unit without a driver camera: the packet never arrives and the
+    # last one would be drawn forever. Note that isRHD must not be replaced by a
+    # constant -- it flips the left-hand-drive arc geometry.
+    if not sm.alive["driverMonitoringState"]:
+      self.is_active = False
+      return
+
     # Get monitoring state
     dm_state = sm["driverMonitoringState"]
     self.is_active = dm_state.activePolicy == log.DriverMonitoringState.MonitoringPolicy.vision

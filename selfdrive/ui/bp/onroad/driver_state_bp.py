@@ -188,7 +188,7 @@ class DriverStateRendererBP(Widget):
       self._comma3x_renderer.render(rect)
       return
 
-    is_rhd = ui_state.sm["driverMonitoringState"].isRHD
+    is_rhd = ui_state.sm.alive["driverMonitoringState"] and ui_state.sm["driverMonitoringState"].isRHD
     x = rect.x + rect.width - UI_BORDER_SIZE - BTN_SIZE if is_rhd else rect.x + UI_BORDER_SIZE
     y = rect.y + rect.height - UI_BORDER_SIZE - BTN_SIZE - get_bottom_dev_ui_offset()
     self._comma4_renderer.set_position(x, y)

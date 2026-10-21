@@ -212,8 +212,12 @@ class Controls(ControlsExt):
     cs.upAccelCmd = float(self.LoC.pid.p)
     cs.uiAccelCmd = float(self.LoC.pid.i)
     cs.ufAccelCmd = float(self.LoC.pid.f)
-    cs.forceDecel = bool((self.sm['driverMonitoringState'].alertLevel == log.DriverMonitoringState.AlertLevel.three) or
-                         (self.sm['selfdriveState'].state == State.softDisabling))
+    # With DM off (or on a unit with no driver camera) driverMonitoringState is never
+    # published, and SubMaster keeps returning the last packet forever: a stale level 3
+    # would hold forceDecel true with nothing to show for it. Only trust a live packet.
+    dm_alert = self.sm.alive['driverMonitoringState'] and \
+      (self.sm['driverMonitoringState'].alertLevel == log.DriverMonitoringState.AlertLevel.three)
+    cs.forceDecel = bool(dm_alert or (self.sm['selfdriveState'].state == State.softDisabling))
 
     lat_tuning = self.CP.lateralTuning.which()
     if self.CP.steerControlType == car.CarParams.SteerControlType.angle:
