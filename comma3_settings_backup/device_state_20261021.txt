@@ -1,0 +1,29 @@
+device=comma3_192.168.0.7
+export_time=2026-10-21T13:20:08+00:00
+uname=Linux comma-7ac6f53c 4.9.103 #32 SMP PREEMPT Mon Aug 4 23:13:16 UTC 2025 aarch64 aarch64 aarch64 GNU/Linux
+branch=spbp260825
+head=935d868ff9658661a137b0b17b7100fd5ba2e9e1
+git_status=
+?? bluepilot/backend/params/params_manager.py.bak_bytesfix
+?? bluepilot/backend/routes/processing.py.bak_weekfix
+?? check_key_fmt.py
+?? check_zmq.py
+?? do_register.py
+?? fix_pub_format.py
+?? patch_kid.py
+?? peek_params.py
+?? restore_api.py
+?? selfdrive/assets/fonts/process.py.bak_zhchs_20260930_184738
+?? selfdrive/assets/fonts/process.py.bak_zhchs_20260930_184748
+?? selfdrive/assets/fonts/regen_zhchs.py
+?? selfdrive/ui/sunnypilot/layouts/settings/osm.py.bak.20260930-185422
+?? selfdrive/ui/sunnypilot/layouts/settings/sunnylink.py.bak.20260930-185422
+?? selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/tesla.py.bak.20260930-185422
+?? selfdrive/ui/translations/app_zh-CHS.po.bak.20260930-185422
+?? sunnypilot/sunnylink/api.py.bak_20261012
+?? test_kids.py
+?? test_kids2.py
+?? test_kids3.out
+params_count=187
+df_data=
+/dev/sda10       30G   24G  5.1G  83% /data
