@@ -310,8 +310,15 @@ hr "3. LFS 资源"
 if [ "$OFFLINE" = "1" ]; then
   warn "离线模式：包内已含模型实体，跳过 git lfs pull"
 else
-  # .lfsconfig 指向上游 hwh-kavin/openpilot，推 LFS 会报无权限；拉取不受影响，先挪开
-  [ -f .lfsconfig ] && mv -f .lfsconfig .lfsconfig.bak
+  # .lfsconfig **不能挪走**。
+  # 它把 LFS endpoint 指向 gitlab.com/sunnypilot/public/sunnypilot-new-lfs.git，
+  # 而 BP7 的模型实体（selfdrive/modeld/models/*.onnx）只存在于那个 GitLab
+  # LFS 仓库里 —— GitHub 侧的 fork 没有这些 LFS 对象（实测 batch API 返回
+  # 422 "Object ... is not N bytes"）。
+  # 挪走 .lfsconfig 后 git lfs pull 会打 GitHub 的 LFS endpoint，
+  # 模型永远拉不到，运行时必然报模型损坏。
+  # 之前误以为「拉取不受影响」而挪走，那是错的：pushurl 只影响推送，
+  # url 影响拉取，两者都在这一个文件里。
   git lfs pull || warn "LFS 拉取失败，模型可能缺失"
 fi
 ls -la selfdrive/modeld/models/*.onnx 2>/dev/null | head -3 || true

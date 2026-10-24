@@ -140,6 +140,11 @@ function launch {
   # start manager
   cd system/manager
   if [ ! -f $DIR/prebuilt ]; then
+    # BluePilot: 自举 —— 补齐 uv 缓存路径、swapfile、LFS 模型实体、sign.py 执行位。
+    # 走 AGNOS 界面「填 URL 安装」这条路时不会执行 install.sh，编译环境全缺，
+    # 结果是 uv sync 撑爆 /home、scons 被 OOM 杀掉、模型是指针文件。
+    # 这个脚本幂等且失败不阻断启动。
+    [ -f "$DIR/scripts/bp7_bootstrap.sh" ] && bash "$DIR/scripts/bp7_bootstrap.sh" || true
     # BluePilot: verbose build UI (progress + live scons line + failure log). Falls back to the
     # stock build if bp_build.py can't start, so a UI bug can't leave the device unable to build.
     ./bp_build.py || ./build.py

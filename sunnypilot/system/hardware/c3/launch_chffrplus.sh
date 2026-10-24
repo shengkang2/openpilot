@@ -104,6 +104,9 @@ function launch {
   # start manager
   cd $DIR/system/manager
   if [ ! -f $DIR/prebuilt ]; then
+    # BluePilot: 自举，见根目录 launch_chffrplus.sh 的同名说明。
+    # AGNOS 界面「填 URL 安装」这条路不跑 install.sh，编译环境全缺。
+    [ -f "$DIR/scripts/bp7_bootstrap.sh" ] && bash "$DIR/scripts/bp7_bootstrap.sh" || true
     ./build.py
   fi
   ./manager.py

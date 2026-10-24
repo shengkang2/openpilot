@@ -52,7 +52,8 @@ done
 [ "$MISSING" = "0" ] && echo "  模型实体齐全 ✅"
 if [ "$MISSING" = "1" ]; then
   echo "  尝试 git lfs pull ..."
-  [ -f .lfsconfig ] && mv -f .lfsconfig .lfsconfig.bak
+  # 注意：不要挪走 .lfsconfig！它把 LFS endpoint 指向 sunnypilot 的 GitLab LFS 仓库，
+  # BP7 的模型实体只在那里（GitHub 侧 fork 没有这些 LFS 对象）。
   git lfs pull || echo "  ! LFS 拉取失败，请检查网络后重试"
 fi
 
