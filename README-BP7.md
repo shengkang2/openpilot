@@ -6,9 +6,56 @@
 
 ## 一、链接安装
 
-### 方式 A：设备上一条命令（推荐）
+### 方式 A：设备开机界面填 URL（最接近「一步安装」）
 
-在 comma three 上通过 SSH / ADB shell 执行：
+comma three 开机后有一个 setup 界面，选 **Custom Software → Enter URL**，
+填下面这个地址即可：
+
+```
+https://installer.comma.ai/shengkang2/openpilot/bp7.020261020
+```
+
+**这个 URL 的工作原理**（重要，决定了它能干什么）：
+
+AGNOS 会去 `installer.comma.ai` 请求一个**针对你的仓库和分支定制过的 ELF 安装器**。
+comma 的服务端会现场把安装器里的仓库地址和分支名替换成你 URL 里指定的值，
+所以它**不是**下载源码，而是下载一个「只会 clone 这一个仓库这一个分支」的小程序。
+设备上执行它的效果等价于：
+
+```bash
+git clone --depth=1 --recurse-submodules -b bp7.020261020 \
+  https://github.com/shengkang2/openpilot.git /data/openpilot
+```
+
+然后写 `/data/continue.sh` 并重启，首次启动时编译。
+
+已实测验证：服务端返回的 ELF 里确实嵌着
+`https://github.com/shengkang2/openpilot.git` 和 `bp7.020261020`。
+
+**BP7 为这条路径专门做的适配**（`scripts/bp7_bootstrap.sh`）：
+AGNOS 这条路**不会**执行 `install.sh`，编译环境全缺，会连环失败——
+uv 缓存默认落在 100MB 的 `/home` overlay（No space left）、
+tici 3.6G 内存无 swap 编译被 OOM 杀掉、模型在 LFS 里是指针文件、
+`sign.py` 缺执行位。自举脚本在**进入编译前**自动补齐这四项，
+并只读复核五道引导链防护。它幂等，失败也不会阻断启动。
+
+也支持只填 `owner/repo/branch` 的简写形式（AGNOS 会自动补 `installer.comma.ai/` 前缀）。
+
+> ⚠️ **这条路径没有装前体检。** 走 SSH 跑 install.sh 时，脚本会在动手前检查
+> AGNOS 版本、引导链哈希并对低版本设备（<18.5）直接拦截；
+> 而 AGNOS 界面这条路跳过所有检查，直接 clone + 编译。
+> **BP7 的模型与依赖是按 AGNOS 18.5 编译的**，设备底包必须是 18.5，
+> 否则编译必然失败（缺 acados / capnproto 等依赖，那些库只有 18.5 镜像自带）。
+>
+> 好消息是变砖风险不因此增加：安装全程只写 `/data/openpilot`，
+> **不刷任何分区**，引导链零改动。防护代码（`agnos.py` 硬拦截、
+> 版本匹配闸、`launch_env.sh` 动态钉子、OTA 哨兵）都在**源码里**，
+> clone 下来就带着，开机时照常生效。
+>
+> 如果装完起不来，先看 `/data/bp7_bootstrap.log`（自举日志），
+> 再看 `/data/launch_log`（启动日志）。
+
+### 方式 B：设备上一条命令（SSH / ADB shell）
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/shengkang2/openpilot/bp7.020261020/install.sh)
@@ -24,7 +71,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/shengkang2/openpilot/bp7.020
 
 安装耗时：clone+拉模型约 5-15 分钟，编译约 20-40 分钟（tici 无 GPU，用 `scons -j2`）。
 
-### 方式 B：离线包（设备访问不了 GitHub 时）
+### 方式 C：离线包（设备访问不了 GitHub 时）
 
 设备在国内、GitHub 不通时用这条。PC 上生成包：
 
@@ -47,7 +94,7 @@ bash /data/openpilot/install.sh
 离线包自带子模块 + LFS 模型实体 + 17 个符号链接清单，install.sh 会自动重建符号链接、
 跳过所有网络请求。包内带 `.bp7_offline` 标记，脚本据此进入离线模式。
 
-### 方式 C：设备上已有仓库，只想更新
+### 方式 D：设备上已有仓库，只想更新
 
 ```bash
 cd /data/openpilot
@@ -67,11 +114,12 @@ bash <(curl -fsSL https://raw.githubusercontent.com/shengkang2/openpilot/bp7.020
 
 ### 安装日志
 
-全程写 `/data/bp7_install.log`，实时看：
-
-```bash
-tail -f /data/bp7_install.log
-```
+| 位置 | 内容 |
+|---|---|
+| `/data/bp7_install.log` | install.sh 全程日志 |
+| `/data/bp7_bootstrap.log` | 自举脚本日志（uv 缓存 / swapfile / LFS / 防护复核） |
+| `/data/bp7_chain_before.txt` | 装前引导链哈希基线 |
+| `/data/bp7_chain_after.txt` | 装后哈希，与基线比对证明零改动 |
 
 ### 回滚
 
