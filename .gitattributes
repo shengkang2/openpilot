@@ -64,3 +64,11 @@ selfdrive/assets/sounds/bluepilot/*.wav -filter -diff -merge
 
 # Theme pack assets: store directly in Git, not upstream GitLab LFS.
 selfdrive/assets/bp_themes/** -filter -diff -merge
+
+# bp7 Jetlink icons: stored as real PNG in Git, not upstream GitLab LFS.
+selfdrive/assets/icons/jetlink.png -filter -diff -merge -text
+selfdrive/assets/icons/jetlink_green.png -filter -diff -merge -text
+selfdrive/assets/icons/jetlink_orange.png -filter -diff -merge -text
+
+# Shell scripts must stay LF: device runs them with bash, CRLF breaks them.
+*.sh text eol=lf

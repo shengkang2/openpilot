@@ -9,6 +9,13 @@
 #
 #   bash install.sh
 #
+# 如果 /data/openpilot 不存在，脚本会自动 clone（含 LFS），不需要先手动 clone。
+# 如果设备上 GitHub 不通，用离线包：
+#
+#   # PC 上： bash tools/make_bundle.sh   -> 生成 bp7-offline.tar.gz
+#   # 设备上：把包传到 /data 后
+#   tar -xzf /data/bp7-offline.tar.gz -C /data && bash /data/bp7-offline/install.sh
+#
 # 它做什么：
 #   1. 检查环境（是否在设备上、AGNOS 版本、当前槽位）
 #   2. 拉取并切到目标分支（默认 bp7.020261020）
@@ -41,6 +48,7 @@ BP7_REPO="${BP7_REPO:-https://github.com/shengkang2/openpilot.git}"
 BP7_JOBS="${BP7_JOBS:-2}"
 OP="${OP:-/data/openpilot}"
 LOG="${LOG:-/data/bp7_install.log}"
+OFFLINE="${OFFLINE:-0}"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 hr() { echo; echo "===== $* ====="; }
@@ -73,7 +81,44 @@ if [ ! -d /data ]; then
   OP="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fi
 
-[ -d "$OP/.git" ] || die "$OP 不是 git 仓库，请先 clone 或指定 OP 环境变量"
+# ---------------------------------------------------------------- bootstrap
+# 离线包优先判定（包内有 .bp7_offline 标记）：跳过 git fetch / submodule / LFS。
+if [ -f "$OP/.bp7_offline" ]; then
+  warn "离线包模式（$OP）—— 跳过 git fetch / submodule / LFS，使用包内完整源码"
+  OFFLINE=1
+elif [ ! -d "$OP/.git" ]; then
+  if [ "${BP7_BOOTSTRAPPED:-0}" = "1" ]; then
+    die "$OP 仍不是 git 仓库，bootstrap 失败"
+  fi
+  hr "0.1 Bootstrap：clone $BP7_REPO ($BP7_BRANCH)"
+  if ! command -v git > /dev/null 2>&1; then
+    die "设备上没有 git，先装 git：sudo apt-get install -y git git-lfs"
+  fi
+  if [ -e "$OP" ] && [ -n "$(ls -A "$OP" 2>/dev/null)" ]; then
+    warn "$OP 非空但不是 git 仓库 —— 保留内容，在其中 init 并尝试拉取"
+    git -C "$OP" init -q || die "git init 失败"
+    git -C "$OP" remote add origin "$BP7_REPO" 2>/dev/null || \
+      git -C "$OP" remote set-url origin "$BP7_REPO"
+  else
+    mkdir -p "$OP" || die "无法创建 $OP"
+    git clone --depth 1 -b "$BP7_BRANCH" "$BP7_REPO" "$OP" || die "clone 失败（设备可能访问不了 GitHub？改用离线包 tools/make_bundle.sh）"
+  fi
+  # LFS：模型在 LFS 里，clone 下来是指针文件，编译会失败
+  if command -v git-lfs > /dev/null 2>&1; then
+    git -C "$OP" lfs install --skip-repo > /dev/null 2>&1 || true
+    git -C "$OP" lfs pull || warn "LFS 拉取失败，模型可能缺失"
+  else
+    warn "设备没有 git-lfs，模型会是指针文件。装：sudo apt-get install -y git-lfs"
+  fi
+  # 交接给仓库内的 install.sh（它带完整上下文：tools/ 补丁、自身分支校验）
+  if [ -f "$OP/install.sh" ]; then
+    export BP7_BOOTSTRAPPED=1
+    ok "Bootstrap 完成，转交 $OP/install.sh"
+    exec bash "$OP/install.sh"
+  fi
+  warn "$OP/install.sh 不存在，继续用当前脚本"
+fi
+
 cd "$OP"
 
 AGNOS_VERSION="$(cat /VERSION 2>/dev/null || echo unknown)"
@@ -201,35 +246,83 @@ echo
 # ---------------------------------------------------------------- 拉分支
 hr "1. 拉取并切换到 $BP7_BRANCH"
 
-ORIG_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
-ORIG_SHA="$(git rev-parse HEAD 2>/dev/null || echo unknown)"
-echo "  切分支前: $ORIG_BRANCH @ ${ORIG_SHA:0:9}"
-echo "$ORIG_BRANCH $ORIG_SHA" > /data/bp7_install_origin.txt
+if [ "$OFFLINE" = "1" ]; then
+  warn "离线模式：跳过 git fetch / checkout（包内已是 $BP7_BRANCH 的完整源码）"
+  ORIG_BRANCH="offline-bundle"
+  ORIG_SHA="offline"
+  echo "$ORIG_BRANCH $ORIG_SHA" > /data/bp7_install_origin.txt 2>/dev/null || true
 
-rm -f "$OP/.git/index.lock"
-git fetch --depth 1 origin "$BP7_BRANCH" || die "拉取分支失败：$BP7_BRANCH"
-git checkout -f -B "$BP7_BRANCH" FETCH_HEAD || die "切换分支失败"
-ok "已切到 $(git log --oneline -1)"
+  # 重建符号链接：打包时符号链接被抽成清单（Windows tar 不支持 symlink）
+  if [ -f "$OP/.bp7_symlinks" ]; then
+    echo "  重建符号链接："
+    LINK_OK=1
+    while IFS=$'\t' read -r link target; do
+      [ -n "$link" ] || continue
+      [ -n "$target" ] || continue
+      [ -e "$OP/$link" ] && continue
+      mkdir -p "$(dirname "$OP/$link")"
+      if ln -sfn "$target" "$OP/$link" 2>/dev/null; then
+        echo "    $link -> $target"
+      else
+        warn "符号链接创建失败: $link -> $target"
+        LINK_OK=0
+      fi
+    done < "$OP/.bp7_symlinks"
+    [ "$LINK_OK" = "1" ] && ok "符号链接重建完成 ✅" || warn "部分符号链接失败（编译若报缺文件，检查这些链接）"
+  fi
+else
+  ORIG_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+  ORIG_SHA="$(git rev-parse HEAD 2>/dev/null || echo unknown)"
+  echo "  切分支前: $ORIG_BRANCH @ ${ORIG_SHA:0:9}"
+  echo "$ORIG_BRANCH $ORIG_SHA" > /data/bp7_install_origin.txt
+
+  rm -f "$OP/.git/index.lock"
+  git fetch --depth 1 origin "$BP7_BRANCH" || die "拉取分支失败：$BP7_BRANCH"
+  git checkout -f -B "$BP7_BRANCH" FETCH_HEAD || die "切换分支失败"
+  ok "已切到 $(git log --oneline -1)"
+fi
 
 # ---------------------------------------------------------------- 子模块
 hr "2. 重建子模块"
-# git checkout 不会更新子模块。切分支后子模块目录里常是上一分支的半份内容和编译产物，
-# 直接 submodule update 会报 "destination path already exists"，必须先清空再拉。
-for d in msgq_repo rednose_repo teleoprtc_repo tinygrad_repo sunnypilot/neural_network_data; do
-  if [ -e "$d" ] && git submodule status "$d" 2>/dev/null | grep -q '^-'; then
-    rm -rf "$d"
-    echo "  清理残留: $d"
-  fi
-done
-git submodule update --init --recursive || warn "子模块初始化有告警，继续"
-git submodule status | head -10
+if [ "$OFFLINE" = "1" ]; then
+  warn "离线模式：包内已含子模块内容，跳过 submodule update"
+  for d in msgq_repo rednose_repo teleoprtc_repo tinygrad_repo sunnypilot/neural_network_data; do
+    if [ -z "$(ls -A "$d" 2>/dev/null)" ]; then
+      die "离线包内子模块为空: $d —— 包不完整，请重新生成"
+    fi
+  done
+  ok "子模块齐全 ✅"
+else
+  # git checkout 不会更新子模块。切分支后子模块目录里常是上一分支的半份内容和编译产物，
+  # 直接 submodule update 会报 "destination path already exists"，必须先清空再拉。
+  for d in msgq_repo rednose_repo teleoprtc_repo tinygrad_repo sunnypilot/neural_network_data; do
+    if [ -e "$d" ] && git submodule status "$d" 2>/dev/null | grep -q '^-'; then
+      rm -rf "$d"
+      echo "  清理残留: $d"
+    fi
+  done
+  git submodule update --init --recursive || warn "子模块初始化有告警，继续"
+  git submodule status | head -10
+fi
 
 # ---------------------------------------------------------------- LFS
 hr "3. LFS 资源"
-# .lfsconfig 指向上游 hwh-kavin/openpilot，推 LFS 会报无权限；拉取不受影响，先挪开
-[ -f .lfsconfig ] && mv -f .lfsconfig .lfsconfig.bak
-git lfs pull || warn "LFS 拉取失败，模型可能缺失"
+if [ "$OFFLINE" = "1" ]; then
+  warn "离线模式：包内已含模型实体，跳过 git lfs pull"
+else
+  # .lfsconfig 指向上游 hwh-kavin/openpilot，推 LFS 会报无权限；拉取不受影响，先挪开
+  [ -f .lfsconfig ] && mv -f .lfsconfig .lfsconfig.bak
+  git lfs pull || warn "LFS 拉取失败，模型可能缺失"
+fi
 ls -la selfdrive/modeld/models/*.onnx 2>/dev/null | head -3 || true
+
+# 模型实体自检：指针文件会导致编译/运行失败
+for m in selfdrive/modeld/models/*.onnx; do
+  [ -f "$m" ] || continue
+  if head -c 40 "$m" | grep -q "version https://git-lfs"; then
+    die "模型仍是 LFS 指针（未拉取实体）：$m —— 离线包不完整或 LFS 未拉取"
+  fi
+done
 
 # ---------------------------------------------------------------- 源码适配
 hr "4. 源码级适配（幂等）"
