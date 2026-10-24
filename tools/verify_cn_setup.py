@@ -176,7 +176,15 @@ CHECKS = [
     ('selfdrive/ui/sunnypilot/layouts/settings/settings.py', 'tr(self.panel_info.name)', '导航栏 tr()'),
     ('jetlink_repo/jetlink/openpilot/provision.py', 'no host within %.0f s, checking the offline pre-fetch', 'Jetlink host-first 握手修复'),
     ('system/hardware/tici/agnos.py', 'assert_official_boot_chain', 'agnos.py 引导链硬拦截'),
+    ('system/hardware/tici/agnos.py', 'assert_boot_chain_matches_device', 'agnos.py 版本匹配闸'),
+    ('launch_env.sh', 'BP7_DYNAMIC_AGNOS_PIN', '根 launch_env OTA 哨兵'),
+    ('sunnypilot/system/hardware/c3/launch_env.sh', 'BP7_DYNAMIC_AGNOS_PIN', 'c3 launch_env OTA 哨兵'),
+    ('system/updated/updated.py', 'BP7_DYNAMIC_AGNOS_PIN', 'updated.py OTA 覆盖防护'),
+    ('launch_chffrplus.sh', 'BP7_DYNAMIC_AGNOS_PIN', '根 launch 三道闸'),
+    ('sunnypilot/system/hardware/c3/launch_chffrplus.sh', 'BP7_DYNAMIC_AGNOS_PIN', 'c3 launch 三道闸'),
     ('install.sh', 'assert_official_boot_chain', 'install.sh 引导链防护校验'),
+    ('install.sh', 'assert_boot_chain_matches_device', 'install.sh 版本闸校验'),
+    ('install.sh', 'BP7_FORCE_LOW_AGNOS', 'install.sh 低版本拦截'),
 ]
 for rel, needle, label in CHECKS:
     p = os.path.join(REPO, rel)

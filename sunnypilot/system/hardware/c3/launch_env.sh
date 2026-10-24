@@ -15,8 +15,14 @@ if [ -z "$AGNOS_VERSION" ]; then
   if [ -r /VERSION ]; then
     export AGNOS_VERSION="$(tr -d '[:space:]' < /VERSION)"
   else
-    export AGNOS_VERSION="18.5"
+    # 读不到 /VERSION 时不猜版本号：用绝不可能匹配的哨兵值，
+    # 让版本比较走升级分支，由 agnos.py 的硬拦截兜底拒绝刷引导链。
+    export AGNOS_VERSION="__BP7_NO_VERSION__"
+    echo "BP7: 读不到 /VERSION，禁用 AGNOS 自动升级（agnos.py 硬拦截兜底）" >&2
   fi
 fi
+
+# BluePilot: 哨兵标记，见根目录 launch_env.sh 的同名说明。
+export BP7_DYNAMIC_AGNOS_PIN="1"
 
 export STAGING_ROOT="/data/safe_staging"

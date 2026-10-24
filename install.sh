@@ -113,6 +113,43 @@ else
   warn "  引导链不受影响 —— 本脚本不刷任何分区。"
 fi
 
+# 低版本设备（12.x / 13.x）的特别风险判定。
+#
+# 变砖的根源是「引导链与硬件世代强绑定」：bp7 的 agnos.json 是 AGNOS 18.5
+# 的整套镜像（含 18.5 的 xbl/abl/boot）。装到 12.x 设备上，只要有任何路径
+# 触发 AGNOS 升级，18.5 的引导链就会盖到 12.x 的 bootloader 上 → bootloader
+# 拒绝加载 → 变砖（Unsupported firmware detected，SSH 与网络全断）。
+#
+# 更实际的问题是：bp7 根本编不过。acados / capnproto / eigen 头文件与
+# Python 3.12.13 只有 18.5 镜像自带，12.x 上装依赖也拿不到。
+# 所以低版本设备装 bp7 = 编不过 + 白折腾。
+#
+# 这里不直接 die —— 装 bp7 到低版本设备本身是安全的（本脚本零分区写入），
+# 但必须把话说清楚，让老板自己决定要不要继续。
+AGNOS_MAJOR="${AGNOS_VERSION%%.*}"
+if [ "$AGNOS_VERSION" != "18.5" ] && [ "$AGNOS_MAJOR" != "unknown" ] && [ "$AGNOS_MAJOR" -lt 18 ] 2>/dev/null; then
+  warn ""
+  warn "⚠️  检测到低版本设备：AGNOS $AGNOS_VERSION（低于 bp7 底包 18.5）"
+  warn ""
+  warn "  预期结果："
+  warn "   · 编译大概率失败 —— acados / capnproto / eigen 头文件与 Python 3.12.13"
+  warn "     只有 AGNOS 18.5 镜像自带，$AGNOS_VERSION 上装不出这套依赖。"
+  warn "   · 即使编过，openpilot 用户空间也可能起不来（boot 与 system 版本绑定）。"
+  warn ""
+  warn "  安全保证："
+  warn "   · 本脚本全程零分区写入，引导链不会被改动，不会变砖。"
+  warn "   · 三道闸门已就位：动态钉子 / agnos.py 硬拦截 / 版本匹配闸，"
+  warn "     即使开机自动 AGNOS 升级被触发，也会拒绝刷不匹配的引导链。"
+  warn ""
+  warn "  建议：先用官方途径把设备升到 AGNOS 18.5，再装 bp7。"
+  warn "  确认要继续（大概率编译失败）请设 BP7_FORCE_LOW_AGNOS=1"
+  warn ""
+  if [ "${BP7_FORCE_LOW_AGNOS:-0}" != "1" ]; then
+    die "AGNOS $AGNOS_VERSION 低于 bp7 底包 18.5，预期编译失败。确认要试请加 BP7_FORCE_LOW_AGNOS=1。"
+  fi
+  warn "已指定 BP7_FORCE_LOW_AGNOS=1，继续（失败不会变砖，可回滚）"
+fi
+
 # 引导链现状：看 abl/boot 是否已经是 fork 自改版。
 # 如果已经是，说明设备早就被刷过自改引导链，现在只是维持现状，不会有新增风险。
 BEFORE_ABL="$(sudo -n sha256sum /dev/disk/by-partlabel/abl_${DEV_SLOT} 2>/dev/null | cut -d' ' -f1 || true)"
@@ -129,6 +166,13 @@ else
   die "引导链硬拦截缺失！拒绝继续安装 —— 没有这道闸，开机自动 AGNOS 升级会刷进 fork 自改的 abl/boot 导致变砖。"
 fi
 
+# 版本匹配闸：低版本设备刷不匹配引导链的兜底拦截。
+if grep -q "assert_boot_chain_matches_device" system/hardware/tici/agnos.py 2>/dev/null; then
+  ok "引导链版本匹配闸已就位 ✅（agnos.py: assert_boot_chain_matches_device）"
+else
+  die "引导链版本匹配闸缺失！拒绝继续 —— 低版本设备（12.x/13.x）刷 18.5 引导链必然变砖。"
+fi
+
 # AGNOS_VERSION 必须动态钉实机版本，否则开机会自动触发 AGNOS 升级刷写。
 if grep -q 'AGNOS_VERSION="\$(tr' launch_env.sh 2>/dev/null; then
   ok "AGNOS_VERSION 动态钉子已就位 ✅（开机不会自动刷引导链）"
@@ -137,10 +181,20 @@ else
   warn "  第 4 步会修正它，但请确认这一步能跑完。"
 fi
 
+# 动态钉子哨兵：OTA 更新会 git reset --hard 覆盖 launch_env.sh，
+# 把动态钉子打回上游写死的版本号。有哨兵在，updated.py 会拒绝升级。
+if grep -q "BP7_DYNAMIC_AGNOS_PIN" launch_env.sh 2>/dev/null && \
+   grep -q "BP7_DYNAMIC_AGNOS_PIN" system/updated/updated.py 2>/dev/null; then
+  ok "OTA 覆盖防护已就位 ✅（哨兵 BP7_DYNAMIC_AGNOS_PIN）"
+else
+  die "OTA 覆盖防护缺失！OTA 更新会 git reset --hard 覆盖 launch_env.sh，把动态钉子打回写死版本号并触发 AGNOS 升级。"
+fi
+
 echo
 echo "  体检结论："
 echo "  · 本脚本全程零分区写入 —— 不刷 boot/system/xbl/abl，不换槽。"
 echo "  · 即使 AGNOS 自动升级被触发，agnos.py 也会拒绝刷 fork 自改的引导链。"
+echo "  · 即使 OTA 把动态钉子覆盖掉，哨兵 + 版本匹配闸也会拒绝刷写。"
 echo "  · 引导链基线已记录在 /data/bp7_chain_before.txt，装完自动比对。"
 echo
 
@@ -229,32 +283,67 @@ fi
 
 # 4.6 引导链防护强制校验：任何一道不到位都中止，不带着未设防的引导链开机。
 #     这是最后一道闸 —— 前面 4.1 的 sed 可能因为文件结构变化而没生效。
-echo "  校验引导链三道防护："
+echo "  校验引导链防护："
 GUARD_OK=1
 
 if grep -q 'AGNOS_VERSION="\$(tr' launch_env.sh 2>/dev/null; then
-  echo "    [1/3] AGNOS_VERSION 动态钉子  ✅"
+  echo "    [1/5] AGNOS_VERSION 动态钉子  ✅"
 else
-  echo "    [1/3] AGNOS_VERSION 动态钉子  ✗ 写死了版本，开机会自动触发 AGNOS 升级"
+  echo "    [1/5] AGNOS_VERSION 动态钉子  ✗ 写死了版本，开机会自动触发 AGNOS 升级"
   GUARD_OK=0
 fi
 
 if grep -q "assert_official_boot_chain" system/hardware/tici/agnos.py 2>/dev/null; then
-  echo "    [2/3] agnos.py 引导链硬拦截  ✅"
+  echo "    [2/5] agnos.py 引导链硬拦截  ✅"
 else
-  echo "    [2/3] agnos.py 引导链硬拦截  ✗ 缺失，AGNOS 升级会刷进 fork 自改的 abl/boot"
+  echo "    [2/5] agnos.py 引导链硬拦截  ✗ 缺失，AGNOS 升级会刷进 fork 自改的 abl/boot"
   GUARD_OK=0
 fi
 
 if grep -q 'AGNOS_VERSION="\$(tr' sunnypilot/system/hardware/c3/launch_env.sh 2>/dev/null || \
    [ ! -f sunnypilot/system/hardware/c3/launch_env.sh ]; then
-  echo "    [3/3] c3 launch_env 动态钉子  ✅"
+  echo "    [3/5] c3 launch_env 动态钉子  ✅"
 else
-  echo "    [3/3] c3 launch_env 动态钉子  ✗"
+  echo "    [3/5] c3 launch_env 动态钉子  ✗"
+  GUARD_OK=0
+fi
+
+if grep -q "assert_boot_chain_matches_device" system/hardware/tici/agnos.py 2>/dev/null; then
+  echo "    [4/5] agnos.py 版本匹配闸  ✅"
+else
+  echo "    [4/5] agnos.py 版本匹配闸  ✗ 缺失，低版本设备刷 18.5 引导链会变砖"
+  GUARD_OK=0
+fi
+
+if grep -q "BP7_DYNAMIC_AGNOS_PIN" launch_env.sh 2>/dev/null && \
+   grep -q "BP7_DYNAMIC_AGNOS_PIN" system/updated/updated.py 2>/dev/null; then
+  echo "    [5/5] OTA 覆盖防护哨兵  ✅"
+else
+  echo "    [5/5] OTA 覆盖防护哨兵  ✗ 缺失，OTA 会打回写死版本号并触发 AGNOS 升级"
   GUARD_OK=0
 fi
 
 [ "$GUARD_OK" = "1" ] || die "引导链防护未全部就位，拒绝继续。修好上面标 ✗ 的项，或重新执行本脚本。"
+
+# 4.6.1 低版本设备主动禁用 OTA。
+#     OTA 更新会把源码树 git reset --hard 到远端分支，覆盖掉本仓库的所有
+#     固化改动（含三道防护本身）。虽然 updated.py 有哨兵兜底，但低版本
+#     设备上 OTA 会把 launch_env.sh 换成上游写死的 10.1，版本闸与哨兵
+#     只能"拒绝刷写"，openpilot 用户空间仍会起不来。直接关掉最干净。
+#     DisableUpdates 是 PERSISTENT | BACKUP 参数，写进 /data/params/d 即持久生效。
+if [ "$AGNOS_VERSION" != "18.5" ] && [ "${AGNOS_MAJOR:-0}" != "unknown" ] && [ "${AGNOS_MAJOR:-0}" -lt 18 ] 2>/dev/null; then
+  PARAM_DIR=/data/params/d
+  if [ -d "$PARAM_DIR" ]; then
+    if printf '1' > "$PARAM_DIR/DisableUpdates" 2>/dev/null; then
+      echo "    低版本设备（AGNOS $AGNOS_VERSION）：已写 DisableUpdates=1，禁用 OTA 自动更新 ✅"
+      echo "    （OTA 会覆盖本仓库所有固化改动，且在低版本上必然导致用户空间起不来）"
+    else
+      warn "    低版本设备：写 DisableUpdates 失败，OTA 仍可能触发。哨兵会兜底拒绝刷引导链。"
+    fi
+  else
+    warn "    低版本设备：找不到 $PARAM_DIR，跳过 DisableUpdates 设置"
+  fi
+fi
 
 # 4.7 引导链清单二次确认（只读，不修改清单）
 #     故意不改 agnos.json：abl/boot 是 AGNOS 升级的必需分区，删掉它们

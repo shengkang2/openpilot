@@ -19,6 +19,28 @@ function agnos_init {
 
 
   if [ $(< /VERSION) != "$AGNOS_VERSION" ]; then
+    # BluePilot: 三道闸门，见根目录 launch_chffrplus.sh 的同名说明。
+    # 这份是 c3 分支，MANIFEST 指向 c3/agnos.json —— 那份清单带完整引导链，
+    # 在低版本设备上刷进去必然变砖，所以这里更不能有任何闪失。
+
+    # 闸门 1：动态钉子哨兵
+    if [ "${BP7_DYNAMIC_AGNOS_PIN:-}" = "1" ]; then
+      echo "BP7: AGNOS_VERSION 动态钉子与实机不一致，疑似环境异常，跳过 AGNOS 自动升级" >&2
+      return 0
+    fi
+
+    # 闸门 2：哨兵版本号（读不到 /VERSION）
+    if [ "$AGNOS_VERSION" = "__BP7_NO_VERSION__" ]; then
+      echo "BP7: 无法确定目标 AGNOS 版本，跳过 AGNOS 自动升级" >&2
+      return 0
+    fi
+
+    # 闸门 3：禁止降级刷写
+    if printf '%s\n%s\n' "$AGNOS_VERSION" "$(< /VERSION)" | sort -V -C 2>/dev/null; then
+      echo "BP7: 目标 AGNOS 版本 ($AGNOS_VERSION) 不高于实机 ($(< /VERSION))，拒绝降级刷写" >&2
+      return 0
+    fi
+
     AGNOS_PY="$DIR/system/hardware/tici/agnos.py"
     MANIFEST="$SP_C3_DIR/agnos.json"
     if $AGNOS_PY --verify $MANIFEST; then

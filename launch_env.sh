@@ -22,12 +22,29 @@ if [ -z "$AGNOS_VERSION" ]; then
   # agnos.json 里 abl/boot 都是 fork 自改的（abl=b6fba807、boot=19ff57b6），
   # 刷进去 bootloader 校验失败，设备直接变砖（Unsupported firmware detected）。
   # 历史上已经因此变砖两次，这里改成运行时读 /VERSION，装到任何 AGNOS 版本都安全。
+  #
+  # 低版本设备（12.x / 13.x）尤其关键：这类设备的 bootloader 与 18.5 的
+  # rootfs 模块不兼容，刷进去必砖。所以宁可读不到 /VERSION 也不猜版本。
   if [ -r /VERSION ]; then
     export AGNOS_VERSION="$(tr -d '[:space:]' < /VERSION)"
   else
-    export AGNOS_VERSION="18.5"
+    # 读不到 /VERSION：不能回落任何具体版本号。
+    # 用一个绝不可能等于真实 /VERSION 的哨兵值，让 agnos_init 的版本比较
+    # 判定为「需要升级」并进入升级分支 —— 但那条分支有 agnos.py 的硬拦截，
+    # 会拒绝刷 fork 自改的引导链。宁可起不来，也绝不能刷坏 bootloader。
+    export AGNOS_VERSION="__BP7_NO_VERSION__"
+    echo "BP7: 读不到 /VERSION，禁用 AGNOS 自动升级（agnos.py 硬拦截兜底）" >&2
   fi
 fi
+
+# BluePilot: 哨兵标记 —— 表示本文件的 AGNOS_VERSION 是动态读取的。
+# system/updated/updated.py 的 handle_agnos_update() 会拿 launch_env.sh 里的
+# AGNOS_VERSION 跟实机 /VERSION 比。OTA 更新会把整个源码树 git reset --hard
+# 到远端分支，覆盖掉这份动态钉子，退回到上游写死的版本号 —— 那时
+# handle_agnos_update 会认为「版本不符」而启动 AGNOS 升级刷写。
+# 这个标记让 updated.py 能识别出「版本不符只是因为钉子被覆盖」，
+# 从而拒绝升级，而不是真的去刷引导链。
+export BP7_DYNAMIC_AGNOS_PIN="1"
 
 export STAGING_ROOT="/data/safe_staging"
 

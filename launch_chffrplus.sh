@@ -22,6 +22,35 @@ function agnos_init {
 
   # Check if AGNOS update is required
   if [ $(< /VERSION) != "$AGNOS_VERSION" ]; then
+    # BluePilot: 三道额外闸门，拦住「低版本设备刷成不匹配引导链」这条变砖路径。
+    #
+    # 变砖机理：boot 与 system 是版本绑定的。若把与当前 bootloader 不匹配的
+    # AGNOS 整套刷进去（xbl/abl/boot 全换），设备 bootloader 拒绝加载
+    # → Unsupported firmware detected → SSH 与网络全断，只能 QDL 全刷救砖。
+    # 低版本设备（12.x / 13.x）刷 18.5 的引导链必然踩中，历史已变砖两次。
+
+    # 闸门 1：动态钉子哨兵。launch_env.sh 的 AGNOS_VERSION 是运行时读
+    # /VERSION 的，理论上永远与实机相等。走到这个分支说明环境异常，
+    # 此时任何刷写都是赌博 —— 直接跳过。
+    if [ "${BP7_DYNAMIC_AGNOS_PIN:-}" = "1" ]; then
+      echo "BP7: AGNOS_VERSION 动态钉子与实机不一致，疑似环境异常，跳过 AGNOS 自动升级" >&2
+      return 0
+    fi
+
+    # 闸门 2：哨兵版本号。读不到 /VERSION 时 launch_env.sh 会设这个值，
+    # 说明无法确定目标版本，不刷。
+    if [ "$AGNOS_VERSION" = "__BP7_NO_VERSION__" ]; then
+      echo "BP7: 无法确定目标 AGNOS 版本，跳过 AGNOS 自动升级" >&2
+      return 0
+    fi
+
+    # 闸门 3：禁止降级。目标版本比实机旧（12.x 刷 10.1 之类）说明拉到了
+    # 上游写死的旧版本号，刷进去一定不匹配。用 sort -V 做版本比较。
+    if printf '%s\n%s\n' "$AGNOS_VERSION" "$(< /VERSION)" | sort -V -C 2>/dev/null; then
+      echo "BP7: 目标 AGNOS 版本 ($AGNOS_VERSION) 不高于实机 ($(< /VERSION))，拒绝降级刷写" >&2
+      return 0
+    fi
+
     AGNOS_PY="$DIR/system/hardware/tici/agnos.py"
     MANIFEST="$DIR/system/hardware/tici/agnos.json"
     if $AGNOS_PY --verify $MANIFEST; then

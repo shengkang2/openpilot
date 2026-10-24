@@ -54,13 +54,13 @@ https://github.com/shengkang2/openpilot/releases/download/bp7-release/<tag>/bp7-
 | **装后自检** | 第 4.6 步校验三道防护全部就位，任何一道缺失直接中止安装 |
 | 失败可回滚 | 编译失败不影响系统启动，`git checkout` 回原分支重编即可 |
 
-### 三道防护：为什么装 bp7 不会刷坏引导链
+### 五道防护：为什么装 bp7 不会刷坏引导链
 
 设备是 comma three，bp7 是 AGNOS 18.5 底包，版本不一定对得上。
 真正会变砖的路径只有一条：**开机时 `agnos_init` 发现 `/VERSION != AGNOS_VERSION`
-→ 自动跑 `agnos.py` 拉整套清单重刷 → 刷进 fork 自改的 abl/boot → bootloader 拒绝加载。**
+→ 自动跑 `agnos.py` 拉整套清单重刷 → 刷进不匹配的引导链 → bootloader 拒绝加载。**
 
-针对这一条，本分支设了三道独立的闸：
+针对这一条，本分支设了五道独立的闸：
 
 **第一道 · 消除触发条件** —— 两处 `launch_env.sh` 的 `AGNOS_VERSION` 改成
 运行时读 `/VERSION`。这样 `/VERSION != AGNOS_VERSION` 永远为假，
@@ -72,9 +72,49 @@ https://github.com/shengkang2/openpilot/releases/download/bp7-release/<tag>/bp7-
 abl（`b6fba807…`）或 boot（`19ff57b6…`）就抛异常中止，
 **在任何写操作之前**（包括 `abctl --set_unbootable`），分区一个字节都不会动。
 
-**第三道 · 装前体检 + 装后自检** —— `install.sh` 第 0.6 步只读输出设备状态；
-第 4.6 步校验前两道防护确实在源码里生效，任何一道缺失就 `die` 中止，
-**绝不允许带着未设防的引导链去开机**。
+**第三道 · 版本匹配闸** —— `assert_boot_chain_matches_device()` 拦「官方但版本
+不匹配」的引导链。bp7 的 `agnos.json` 是 AGNOS 18.5 的整套镜像；刷到 12.x / 13.x
+设备上，18.5 的 xbl/abl 与该设备的 bootloader 世代不匹配，bootloader 直接拒绝加载。
+这道闸比对实机 `/VERSION` 与清单对应的 AGNOS 版本，不一致就中止整份清单。
+
+**第四道 · OTA 覆盖防护** —— openpilot 自带的 OTA 会把源码树
+`git reset --hard` 到远端分支，**覆盖掉上面第一道闸的动态钉子**，
+把 `AGNOS_VERSION` 打回上游写死的值（上游 master 是 `"10.1"`）。
+`launch_env.sh` 导出哨兵 `BP7_DYNAMIC_AGNOS_PIN=1`，
+`system/updated/updated.py` 的 `handle_agnos_update()` 检测到哨兵就**拒绝升级** ——
+版本不符只是因为钉子被覆盖，不是真的需要刷机。
+
+**第五道 · 装前体检 + 装后自检** —— `install.sh` 第 0.6 步只读输出设备状态，
+低版本设备直接拦截；第 4.6 步校验前四道防护确实在源码里生效，任何一道缺失就
+`die` 中止，**绝不允许带着未设防的引导链去开机**。
+
+### 低版本设备（12.x / 13.x）的特别说明
+
+**结论：不会砖，但也装不上。**
+
+不会砖的理由：变砖只有「刷引导链」这一条路径，而上面五道闸把它的所有入口
+（开机 `agnos_init`、手动 `agnos.py`、OTA `handle_agnos_update`）都封死了，
+而且 `install.sh` 全程零分区写入。
+
+装不上的理由：bp7 需要 AGNOS 18.5 底包自带的依赖 ——
+**acados / capnproto / eigen 头文件与 Python 3.12.13**。
+12.x / 13.x 的系统里没有这套东西，`uv sync` 也装不出 acados 的原生库，
+编译必然失败。历史记录确认过：bp7 在 AGNOS 16 上就「无解」。
+
+所以 `install.sh` 在低版本设备上会**明确拦截并说明原因**：
+
+```
+⚠️  检测到低版本设备：AGNOS 12.8（低于 bp7 底包 18.5）
+  预期结果：编译大概率失败 / 即使编过用户空间也可能起不来
+  安全保证：全程零分区写入，不会变砖，可回滚
+确认要继续请设 BP7_FORCE_LOW_AGNOS=1
+```
+
+另外低版本设备上 `install.sh` 会自动写 `DisableUpdates=1`（持久化参数），
+把 OTA 关掉 —— OTA 会覆盖本仓库的所有固化改动，且在低版本上必然导致用户空间起不来。
+
+**正确做法：先用官方途径把设备升到 AGNOS 18.5，再装 bp7。**
+升 AGNOS 本身有刷引导链的风险，但那是官方同版本的引导链，不会变砖。
 
 ### 为什么 AGNOS_VERSION 必须动态
 
@@ -86,8 +126,9 @@ bp7 自带的 `system/hardware/tici/agnos.json` 里 `abl=b6fba807`、`boot=19ff5
 自动跑 `agnos.py` 拉整套清单重刷 → bootloader 校验失败 →
 `Unsupported firmware detected` / `Reflash the firmware` → **SSH 与网络全断，只能 QDL 全刷救砖**。
 
-历史上已经因此变砖两次。本分支从三个层面消除了它：动态钉子消除触发条件，
-代码层拦截兜底，install.sh 自检防止带着隐患开机。
+历史上已经因此变砖两次。本分支从五个层面消除了它：动态钉子消除触发条件，
+代码层拦截兜底，版本匹配闸挡住跨代刷写，OTA 哨兵挡住钉子被覆盖，
+install.sh 自检防止带着隐患开机。
 
 ### 关于版本不匹配（这不会变砖）
 

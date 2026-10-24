@@ -53,6 +53,53 @@ def assert_official_boot_chain(update: list[dict]) -> None:
       )
 
 
+# 引导链分区名 —— 这些分区属于 bootloader 链，与 openpilot 用户空间无关，
+# 但刷错版本会让设备彻底起不来（连 SSH 都没有，只能 QDL 全刷）。
+BOOT_CHAIN_PARTITIONS = ("xbl", "xbl_config", "abl", "aop", "devcfg", "boot")
+
+# 本仓库随附的 agnos.json 对应的 AGNOS 版本。
+# 清单里的 url 只有 hash（commadist 靠 hash 寻址，不带版本号），所以版本只能
+# 在源码里标注。这个值与仓库的 18.5 底包一致 —— 历史确认过 bp7 的
+# agnos.json 是 AGNOS 18.5 的整套镜像。
+MANIFEST_AGNOS_VERSION = "18.5"
+
+
+def assert_boot_chain_matches_device(update: list[dict]) -> None:
+  """拒绝把「与当前设备 bootloader 不匹配」的引导链刷进去。
+
+  背景：bp7 自带的 agnos.json 指向 AGNOS 18.5 的整套镜像，包含 18.5 的
+  xbl/abl/boot。而设备的 bootloader（装在 xbl/abl 分区里）是出厂时那一版。
+  AGNOS 的 xbl 与设备硬件强绑定 —— 把别的硬件世代的 xbl 刷进去，bootloader
+  直接拒绝加载，设备变砖。
+
+  低版本设备（12.x / 13.x）刷 18.5 的引导链必然踩中：历史上两次变砖
+  都是这个原因。而 FORK_MODIFIED_BOOT_CHAIN 只能识别「已知的自改哈希」，
+  识别不了「官方但版本不匹配」的情况 —— 所以这里补一道版本闸。
+
+  判据：实机 /VERSION 必须等于本清单对应的 AGNOS 版本，否则拒绝整份清单。
+  """
+  device_version = ""
+  try:
+    with open("/VERSION") as f:
+      device_version = f.read().strip()
+  except OSError:
+    device_version = ""
+
+  if not device_version:
+    # 读不到实机版本，无从判断 —— 不在这里拦，交给上面的哈希闸。
+    return
+
+  if device_version == MANIFEST_AGNOS_VERSION:
+    return
+
+  raise RuntimeError(
+    f"拒绝刷引导链：本清单对应 AGNOS {MANIFEST_AGNOS_VERSION}，而设备实机是 "
+    f"{device_version}。boot 与 system 是版本绑定的，引导链与硬件世代也强绑定 —— "
+    f"刷进去 bootloader 会拒绝加载，设备直接变砖（Unsupported firmware detected，"
+    f"SSH 与网络全断，只能 QDL 全刷救砖）。已中止本次 AGNOS 更新，设备分区未被改动。"
+  )
+
+
 
 class StreamingDecompressor:
   def __init__(self, url: str) -> None:
@@ -315,6 +362,11 @@ def flash_agnos_update(manifest_path: str, target_slot_number: int, cloudlog, st
   # 这一步必须在 abctl --set_unbootable 之前，否则拦晚了会把目标槽标成
   # unbootable，留下一个刷了一半的槽位。
   assert_official_boot_chain(update)
+
+  # BluePilot: 再拦「官方但与实机版本不匹配」的引导链。
+  # 低版本设备（12.x / 13.x）刷 18.5 的引导链必然变砖 —— 上一道只认
+  # 已知的自改哈希，识别不了这种情况。
+  assert_boot_chain_matches_device(update)
 
   cloudlog.info(f"Target slot {target_slot_number}")
 

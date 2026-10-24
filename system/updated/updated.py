@@ -204,6 +204,37 @@ def handle_agnos_update() -> None:
   if cur_version == updated_version:
     return
 
+  # BluePilot: 拒绝「因为动态钉子被覆盖而误判版本不符」的 AGNOS 升级。
+  #
+  # 背景：launch_env.sh 里 AGNOS_VERSION 是运行时读 /VERSION 的（动态钉子），
+  # 所以正常情况下 cur_version 永远等于 updated_version，永远不会走到这里。
+  # 但 OTA 更新流程会把整个源码树 git reset --hard 到远端分支
+  # （见 Updater.update() 里的 checkout --force -B $branch FETCH_HEAD），
+  # 覆盖掉这份动态钉子，退回上游写死的版本号 —— 比如上游 master 写的是
+  # AGNOS_VERSION="10.1"。于是版本比较判为「不符」，本函数就会去刷 AGNOS。
+  #
+  # 低版本设备（12.x / 13.x）在这里最危险：upstream 的清单与 bootloader
+  # 不匹配，刷进去设备直接变砖（Unsupported firmware detected）。
+  #
+  # 判据：BP7_DYNAMIC_AGNOS_PIN 哨兵存在，说明这份 launch_env.sh 的版本号
+  # 本来就是动态的；此时 updated_version 与实机不符，只可能是钉子被覆盖或
+  # 环境异常，绝不能触发刷写。直接拒绝升级。
+  pin_marker = run(["bash", "-c", r"unset AGNOS_VERSION && source launch_env.sh && \
+                     echo -n ${BP7_DYNAMIC_AGNOS_PIN:-}"], OVERLAY_MERGED).strip()
+  if pin_marker == "1":
+    cloudlog.warning(
+      f"refusing AGNOS update: launch_env.sh carries the dynamic-pin marker but "
+      f"versions differ (device={cur_version}, manifest={updated_version}). "
+      f"Updating AGNOS here could brick the bootloader. Skipping."
+    )
+    return
+
+  # 哨兵里的 __BP7_NO_VERSION__ 表示设备上读不到 /VERSION，无法确定目标版本。
+  # 这种情况下刷任何 AGNOS 都是赌博，直接拒绝。
+  if updated_version == "__BP7_NO_VERSION__":
+    cloudlog.warning("refusing AGNOS update: cannot determine target AGNOS version (/VERSION unreadable). Skipping.")
+    return
+
   # prevent an openpilot getting swapped in with a mismatched or partially downloaded agnos
   set_consistent_flag(False)
 
