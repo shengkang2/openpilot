@@ -14,18 +14,45 @@
 bash <(curl -fsSL https://raw.githubusercontent.com/shengkang2/openpilot/bp7.020261020/install.sh)
 ```
 
-脚本会依次完成：环境自检 → 切分支 → 重建子模块 → 拉 LFS → 源码级适配 →
-依赖准备 → 编译 → 重启服务 → 引导链比对。
-
-### 方式 B：下载源码包
-
-Release 直链：
+**不需要先手动 clone。** 脚本会自动完成 bootstrap：
 
 ```
-https://github.com/shengkang2/openpilot/releases/download/bp7-release/<tag>/bp7-prebuilt-src.tar.gz
+0. 环境自检 → 0.5 引导链基线 → 0.6 装前体检
+   → [若 /data/openpilot 不存在] 0.1 自动 clone（含 LFS）
+   → 1 切分支 → 2 子模块 → 3 LFS → 4 源码适配 → 5 依赖 → 6 编译 → 7 启动 → 8 引导链比对
 ```
 
-解包到 `/data/openpilot` 后跑 `bash install.sh` 完成编译。
+安装耗时：clone+拉模型约 5-15 分钟，编译约 20-40 分钟（tici 无 GPU，用 `scons -j2`）。
+
+### 方式 B：离线包（设备访问不了 GitHub 时）
+
+设备在国内、GitHub 不通时用这条。PC 上生成包：
+
+```bash
+bash tools/make_bundle.sh          # 产出 dist/bp7-offline.tar.gz，约 406MB
+```
+
+传到设备并安装：
+
+```bash
+scp dist/bp7-offline.tar.gz comma@<设备IP>:/data/
+ssh comma@<设备IP>
+
+# /data/openpilot 是 comma 服务的固定工作目录，必须展开到这里
+sudo -n rm -rf /data/openpilot && sudo -n mkdir -p /data/openpilot
+tar -xzf /data/bp7-offline.tar.gz -C /data/openpilot
+bash /data/openpilot/install.sh
+```
+
+离线包自带子模块 + LFS 模型实体 + 17 个符号链接清单，install.sh 会自动重建符号链接、
+跳过所有网络请求。包内带 `.bp7_offline` 标记，脚本据此进入离线模式。
+
+### 方式 C：设备上已有仓库，只想更新
+
+```bash
+cd /data/openpilot
+bash <(curl -fsSL https://raw.githubusercontent.com/shengkang2/openpilot/bp7.020261020/install.sh)
+```
 
 ### 环境变量
 
@@ -35,7 +62,24 @@ https://github.com/shengkang2/openpilot/releases/download/bp7-release/<tag>/bp7-
 | `BP7_REPO` | `https://github.com/shengkang2/openpilot.git` | 仓库地址 |
 | `BP7_JOBS` | `2` | 编译并发（tici 只有 3.6G 内存） |
 | `BP7_SKIP_BUILD` | `0` | 设为 `1` 只做源码适配不编译 |
+| `BP7_FORCE_LOW_AGNOS` | `0` | 低版本设备（<18.5）需显式设为 `1` 才继续 |
 | `OP` | `/data/openpilot` | openpilot 根目录 |
+
+### 安装日志
+
+全程写 `/data/bp7_install.log`，实时看：
+
+```bash
+tail -f /data/bp7_install.log
+```
+
+### 回滚
+
+```bash
+cd /data/openpilot && git checkout -f <原分支> && bash install.sh
+```
+
+引导链全程零写入，回滚不需要刷任何分区。
 
 ---
 
