@@ -17,6 +17,42 @@ CAIBX_URL = "https://commadist.azureedge.net/agnosupdate/"
 
 AGNOS_MANIFEST_FILE = "system/hardware/tici/agnos.json"
 
+# BluePilot: fork 自改的引导链分区，绝不允许刷进设备。
+#
+# bp7 分支自带的 agnos.json 里 abl / boot 的 hash 是这个 fork 自己改过的
+# （abl=b6fba807…、boot=19ff57b6…），并不是官方镜像。设备 bootloader 会校验
+# 这两个分区，hash 对不上就拒绝加载 → "Unsupported firmware detected"，
+# 设备直接变砖。历史上已经因此变砖两次。
+#
+# 这里做硬拦截：只要待刷清单里的引导链分区命中这些 hash，直接抛异常中止，
+# 宁可 AGNOS 不升级，也不碰引导链。所有刷引导链的入口都经过
+# flash_agnos_update()，所以在这里拦一次就全线封死。
+FORK_MODIFIED_BOOT_CHAIN = {
+  # name -> (hash_raw 前缀, 说明)
+  "abl": ("b6fba807b9bcd66a31f2afb0eba5163ec239693ad32e2e4200f6c356adfe098c",
+          "fork 自改的 ABL（bootloader）"),
+  "boot": ("19ff57b68e219e4503fcaca716967098d5d0a1de8af833f04dbf13b99aeb4d39",
+           "fork 自改的 boot 内核"),
+}
+
+
+def assert_official_boot_chain(update: list[dict]) -> None:
+  """拒绝刷入 fork 自改的引导链分区。命中即抛异常，中止整个 AGNOS 更新。"""
+  for partition in update:
+    name = partition.get("name")
+    entry = FORK_MODIFIED_BOOT_CHAIN.get(name)
+    if entry is None:
+      continue
+    forbidden_hash, desc = entry
+    actual = str(partition.get("hash_raw", "")).lower()
+    if actual == forbidden_hash.lower():
+      raise RuntimeError(
+        f"拒绝刷引导链：清单里的 {name} 是 {desc}（hash={actual[:16]}…）。"
+        f"设备 bootloader 会拒绝加载它，刷进去必然变砖（Unsupported firmware detected）。"
+        f"已中止本次 AGNOS 更新，设备分区未被改动。"
+      )
+
+
 
 class StreamingDecompressor:
   def __init__(self, url: str) -> None:
@@ -274,6 +310,11 @@ def swap(manifest_path: str, target_slot_number: int, cloudlog) -> None:
 
 def flash_agnos_update(manifest_path: str, target_slot_number: int, cloudlog, standalone=False) -> None:
   update = json.load(open(manifest_path))
+
+  # BluePilot: 先拦掉 fork 自改的引导链，再做任何写操作。
+  # 这一步必须在 abctl --set_unbootable 之前，否则拦晚了会把目标槽标成
+  # unbootable，留下一个刷了一半的槽位。
+  assert_official_boot_chain(update)
 
   cloudlog.info(f"Target slot {target_slot_number}")
 

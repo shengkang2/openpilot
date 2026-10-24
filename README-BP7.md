@@ -49,20 +49,57 @@ https://github.com/shengkang2/openpilot/releases/download/bp7-release/<tag>/bp7-
 | 不换槽 | 不执行 `abctl --set_active`，槽位由你决定 |
 | 不刷 boot/system | 不执行 `agnos.py`，不碰任何镜像 |
 | AGNOS_VERSION 动态钉 | 两处 `launch_env.sh` 都在运行时读 `/VERSION`，装到任何 AGNOS 版本都不触发开机自动升级 |
+| **代码层硬拦截** | `agnos.py` 在 `flash_agnos_update()` 第一行就拒绝 fork 自改的 abl/boot，抛异常中止 |
+| **装前体检** | `install.sh` 第 0.6 步只读体检，输出设备型号/槽位/AGNOS 版本/引导链哈希 |
+| **装后自检** | 第 4.6 步校验三道防护全部就位，任何一道缺失直接中止安装 |
 | 失败可回滚 | 编译失败不影响系统启动，`git checkout` 回原分支重编即可 |
+
+### 三道防护：为什么装 bp7 不会刷坏引导链
+
+设备是 comma three，bp7 是 AGNOS 18.5 底包，版本不一定对得上。
+真正会变砖的路径只有一条：**开机时 `agnos_init` 发现 `/VERSION != AGNOS_VERSION`
+→ 自动跑 `agnos.py` 拉整套清单重刷 → 刷进 fork 自改的 abl/boot → bootloader 拒绝加载。**
+
+针对这一条，本分支设了三道独立的闸：
+
+**第一道 · 消除触发条件** —— 两处 `launch_env.sh` 的 `AGNOS_VERSION` 改成
+运行时读 `/VERSION`。这样 `/VERSION != AGNOS_VERSION` 永远为假，
+开机根本不会走进刷引导链的分支。
+
+**第二道 · 代码层硬拦截** —— 万一有人手动跑 `agnos.py`（或 `system/updated/updated.py`
+的 `handle_agnos_update()` 触发），`agnos.py` 在 `flash_agnos_update()` 的**第一行**
+就调用 `assert_official_boot_chain()`，检测到清单里有 fork 自改的
+abl（`b6fba807…`）或 boot（`19ff57b6…`）就抛异常中止，
+**在任何写操作之前**（包括 `abctl --set_unbootable`），分区一个字节都不会动。
+
+**第三道 · 装前体检 + 装后自检** —— `install.sh` 第 0.6 步只读输出设备状态；
+第 4.6 步校验前两道防护确实在源码里生效，任何一道缺失就 `die` 中止，
+**绝不允许带着未设防的引导链去开机**。
 
 ### 为什么 AGNOS_VERSION 必须动态
 
 bp7 自带的 `system/hardware/tici/agnos.json` 里 `abl=b6fba807`、`boot=19ff57b6`
 都是 fork 自改的，不是官方镜像。而 `sunnypilot/system/hardware/c3/launch_env.sh`
-原本写死 `AGNOS_VERSION="12.8"`。
+原本写死 `AGNOS_VERSION="12.8"`，根目录 `launch_env.sh` 写死 `"18.5"`。
 
 两者叠加的后果：设备上是 AGNOS 18.x，开机时 `agnos_init` 发现版本不符 →
 自动跑 `agnos.py` 拉整套清单重刷 → bootloader 校验失败 →
 `Unsupported firmware detected` / `Reflash the firmware` → **SSH 与网络全断，只能 QDL 全刷救砖**。
 
-历史上已经因此变砖两次。本分支把两处 `launch_env.sh` 都改成读 `/VERSION`，
-从根上消除了这个触发条件。
+历史上已经因此变砖两次。本分支从三个层面消除了它：动态钉子消除触发条件，
+代码层拦截兜底，install.sh 自检防止带着隐患开机。
+
+### 关于版本不匹配（这不会变砖）
+
+bp7 按 18.5 编译，设备底包如果是别的版本，openpilot 用户空间可能起不来。
+但这跟引导链无关 —— 引导链零改动，可以回滚：
+
+```bash
+cd /data/openpilot && git checkout -f <原分支> && bash install.sh
+```
+
+**boot 与 system 必须同版本**这条铁律依然有效，但那只在需要**刷机**时起作用。
+`install.sh` 不刷机，所以不涉及。
 
 ---
 

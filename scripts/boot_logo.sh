@@ -160,14 +160,27 @@ clean_backups() {
 update_boot_image() {
     print_info "Updating boot image (device: $DEVICE_TYPE)..."
     print_info "Using image: $BLUEPILOT_BOOT_IMG"
-    mount_partition_rw "/"
 
-    # Ensure the original file exists before proceeding
+    # BluePilot: 先做全部存在性检查，再 remount。
+    # 原版是先 remount rw "/" 再检查文件，文件不存在就直接 return 1，
+    # 根分区被永久留在 rw 状态 —— 这台设备的 /usr 只读是设计如此，
+    # 留着 rw 一旦中途掉电就可能损坏根文件系统。
+    #
+    # 顺序调整：先确认源和目标都在，再动挂载；任何失败路径都保证
+    # 把根分区 remount 回 ro。
+    if [ ! -f "$BLUEPILOT_BOOT_IMG" ]; then
+        print_error "BluePilot boot image ($BLUEPILOT_BOOT_IMG) not found."
+        [ "$HEADLESS_MODE" != "true" ] && pause_for_user
+        return 1
+    fi
+
     if [ ! -f "$BOOT_IMG" ]; then
         print_error "Boot image ($BOOT_IMG) does not exist. Aborting update."
         [ "$HEADLESS_MODE" != "true" ] && pause_for_user
         return 1
     fi
+
+    mount_partition_rw "/"
 
     # Create backup if it does not already exist
     if [ ! -f "$BOOT_IMG_BKP" ]; then
@@ -175,13 +188,6 @@ update_boot_image() {
         print_success "Backup created for boot image at $BOOT_IMG_BKP"
     else
         print_info "Backup for boot image already exists at $BOOT_IMG_BKP"
-    fi
-
-    # Ensure the BluePilot image exists
-    if [ ! -f "$BLUEPILOT_BOOT_IMG" ]; then
-        print_error "BluePilot boot image ($BLUEPILOT_BOOT_IMG) not found."
-        [ "$HEADLESS_MODE" != "true" ] && pause_for_user
-        return 1
     fi
 
     # Overwrite the original file with the BluePilot image

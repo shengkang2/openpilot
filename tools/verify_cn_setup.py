@@ -175,6 +175,8 @@ CHECKS = [
     ('selfdrive/ui/sunnypilot/layouts/settings/settings.py', 'JetlinkLayout', 'Jetlink 面板注册'),
     ('selfdrive/ui/sunnypilot/layouts/settings/settings.py', 'tr(self.panel_info.name)', '导航栏 tr()'),
     ('jetlink_repo/jetlink/openpilot/provision.py', 'no host within %.0f s, checking the offline pre-fetch', 'Jetlink host-first 握手修复'),
+    ('system/hardware/tici/agnos.py', 'assert_official_boot_chain', 'agnos.py 引导链硬拦截'),
+    ('install.sh', 'assert_official_boot_chain', 'install.sh 引导链防护校验'),
 ]
 for rel, needle, label in CHECKS:
     p = os.path.join(REPO, rel)
@@ -199,18 +201,37 @@ danger = [
     ('fastboot flash', 'fastboot 刷写'),
     ('dd if=', '裸 dd 写盘'),
 ]
+# 只读引用不算危险调用：
+#   - grep -q / grep 只是在检查文件内容
+#   - pgrep / pkill 是检查和杀进程
+#   - echo / warn / die / ok 是打印说明
+#   - 注释行
+# 只有真正把 agnos.py 当命令跑、或执行换槽/刷写指令才算违规。
+READONLY_PREFIXES = ('grep ', 'pgrep ', 'pkill ', 'echo ', 'warn ', 'die ', 'ok ', 'printf ',
+                     'sudo -n pkill ', 'sudo -n pgrep ')
 for needle, why in danger:
-    if needle in inst:
-        # 允许出现在警告/说明文字里，但不能是实际调用
-        for line in inst.splitlines():
-            if needle in line and not line.strip().startswith('#') and 'pkill' not in line and 'pgrep' not in line:
-                if 'die ' in line or 'warn ' in line or 'echo' in line:
-                    continue
-                print(f'  !! install.sh 疑似执行 {needle}（{why}）: {line.strip()[:70]}')
-                problems.append(f'install.sh 疑似执行 {needle}')
-                break
-        else:
+    if needle not in inst:
+        continue
+    flagged = False
+    for line in inst.splitlines():
+        s = line.strip()
+        if needle not in s or s.startswith('#'):
             continue
+        # 去掉行首的 if/[ 等条件前缀后，看这个 needle 是不是处于「命令位置」
+        cmd = s.split('if ', 1)[-1] if s.startswith('if ') else s
+        cmd = cmd.lstrip('[]!; ')
+        # 命中只读前缀 → 放行
+        if any(cmd.startswith(p) for p in READONLY_PREFIXES):
+            continue
+        # 出现在 grep 的模式串里 → 放行
+        if 'grep' in cmd and needle in cmd.split('"')[1] if '"' in cmd else False:
+            continue
+        print(f'  !! install.sh 疑似执行 {needle}（{why}）: {s[:70]}')
+        problems.append(f'install.sh 疑似执行 {needle}')
+        flagged = True
+        break
+    if not flagged:
+        continue
 print('  未发现分区写入调用 ✅')
 
 print()

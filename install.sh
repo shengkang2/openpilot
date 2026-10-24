@@ -87,10 +87,62 @@ fi
 
 # 记录引导链基线：只读哈希，装完对比，证明零改动
 hr "0.5 引导链基线（只读，用于事后证明零改动）"
-for p in xbl_a xbl_config_a abl_a aop_a devcfg_a; do
+for p in xbl_a xbl_config_a abl_a devcfg_a aop_a; do
   h=$(sudo -n sha256sum /dev/disk/by-partlabel/$p 2>/dev/null | cut -d' ' -f1 || true)
   [ -n "$h" ] && echo "  $p = $h"
 done | tee /data/bp7_chain_before.txt 2>/dev/null || true
+
+# ---------------------------------------------------------------- 装前体检
+# 全程只读。目的：装之前把「会不会变砖」这件事问清楚，而不是装完再看。
+hr "0.6 装前体检（只读，不做任何写入）"
+
+DEV_MODEL="$(tr -d '\0' < /sys/firmware/devicetree/base/model 2>/dev/null || echo unknown)"
+DEV_SLOT="$(sudo -n abctl --boot_slot 2>/dev/null || echo unknown)"
+DEV_MODEL_ID="$(grep -m1 'tegra_platform' /proc/cmdline 2>/dev/null | cut -d= -f2 || echo unknown)"
+ok "设备型号   : $DEV_MODEL"
+ok "当前槽位   : $DEV_SLOT"
+
+# 版本绑定铁律：boot 与 system 必须同版本。bp7 编译产物是按 18.5 生成的，
+# 设备底包如果是别的版本，openpilot 用户空间可能起不来 —— 但这跟引导链
+# 无关，属于「装得上但跑不起来」，可回滚。
+if [ "$AGNOS_VERSION" = "18.5" ]; then
+  ok "AGNOS 版本 : $AGNOS_VERSION（与 bp7 底包一致 ✅）"
+else
+  warn "AGNOS 版本 : $AGNOS_VERSION（bp7 按 18.5 编译）"
+  warn "  boot 与 system 版本必须绑定。若装完起不来，是版本不匹配，不是变砖。"
+  warn "  引导链不受影响 —— 本脚本不刷任何分区。"
+fi
+
+# 引导链现状：看 abl/boot 是否已经是 fork 自改版。
+# 如果已经是，说明设备早就被刷过自改引导链，现在只是维持现状，不会有新增风险。
+BEFORE_ABL="$(sudo -n sha256sum /dev/disk/by-partlabel/abl_${DEV_SLOT} 2>/dev/null | cut -d' ' -f1 || true)"
+BEFORE_BOOT="$(sudo -n sha256sum /dev/disk/by-partlabel/boot_${DEV_SLOT} 2>/dev/null | cut -d' ' -f1 || true)"
+[ -n "$BEFORE_ABL" ] && ok "当前 abl  = ${BEFORE_ABL:0:16}…"
+[ -n "$BEFORE_BOOT" ] && ok "当前 boot = ${BEFORE_BOOT:0:16}…"
+
+# 关键检查：本仓库自带的 agnos.json 里的 abl/boot 是 fork 自改版。
+# agnos.py 已在代码层硬拦截（assert_official_boot_chain），
+# 这里再确认一次拦截确实在源码里生效。
+if grep -q "assert_official_boot_chain" system/hardware/tici/agnos.py 2>/dev/null; then
+  ok "引导链硬拦截已就位 ✅（agnos.py: assert_official_boot_chain）"
+else
+  die "引导链硬拦截缺失！拒绝继续安装 —— 没有这道闸，开机自动 AGNOS 升级会刷进 fork 自改的 abl/boot 导致变砖。"
+fi
+
+# AGNOS_VERSION 必须动态钉实机版本，否则开机会自动触发 AGNOS 升级刷写。
+if grep -q 'AGNOS_VERSION="\$(tr' launch_env.sh 2>/dev/null; then
+  ok "AGNOS_VERSION 动态钉子已就位 ✅（开机不会自动刷引导链）"
+else
+  warn "launch_env.sh 的 AGNOS_VERSION 不是动态读取，开机可能自动触发 AGNOS 升级。"
+  warn "  第 4 步会修正它，但请确认这一步能跑完。"
+fi
+
+echo
+echo "  体检结论："
+echo "  · 本脚本全程零分区写入 —— 不刷 boot/system/xbl/abl，不换槽。"
+echo "  · 即使 AGNOS 自动升级被触发，agnos.py 也会拒绝刷 fork 自改的引导链。"
+echo "  · 引导链基线已记录在 /data/bp7_chain_before.txt，装完自动比对。"
+echo
 
 # ---------------------------------------------------------------- 拉分支
 hr "1. 拉取并切换到 $BP7_BRANCH"
@@ -172,6 +224,49 @@ if [ -f tools/fix_jetlink_i18n.py ] && [ -f tools/add_jetlink_po.py ]; then
     "$PY" tools/add_jetlink_po.py   || warn "po 词条补充有告警"
   else
     warn "找不到 python3，跳过汉化补丁"
+  fi
+fi
+
+# 4.6 引导链防护强制校验：任何一道不到位都中止，不带着未设防的引导链开机。
+#     这是最后一道闸 —— 前面 4.1 的 sed 可能因为文件结构变化而没生效。
+echo "  校验引导链三道防护："
+GUARD_OK=1
+
+if grep -q 'AGNOS_VERSION="\$(tr' launch_env.sh 2>/dev/null; then
+  echo "    [1/3] AGNOS_VERSION 动态钉子  ✅"
+else
+  echo "    [1/3] AGNOS_VERSION 动态钉子  ✗ 写死了版本，开机会自动触发 AGNOS 升级"
+  GUARD_OK=0
+fi
+
+if grep -q "assert_official_boot_chain" system/hardware/tici/agnos.py 2>/dev/null; then
+  echo "    [2/3] agnos.py 引导链硬拦截  ✅"
+else
+  echo "    [2/3] agnos.py 引导链硬拦截  ✗ 缺失，AGNOS 升级会刷进 fork 自改的 abl/boot"
+  GUARD_OK=0
+fi
+
+if grep -q 'AGNOS_VERSION="\$(tr' sunnypilot/system/hardware/c3/launch_env.sh 2>/dev/null || \
+   [ ! -f sunnypilot/system/hardware/c3/launch_env.sh ]; then
+  echo "    [3/3] c3 launch_env 动态钉子  ✅"
+else
+  echo "    [3/3] c3 launch_env 动态钉子  ✗"
+  GUARD_OK=0
+fi
+
+[ "$GUARD_OK" = "1" ] || die "引导链防护未全部就位，拒绝继续。修好上面标 ✗ 的项，或重新执行本脚本。"
+
+# 4.7 引导链清单二次确认（只读，不修改清单）
+#     故意不改 agnos.json：abl/boot 是 AGNOS 升级的必需分区，删掉它们
+#     会让「boot 与 system 版本绑定」的铁律失效（系统升了但引导链没升）。
+#     真正的防线是 4.6 的代码层拦截 assert_official_boot_chain ——
+#     它在 flash_agnos_update 的第一行就抛异常，比清单层更早、更可靠。
+MANIFEST=system/hardware/tici/agnos.json
+if [ -f "$MANIFEST" ]; then
+  if grep -q '"b6fba807b9bcd66a31f2afb0eba5163ec239693ad32e2e4200f6c356adfe098c"' "$MANIFEST"; then
+    echo "    [4/4] agnos.json 含 fork 自改的 abl —— 已由 agnos.py 硬拦截覆盖 ✅"
+  else
+    echo "    [4/4] agnos.json 无 fork 自改条目  ✅"
   fi
 fi
 
