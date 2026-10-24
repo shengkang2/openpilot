@@ -57,11 +57,19 @@ cd "$DIR" || exit 0
 # ---------------------------------------------------------------- 3. LFS 模型
 # clone 下来的是 134 字节的指针文件，必须拉实体。
 # 只在检测到指针时才动作，避免每次开机都走网络。
+is_lfs_pointer() {
+  # 指针文件以 "version https://git-lfs.github.com/spec/v1" 开头。
+  # 用 grep 而非精确字节比较：指针长度随 oid/size 字段略有差异。
+  head -c 60 "$1" 2>/dev/null | grep -q "git-lfs.github.com/spec" && return 0
+  return 1
+}
+
 LFS_NEEDED=0
 for m in selfdrive/modeld/models/*.onnx; do
   [ -f "$m" ] || continue
-  if [ "$(head -c 40 "$m" 2>/dev/null)" = "version https://git-lfs.github.com/spec/v1" ]; then
+  if is_lfs_pointer "$m"; then
     LFS_NEEDED=1
+    log "检测到指针文件: $(basename "$m")"
     break
   fi
 done

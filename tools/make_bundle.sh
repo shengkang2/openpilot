@@ -45,7 +45,7 @@ echo "[2/5] 检查 LFS 模型实体"
 MISSING=0
 for m in selfdrive/modeld/models/*.onnx; do
   [ -f "$m" ] || continue
-  if head -c 40 "$m" | grep -q "version https://git-lfs"; then
+  if head -c 60 "$m" | grep -q "git-lfs.github.com/spec"; then
     echo "  ! 仍是 LFS 指针: $m"; MISSING=1
   fi
 done

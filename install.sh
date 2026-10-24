@@ -326,7 +326,7 @@ ls -la selfdrive/modeld/models/*.onnx 2>/dev/null | head -3 || true
 # 模型实体自检：指针文件会导致编译/运行失败
 for m in selfdrive/modeld/models/*.onnx; do
   [ -f "$m" ] || continue
-  if head -c 40 "$m" | grep -q "version https://git-lfs"; then
+  if head -c 60 "$m" | grep -q "git-lfs.github.com/spec"; then
     die "模型仍是 LFS 指针（未拉取实体）：$m —— 离线包不完整或 LFS 未拉取"
   fi
 done
