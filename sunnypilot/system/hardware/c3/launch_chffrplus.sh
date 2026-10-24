@@ -68,7 +68,8 @@ function launch {
 
   # handle pythonpath
   ln -sfn $(pwd) /data/pythonpath
-  export PYTHONPATH="$PWD"
+  # BluePilot: 同根目录 launch_chffrplus.sh，保留 /data/pylibs（AGNOS 18.x 下 capnproto 半装状态的解药）
+  export PYTHONPATH="/data/pylibs:$PWD"
 
   # hardware specific init
   if [ -f /AGNOS ]; then

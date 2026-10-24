@@ -6,6 +6,7 @@ Reusable card component for displaying metrics (CPU, GPU, Memory, Vehicle, Conne
 import pyray as rl
 from dataclasses import dataclass
 from openpilot.system.ui.lib.application import gui_app, FontWeight
+from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.widgets import Widget
 from bluepilot.ui.lib.colors import BPColors
@@ -80,6 +81,14 @@ class MetricCard(Widget):
     else:
       self._render_standard(rect)
 
+  def _label_text(self) -> str:
+    """卡片标签统一翻译（CPU/GPU/MEMORY/VEHICLE/CONNECT/SUNNYLINK…）。
+
+    bluepilot 自己重写了这些组件，用的是裸英文字符串，完全绕过了 tr()；
+    原版 openpilot 的对应文件是走 tr_noop()/tr() 的。
+    """
+    return tr(self._data.label)
+
   def _render_compact(self, rect: rl.Rectangle):
     """2-row layout: Label on top, values side-by-side below"""
     padding = 20
@@ -88,7 +97,7 @@ class MetricCard(Widget):
 
     # Draw label (top-left)
     label_pos = rl.Vector2(rect.x + padding, rect.y + 10)
-    rl.draw_text_ex(self._font_label, self._data.label, label_pos,
+    rl.draw_text_ex(self._font_label, self._label_text(), label_pos,
                     label_font_size, 0, BPColors.WHITE)
 
     # Draw values side by side in bottom row
@@ -115,7 +124,7 @@ class MetricCard(Widget):
     # Draw label (top row, smaller font)
     label_y = rect.y + 15
     label_pos = rl.Vector2(rect.x + left_padding, label_y)
-    rl.draw_text_ex(self._font_label, self._data.label, label_pos,
+    rl.draw_text_ex(self._font_label, self._label_text(), label_pos,
                     label_font_size, 0, BPColors.TEXT_SECONDARY)
 
     # Draw main value (below label with proper spacing)

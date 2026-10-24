@@ -3360,3 +3360,186 @@ msgstr ""
 msgid "{} (by VIN)"
 msgstr ""
 
+
+msgid "Link state"
+msgstr ""
+
+msgid "Transport"
+msgstr ""
+
+msgid "Device online"
+msgstr ""
+
+msgid "USB-C port"
+msgstr ""
+
+msgid "Will drive"
+msgstr ""
+
+msgid "Engine built on the device"
+msgstr ""
+
+msgid "Progress"
+msgstr ""
+
+msgid "Unavailable"
+msgstr ""
+
+msgid "Big model"
+msgstr ""
+
+msgid "Device's model"
+msgstr ""
+
+msgid "Update model list"
+msgstr ""
+
+msgid "Update"
+msgstr ""
+
+msgid "Updating..."
+msgstr ""
+
+msgid "Off (held by Jetlink)"
+msgstr ""
+
+msgid "Nothing"
+msgstr ""
+
+msgid "No device"
+msgstr ""
+
+msgid "Not built"
+msgstr ""
+
+msgid "Ready"
+msgstr ""
+
+msgid "Loading"
+msgstr ""
+
+msgid "Failed"
+msgstr ""
+
+msgid "Re-engage"
+msgstr ""
+
+msgid "Connecting"
+msgstr ""
+
+msgid "Downloading"
+msgstr ""
+
+msgid "Uploading"
+msgstr ""
+
+msgid "Building"
+msgstr ""
+
+msgid "Runs the large driving model on a computer attached to the comma's USB-C port (a Jetson, a Linux PC or a Mac over USB; an iPhone over the cable). It turns ADB off, and the mode can only change while parked. If the link drops or falls behind, the comma goes straight back to its own small model."
+msgstr ""
+
+msgid "Not reported"
+msgstr ""
+
+msgid "Built on the device: "
+msgstr ""
+
+msgid "The device has not reported a built model yet (shown once it connects)."
+msgstr ""
+
+msgid "Follows the device: the model picked in the phone (or Jetson / Mac) app is the one that drives; the comma downloads nothing."
+msgstr ""
+
+msgid "Picked on the comma: {}. If the device does not have it, the comma downloads it while parked and uploads it to be built."
+msgstr ""
+
+msgid "Follow the device (now: {})"
+msgstr ""
+
+msgid "unknown"
+msgstr ""
+
+msgid "loaded"
+msgstr ""
+
+msgid "built on device"
+msgstr ""
+
+msgid "downloaded on comma"
+msgstr ""
+
+msgid "Updated: {} big model(s)."
+msgstr ""
+
+msgid "Update failed: {}"
+msgstr ""
+
+msgid " (jetlink is not in this build)"
+msgstr ""
+
+msgid "check the cable"
+msgstr ""
+
+msgid "check the cable or the app"
+msgstr ""
+
+msgid "{}, {} ({} drops)"
+msgstr ""
+
+msgid "Jetlink connected: {}."
+msgstr ""
+
+msgid "Nothing on the USB-C port."
+msgstr ""
+
+msgid "A device is on the USB-C port (not answering Jetlink yet)."
+msgstr ""
+
+msgid "the big model"
+msgstr ""
+
+msgid "Big model unavailable: {}. The small model drives."
+msgstr ""
+
+msgid "Big model unavailable. The small model drives."
+msgstr ""
+
+msgid "{} is ready. It swaps in as soon as nothing is in control: cancel cruise, then re-engage."
+msgstr ""
+
+msgid "The small model drives until the big one is ready."
+msgstr ""
+
+msgid "{} drives until {} is ready."
+msgstr ""
+
+msgid "{} will drive once Jetlink is ready."
+msgstr ""
+
+msgid "{} will drive; a lost link falls back to the small model and returns when it is back."
+msgstr ""
+
+msgid "CPU"
+msgstr ""
+
+msgid "GPU"
+msgstr ""
+
+msgid "MEMORY"
+msgstr ""
+
+msgid "NETWORK"
+msgstr ""
+
+msgid "WiFi"
+msgstr ""
+
+msgid "Ethernet"
+msgstr ""
+
+msgid "REGISTERING"
+msgstr ""
+
+msgid "PROGRESS"
+msgstr ""

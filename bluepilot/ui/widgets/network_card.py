@@ -6,6 +6,7 @@ Custom network status card with signal bars, carrier/SSID display
 import pyray as rl
 from collections.abc import Callable
 from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos
+from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.widgets import Widget
 from bluepilot.ui.lib.colors import BPColors
@@ -67,7 +68,7 @@ class NetworkCard(Widget):
 
     # Draw "NETWORK" label (top-left)
     label_pos = rl.Vector2(rect.x + 20, rect.y + 15)
-    rl.draw_text_ex(self._font_label, "NETWORK", label_pos,
+    rl.draw_text_ex(self._font_label, tr("NETWORK"), label_pos,
                     BPConstants.FONT_SIZE_MEDIUM, 0, BPColors.WHITE)
 
     # Draw carrier/SSID (in accent color)

@@ -129,7 +129,10 @@ def register(show_spinner=False) -> str | None:
 
   if dongle_id:
     params.put("DongleId", dongle_id, block=True)
-    set_offroad_alert("Offroad_UnregisteredHardware", (dongle_id == UNREGISTERED_DONGLE_ID) and not PC)
+    # BluePilot: 关闭「设备未注册到 comma.ai」的红色警报条。
+    # 这里是逗号官方用来提示「这台设备没在 comma.ai 注册过」的提示位，自建/未注册设备上会常驻一条红条。
+    # 只关提示，注册逻辑本身一行没动（dongle_id 照样照常尝试注册并写进参数）。
+    set_offroad_alert("Offroad_UnregisteredHardware", False)
   return dongle_id
 
 

@@ -14,6 +14,7 @@ import pyray as rl
 
 from openpilot.selfdrive.ui.ui_state import ui_state, JetlinkState
 from openpilot.system.ui.lib.application import gui_app
+from openpilot.system.ui.lib.multilang import tr  # __JETLINK_I18N__
 from openpilot.bluepilot.jetlink_adapter import KEYS, MODES
 
 LINK_MODES = MODES
@@ -77,10 +78,10 @@ def link_status() -> str:
   if jetlink is None:
     return ""
   if jetlink.present:
-    return f"Jetlink connected: {jetlink.transport}."
+    return tr("Jetlink connected: {}.").format(jetlink.transport)
   if jetlink.port is None:
     return ""
-  return "Nothing on the USB-C port." if jetlink.port == "empty" else "A device is on the USB-C port (not answering Jetlink yet)."
+  return tr("Nothing on the USB-C port.") if jetlink.port == "empty" else tr("A device is on the USB-C port (not answering Jetlink yet).")
 
 
 def progress() -> tuple[str, float, str] | None:
@@ -95,8 +96,8 @@ def progress() -> tuple[str, float, str] | None:
     return None
   msg = str(p.get('msg', ''))
   if drops := p.get('drops'):
-    hint = "check the cable or the app" if jetlink.mode == 'ios' else "check the cable"
-    msg = f"{msg}, {hint} ({drops} drops)"
+    hint = tr("check the cable or the app") if jetlink.mode == 'ios' else tr("check the cable")
+    msg = tr("{}, {} ({} drops)").format(msg, hint, drops)
   return stage, float(p.get('frac', 0.0)), msg
 
 
@@ -107,21 +108,21 @@ def status_note(model_name: str | None = None) -> str:
   view = ui_state.jetlink
   if view is None:
     return ""
-  big_name = (model_name if model_name and model_name != NONE_TEXT else None) or view.model or "the big model"
+  big_name = (model_name if model_name and model_name != NONE_TEXT else None) or view.model or tr("the big model")
   state = ui_state.jetlink_state
   if state in (JetlinkState.FAILED, JetlinkState.UNCOMPILED):
     if view.reason:
-      return f"Big model unavailable: {view.reason}. The small model drives."
-    return "Big model unavailable. The small model drives."
+      return tr("Big model unavailable: {}. The small model drives.").format(view.reason)
+    return tr("Big model unavailable. The small model drives.")
   if state == JetlinkState.WAITING:
-    return f"{big_name} is ready. It swaps in as soon as nothing is in control: cancel cruise, then re-engage."
+    return tr("{} is ready. It swaps in as soon as nothing is in control: cancel cruise, then re-engage.").format(big_name)
   if state == JetlinkState.LOADING:
-    return "The small model drives until the big one is ready."
+    return tr("The small model drives until the big one is ready.")
   if not view.ready:
     if view.standin:
-      return f"{view.standin} drives until {big_name} is ready."
-    return f"{big_name} will drive once Jetlink is ready."
-  return f"{big_name} will drive; a lost link falls back to the small model and returns when it is back."
+      return tr("{} drives until {} is ready.").format(view.standin, big_name)
+    return tr("{} will drive once Jetlink is ready.").format(big_name)
+  return tr("{} will drive; a lost link falls back to the small model and returns when it is back.").format(big_name)
 
 
 class JetlinkIcons:

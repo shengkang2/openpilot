@@ -29,8 +29,9 @@ from openpilot.common.bluepilot import is_bluepilot
 if is_bluepilot():
   from openpilot.selfdrive.ui.bp.layouts.settings.bluepilot import BluePilotLayout
   from openpilot.selfdrive.ui.bp.layouts.settings.bp_web_panel import BPWebPanel
+  from openpilot.bluepilot.ui.layouts.jetlink import JetlinkLayout
 from openpilot.system.ui.lib.application import gui_app, MousePos
-from openpilot.system.ui.lib.multilang import tr_noop
+from openpilot.system.ui.lib.multilang import tr, tr_noop
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.lib.wifi_manager import WifiManager
 from openpilot.system.ui.sunnypilot.lib.styles import style
@@ -76,7 +77,7 @@ class NavButton(Widget):
     is_selected = self.panel_type == self.parent._current_panel
     text_color = OP.TEXT_SELECTED if is_selected else OP.TEXT_NORMAL
     content_x = rect.x + 90
-    text_size = measure_text_cached(self.parent._font_medium, self.panel_info.name, 65)
+    text_size = measure_text_cached(self.parent._font_medium, tr(self.panel_info.name), 65)
 
     # Draw background if selected
     if is_selected:
@@ -95,7 +96,7 @@ class NavButton(Widget):
       content_x,
       rect.y + (OP.NAV_BTN_HEIGHT - text_size.y) / 2
     )
-    rl.draw_text_ex(self.parent._font_medium, self.panel_info.name, text_pos, 55, 0, text_color)
+    rl.draw_text_ex(self.parent._font_medium, tr(self.panel_info.name), text_pos, 55, 0, text_color)
 
     # Store button rect for click detection
     self.panel_info.button_rect = rect
@@ -118,6 +119,9 @@ class SettingsLayoutSP(OP.SettingsLayout):
       OP.PanelType.NETWORK: PanelInfo(tr_noop("Network"), NetworkUISP(wifi_manager), icon="icons/network.png"),
       OP.PanelType.SUNNYLINK: PanelInfo(tr_noop("sunnylink"), SunnylinkLayout(), icon="icons/wifi_strength_full.png"),
       OP.PanelType.TOGGLES: PanelInfo(tr_noop("Toggles"), TogglesLayout(), icon="../../sunnypilot/selfdrive/assets/offroad/icon_toggle.png"),
+      # BluePilot: jetlink 面板（USB-C 口的外接大模型加速器）。上游 sunnypilot 版漏注册了这一项，
+      # 而 main.py 在 sunnypilot_ui() 为真时用的是 SettingsLayoutSP，所以菜单里永远看不到 Jetlink。
+      **(({OP.PanelType.JETLINK: PanelInfo(tr_noop("Jetlink"), JetlinkLayout(), icon="icons/jetlink.png")}) if is_bluepilot() else {}),
       OP.PanelType.SOFTWARE: PanelInfo(tr_noop("Software"), SoftwareLayoutSP(), icon="../../sunnypilot/selfdrive/assets/offroad/icon_software.png"),
       OP.PanelType.MODELS: PanelInfo(tr_noop("Models"), ModelsLayout(), icon="../../sunnypilot/selfdrive/assets/offroad/icon_models.png"),
       OP.PanelType.STEERING: PanelInfo(tr_noop("Steering"), SteeringLayout(), icon="../../sunnypilot/selfdrive/assets/offroad/icon_lateral.png"),

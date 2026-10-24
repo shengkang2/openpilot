@@ -120,7 +120,7 @@ class ButtonAction(ItemAction):
 
   @property
   def text(self):
-    return _resolve_value(self._text_source, tr("Error"))
+    return tr(_resolve_value(self._text_source, tr("Error")))
 
   @property
   def value(self):
@@ -250,7 +250,7 @@ class MultipleButtonAction(ItemAction):
       rl.draw_rectangle_rounded(button_rect, 1.0, 20, bg_color)
 
       # Draw text
-      text = _resolve_value(_text, "")
+      text = tr(_resolve_value(_text, ""))
       text_size = measure_text_cached(self._font, text, 40)
       text_x = button_x + (self.button_width - text_size.x) / 2
       text_y = button_y + (BUTTON_HEIGHT - text_size.y) / 2
@@ -397,11 +397,11 @@ class ListItem(Widget):
 
   @property
   def title(self):
-    return _resolve_value(self._title, "")
+    return tr(_resolve_value(self._title, ""))  # __JETLINK_I18N__
 
   @property
   def description(self):
-    return _resolve_value(self._description, "")
+    return tr(_resolve_value(self._description, ""))
 
   def get_item_height(self, font: rl.Font, max_width: int) -> float:
     if not self.is_visible:

@@ -12,6 +12,7 @@ import time
 
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.application import gui_app
+from openpilot.system.ui.lib.multilang import tr  # __JETLINK_I18N__
 from openpilot.system.ui.widgets import Widget, DialogResult
 from openpilot.system.ui.widgets.list_view import multiple_button_item, text_item, button_item
 from openpilot.system.ui.widgets.option_dialog import MultiOptionDialog
@@ -112,7 +113,7 @@ class JetlinkLayout(Widget):
     if p is None:
       return NONE_TEXT
     stage, frac, msg = p
-    label = PROGRESS_STAGES.get(stage, stage)
+    label = tr(PROGRESS_STAGES.get(stage, stage))
     pct = f" {frac * 100:.0f}%" if 0.0 < frac < 1.0 else ""
     return f"{label}{pct} {msg}".strip()
 
@@ -138,17 +139,17 @@ class JetlinkLayout(Widget):
       model = j.active_model or j.model or j.default_model or NONE_TEXT
     else:
       model = NONE_TEXT
-    self._far = {'loaded': name(loaded) or "Not reported",
-                 'built': ("Built on the device: " + ", ".join(name(b) for b in built)) if built
-                          else "The device has not reported a built model yet (shown once it connects).",
+    self._far = {'loaded': name(loaded) or tr("Not reported"),
+                 'built': (tr("Built on the device: ") + ", ".join(name(b) for b in built)) if built
+                          else tr("The device has not reported a built model yet (shown once it connects)."),
                  'model': model, 'following': following, 'at': now}
 
   def _source_description(self) -> str:
     if self._far['following']:
-      return "Follows the device: the model picked in the phone (or Jetson / Mac) app is the one that drives; the comma downloads nothing."
+      return tr("Follows the device: the model picked in the phone (or Jetson / Mac) app is the one that drives; the comma downloads nothing.")
     slot = ui_state.params.get(jetlink_adapter.KEYS.big_model) or {}
-    return (f"Picked on the comma: {slot.get('displayName') or slot.get('ref', '')[:10]}. If the device does not have it, "
-            "the comma downloads it while parked and uploads it to be built.")
+    return tr("Picked on the comma: {}. If the device does not have it, the comma downloads it while parked and uploads it to be built.").format(
+      slot.get('displayName') or slot.get('ref', '')[:10])
 
   def _far_end_loaded(self) -> str:
     return self._far['loaded']
@@ -159,16 +160,16 @@ class JetlinkLayout(Widget):
   def _open_source_dialog(self):
     self._menu = jetlink_adapter.model_menu(ui_state.params)
     loaded, _ = jetlink_adapter.far_end_models()
-    follow_label = f"Follow the device (now: {jetlink_adapter.model_name(loaded, ui_state.params) or 'unknown'})"
+    follow_label = tr("Follow the device (now: {})").format(jetlink_adapter.model_name(loaded, ui_state.params) or tr("unknown"))
     self._menu_labels = {follow_label: None}
     for row in self._menu:
-      notes = [n for n, on in (("loaded", row['loaded']), ("built on device", row['built']),
-                               ("downloaded on comma", row['downloaded'])) if on]
+      notes = [tr(n) for n, on in (("loaded", row['loaded']), ("built on device", row['built']),
+                                   ("downloaded on comma", row['downloaded'])) if on]
       label = row['name'] + (f" ({', '.join(notes)})" if notes else "")
       self._menu_labels[label] = row['ref']
     slot = ui_state.params.get(jetlink_adapter.KEYS.big_model)
     current = follow_label if self._following_now() else next((k for k, v in self._menu_labels.items() if v == (slot or {}).get('ref')), "")
-    dialog = MultiOptionDialog("Big model", list(self._menu_labels.keys()), current,
+    dialog = MultiOptionDialog(tr("Big model"), list(self._menu_labels.keys()), current,
                                callback=lambda result: self._on_source_selected(result, dialog))
     gui_app.push_widget(dialog)
 
@@ -184,14 +185,14 @@ class JetlinkLayout(Widget):
     if self._refreshing:
       return
     self._refreshing = True
-    self._refresh_result = "Updating..."
+    self._refresh_result = tr("Updating...")
 
     def work():
       try:
         n = jetlink_adapter.refresh_catalog(ui_state.params)
-        self._refresh_result = f"Updated: {n} big model(s)."
+        self._refresh_result = tr("Updated: {} big model(s).").format(n)
       except Exception as e:
-        self._refresh_result = f"Update failed: {e}"
+        self._refresh_result = tr("Update failed: {}").format(e)
       finally:
         self._refreshing = False
 
@@ -223,9 +224,9 @@ class JetlinkLayout(Widget):
     self._reason_item.set_visible(bool(j is not None and j.reason))
 
     status = jetlink_ui.link_status()
-    description = f"{DESCRIPTION} {status}".strip()
+    description = f"{tr(DESCRIPTION)} {status}".strip()
     if j is None and not on:
-      description += " (jetlink is not in this build)"
+      description += tr(" (jetlink is not in this build)")
     if description != self._last_description:
       self._last_description = description
       self._link_item.set_description(description)

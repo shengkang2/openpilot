@@ -16,7 +16,17 @@ export VECLIB_MAXIMUM_THREADS=1
 export QCOM_PRIORITY=12
 
 if [ -z "$AGNOS_VERSION" ]; then
-  export AGNOS_VERSION="18.5"
+  # BluePilot: AGNOS_VERSION 必须钉成「实机当前版本」，不能写死。
+  # 写死 18.5 的后果：设备上是 18.4 时，launch_chffrplus.sh 的 agnos_init 会发现
+  # /VERSION != AGNOS_VERSION，自动跑 agnos.py 拉整套清单重刷 —— 而 bp7 自带的
+  # agnos.json 里 abl/boot 都是 fork 自改的（abl=b6fba807、boot=19ff57b6），
+  # 刷进去 bootloader 校验失败，设备直接变砖（Unsupported firmware detected）。
+  # 历史上已经因此变砖两次，这里改成运行时读 /VERSION，装到任何 AGNOS 版本都安全。
+  if [ -r /VERSION ]; then
+    export AGNOS_VERSION="$(tr -d '[:space:]' < /VERSION)"
+  else
+    export AGNOS_VERSION="18.5"
+  fi
 fi
 
 export STAGING_ROOT="/data/safe_staging"

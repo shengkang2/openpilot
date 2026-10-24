@@ -87,7 +87,10 @@ function launch {
 
   # handle pythonpath
   ln -sfn $(pwd) /data/pythonpath
-  export PYTHONPATH="$PWD"
+  # BluePilot: 保留 /data/pylibs。AGNOS 18.x 的 /usr/local/venv 里 capnproto 是半装状态
+  # （dist-info 在、install/ 目录缺），而 /usr/local 只读没法重装，只能把依赖轮子
+  # 离线装到 /data/pylibs。这行 export 会覆盖 launch_env.sh 里的设置，所以两处都要带。
+  export PYTHONPATH="/data/pylibs:$PWD"
 
   # jetlink: the vendored package links into the tree's root so `import jetlink`
   # finds it, as this tree's own packages are found by name. Rebuilt every boot

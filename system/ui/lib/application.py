@@ -109,11 +109,49 @@ class FontWeight(StrEnum):
   ROMAN = "Inter-Regular.fnt"
   DISPLAY = "Inter-Bold.fnt"
 
+  # BluePilot: 中文位图字库（NotoSansSC 渲染，822 字形）
+  ZH_REGULAR = "Zh-Regular.fnt"
+  ZH_MEDIUM = "Zh-Medium.fnt"
+  ZH_SEMI_BOLD = "Zh-SemiBold.fnt"
+  ZH_BOLD = "Zh-Bold.fnt"
+
+
+# BluePilot: 中文按原字重挑对应的中文库，保留粗细层级。
+# Inter 图集基准 200px，UI 实际只用 40~85px（缩小→清晰）；
+# 若退回 16px unifont 点阵，中文会显示成粗糙的方块。
+_ZH_BY_WEIGHT = {
+  FontWeight.NORMAL: FontWeight.ZH_REGULAR,
+  FontWeight.MEDIUM: FontWeight.ZH_MEDIUM,
+  FontWeight.SEMI_BOLD: FontWeight.ZH_SEMI_BOLD,
+  FontWeight.BOLD: FontWeight.ZH_BOLD,
+  FontWeight.DISPLAY: FontWeight.ZH_BOLD,
+  FontWeight.DISPLAY_REGULAR: FontWeight.ZH_REGULAR,
+  FontWeight.ROMAN: FontWeight.ZH_REGULAR,
+}
+
+_FONT_TO_WEIGHT = {}
+
+
+def _zh_font_for(font: rl.Font) -> rl.Font:
+  """把 Inter 字重映射到对应的中文库；找不到就退回 Regular。"""
+  if not _FONT_TO_WEIGHT:
+    for w in FontWeight:
+      try:
+        _FONT_TO_WEIGHT[id(gui_app._fonts[w])] = w
+      except Exception:
+        pass
+  w = _FONT_TO_WEIGHT.get(id(font))
+  target = _ZH_BY_WEIGHT.get(w, FontWeight.ZH_REGULAR)
+  return gui_app.font(target)
+
 
 def font_fallback(font: rl.Font) -> rl.Font:
-  """Fall back to unifont for languages that require it."""
+  """中文等语言切到自带位图字库，保留字重。"""
   if multilang.requires_unifont():
-    return gui_app.font(FontWeight.UNIFONT)
+    try:
+      return _zh_font_for(font)
+    except Exception:
+      return gui_app.font(FontWeight.UNIFONT)
   return font
 
 

@@ -332,14 +332,29 @@ class ProvisioningRun:
 
     finished = False
     try:
-      # the bytes first, and with no Jetson: a parked car whose Jetson is
-      # switched with the ignition never has one to wait for (2026-10-06)
-      if self.needs_download() and self.fetch_model() is None:
-        return False
+      # BluePilot: host 优先，握手优先。
+      #
+      # 远端的 hello 是「到底需不需要下载」的判据（loaded / cached_models：
+      # 手机自己下好模型的，comma 不该再去拉 1.7 GB），而 hello 只有
+      # JetlinkClient.hello() 主动去要才会来，且只发生在 provision() 内部。
+      #
+      # 原顺序先下载再开链路：车上没有到 github/huggingface 的路由时，
+      # 每轮 fetch 都失败 → 永远走不到 provision() → hello 一次都没发出去
+      # → server.json 永远为空 → owner 以为对面是个会睡的 Jetson，
+      # DORMANT_HOLD 到点就撤 gadget → 手机侧只能看到 "the device is gone"，
+      # 无限循环。
+      #
+      # 等 host 的代价是：没插东西时要等 WAKE_TIMEOUT（20s）；
+      # 插了的话已枚举的主机会立刻应答，不花时间。
+      # 只有「确实没人」这个场景才退回旧的离线预下载 —— 那才是原顺序的本意：
+      # 熄火停车的车先把字节备好。
       if not self.open_link():
         return False
       if not self.wait_for_jetson():
-        self.log.warning("jetlink: no jetson within %.0f s, leaving it for the next run", WAKE_TIMEOUT)
+        self.log.warning("jetlink: no host within %.0f s, checking the offline pre-fetch", WAKE_TIMEOUT)
+        if self.needs_download() and self.fetch_model() is None:
+          return False
+        self.log.warning("jetlink: no host within %.0f s, leaving it for the next run", WAKE_TIMEOUT)
         if self.parts.models.shipped_model_path() is not None:
           self.parts.progress.report('waiting', 0.0, 'downloaded, builds when the jetson is on')
         return False

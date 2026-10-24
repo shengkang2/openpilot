@@ -3399,3 +3399,186 @@ msgstr "✓ 已订阅"
 msgid "🔥 Firehose Mode 🔥"
 msgstr "🔥 Firehose 模式 🔥"
 
+
+msgid "Link state"
+msgstr "链路状态"
+
+msgid "Transport"
+msgstr "传输方式"
+
+msgid "Device online"
+msgstr "设备在线"
+
+msgid "USB-C port"
+msgstr "USB-C 接口"
+
+msgid "Will drive"
+msgstr "将使用模型"
+
+msgid "Engine built on the device"
+msgstr "设备上已构建引擎"
+
+msgid "Progress"
+msgstr "进度"
+
+msgid "Unavailable"
+msgstr "不可用"
+
+msgid "Big model"
+msgstr "大模型"
+
+msgid "Device's model"
+msgstr "设备模型"
+
+msgid "Update model list"
+msgstr "更新模型列表"
+
+msgid "Update"
+msgstr "更新"
+
+msgid "Updating..."
+msgstr "更新中..."
+
+msgid "Off (held by Jetlink)"
+msgstr "关闭（被 Jetlink 占用）"
+
+msgid "Nothing"
+msgstr "无"
+
+msgid "No device"
+msgstr "未连接设备"
+
+msgid "Not built"
+msgstr "未构建"
+
+msgid "Ready"
+msgstr "就绪"
+
+msgid "Loading"
+msgstr "加载中"
+
+msgid "Failed"
+msgstr "失败"
+
+msgid "Re-engage"
+msgstr "重新激活"
+
+msgid "Connecting"
+msgstr "连接中"
+
+msgid "Downloading"
+msgstr "下载中"
+
+msgid "Uploading"
+msgstr "上传中"
+
+msgid "Building"
+msgstr "构建中"
+
+msgid "Runs the large driving model on a computer attached to the comma's USB-C port (a Jetson, a Linux PC or a Mac over USB; an iPhone over the cable). It turns ADB off, and the mode can only change while parked. If the link drops or falls behind, the comma goes straight back to its own small model."
+msgstr "把大驾驶模型跑在接到 comma USB-C 口的一台电脑上（Jetson、Linux PC，或通过 USB 连接 Mac；iPhone 用数据线直连）。开启后会关闭 ADB，且只能在停车时切换模式。链路断开或跟不上时，comma 会立刻回退到自带的小模型。"
+
+msgid "Not reported"
+msgstr "未上报"
+
+msgid "Built on the device: "
+msgstr "设备上已构建："
+
+msgid "The device has not reported a built model yet (shown once it connects)."
+msgstr "设备尚未上报已构建的模型（连接后显示）。"
+
+msgid "Follows the device: the model picked in the phone (or Jetson / Mac) app is the one that drives; the comma downloads nothing."
+msgstr "跟随设备：用手机（或 Jetson / Mac）App 里选的模型来驱动，comma 不下载任何东西。"
+
+msgid "Picked on the comma: {}. If the device does not have it, the comma downloads it while parked and uploads it to be built."
+msgstr "在 comma 上选择：{}。若设备没有该模型，comma 会在停车时下载并上传构建。"
+
+msgid "Follow the device (now: {})"
+msgstr "跟随设备（当前：{}）"
+
+msgid "unknown"
+msgstr "未知"
+
+msgid "loaded"
+msgstr "已加载"
+
+msgid "built on device"
+msgstr "设备已构建"
+
+msgid "downloaded on comma"
+msgstr "comma 已下载"
+
+msgid "Updated: {} big model(s)."
+msgstr "已更新：{} 个大模型。"
+
+msgid "Update failed: {}"
+msgstr "更新失败：{}"
+
+msgid " (jetlink is not in this build)"
+msgstr "（此版本不含 jetlink）"
+
+msgid "check the cable"
+msgstr "检查线缆"
+
+msgid "check the cable or the app"
+msgstr "检查线缆或 App"
+
+msgid "{}, {} ({} drops)"
+msgstr "{}，{}（掉线 {} 次）"
+
+msgid "Jetlink connected: {}."
+msgstr "Jetlink 已连接：{}。"
+
+msgid "Nothing on the USB-C port."
+msgstr "USB-C 接口上没有设备。"
+
+msgid "A device is on the USB-C port (not answering Jetlink yet)."
+msgstr "USB-C 接口上有设备（尚未响应 Jetlink）。"
+
+msgid "the big model"
+msgstr "大模型"
+
+msgid "Big model unavailable: {}. The small model drives."
+msgstr "大模型不可用：{}。由小模型驱动。"
+
+msgid "Big model unavailable. The small model drives."
+msgstr "大模型不可用。由小模型驱动。"
+
+msgid "{} is ready. It swaps in as soon as nothing is in control: cancel cruise, then re-engage."
+msgstr "{} 已就绪。只要没有控制接管就会切换：取消定速巡航，然后重新激活。"
+
+msgid "The small model drives until the big one is ready."
+msgstr "大模型就绪前由小模型驱动。"
+
+msgid "{} drives until {} is ready."
+msgstr "{} 驱动，直到 {} 就绪。"
+
+msgid "{} will drive once Jetlink is ready."
+msgstr "Jetlink 就绪后由 {} 驱动。"
+
+msgid "{} will drive; a lost link falls back to the small model and returns when it is back."
+msgstr "由 {} 驱动；链路丢失时回退到小模型，恢复后再切回。"
+
+msgid "CPU"
+msgstr "CPU"
+
+msgid "GPU"
+msgstr "GPU"
+
+msgid "MEMORY"
+msgstr "内存"
+
+msgid "NETWORK"
+msgstr "网络"
+
+msgid "WiFi"
+msgstr "WiFi"
+
+msgid "Ethernet"
+msgstr "以太网"
+
+msgid "REGISTERING"
+msgstr "注册中"
+
+msgid "PROGRESS"
+msgstr "进行中"

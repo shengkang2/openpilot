@@ -1,2 +1,8 @@
 fonts/*.fnt
 fonts/*.png
+
+# BluePilot: 中文字库（Zh-*.fnt / Zh-*.png）是要随源码树分发的资产，
+# 不能被上面的「构建产物」规则忽略掉，否则 clone 下来没有中文字库。
+# 其余 *.fnt / *.png 仍由 selfdrive/assets/fonts/process.py 在构建时生成。
+!fonts/Zh-*.fnt
+!fonts/Zh-*.png
