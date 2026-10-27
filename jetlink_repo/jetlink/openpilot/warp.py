@@ -1,0 +1,258 @@
+"""
+Copyright (c) 2026-, Zeph Leggett.
+
+This file is part of jetlink and is licensed under the MIT License.
+See the LICENSE file in the root directory for more details.
+
+The comma-side warp: openpilot's own, where it lives, what loads it, how the
+frame loop runs it (Warp), and the small model's reset for a fallback.
+
+The warp stays on the comma (see model_state). openpilot's modeld runs it as
+a JIT of its own, driving_warp_{w}x{h}_tinygrad.pkl, one per camera, and the
+link runs the same pickle: both camera frames in as one (2, frame size) uint8
+input_frame, their transforms as one (2, 3, 3) M_inv, and out the
+(2, 6, 128, 256) uint8 frame the link sends. The fork's adapter says where it
+is. Nothing compiles one at runtime: a device without one runs the small
+model.
+
+load() is what stands between a bad pickle and the car.
+
+tinygrad is the fork's, and only modeld has it: every import of it here is
+inside the function that needs it.
+"""
+from __future__ import annotations
+
+import ctypes
+import pickle
+from pathlib import Path
+
+# what the warp's TinyJit was captured with: sorted(kwargs) of modeld's call
+WARP_INPUT_NAMES = ['M_inv', 'input_frame']
+# KGSL allocation flags (msm_kgsl.h) for memory the GPU's accesses snoop the
+# CPU's caches on, mapped write-back: KGSL_MEMFLAGS_IOCOHERENT, which
+# tinygrad's kgsl bindings lack, and KGSL_CACHEMODE_WRITEBACK (3 << 26). See
+# Warp
+COHERENT_WRITEBACK = (1 << 31) | (3 << 26)
+
+
+def init_device(log) -> None:
+  """Bring the GPU up now, on the caller's thread.
+
+  tinygrad initialises the device on its first kernel run and spawns a libusb
+  event thread doing it. A thread created after config_realtime_process(7, 54)
+  inherits SCHED_FIFO 54 and the core-7 pin and preempts the frame loop; that
+  cost 5% of frames once. Failure is not a reason to refuse the accelerator.
+  """
+  try:
+    from tinygrad.tensor import Tensor
+    Tensor([0.0]).realize()
+  except Exception:
+    log.exception("jetlink: could not bring the gpu up before modeld goes realtime")
+  # the same trap for tinygrad's compile pool (engine/worker.py): created on
+  # the first compile, after modeld goes realtime, its handler threads sat at
+  # SCHED_FIFO 54 on core 7. An older tinygrad or PARALLEL=0 is not a failure
+  try:
+    from tinygrad.engine.worker import get_worker_pool
+  except ImportError:
+    return  # dp: tinygrad eecd4706 has no compile pool to start
+  try:
+    get_worker_pool()
+  except Exception:
+    log.exception("jetlink: could not start tinygrad's compile pool before modeld goes realtime")
+
+
+class Warps:
+  """The warps this device's checkout has, where the fork's adapter says."""
+
+  def __init__(self, op):
+    self.op = op
+    # nothing makes a warp at runtime and the checkout's are there before
+    # manager, so the answer holds for the life of the process; the UI asks
+    # at 5 Hz
+    self._built: bool | None = None
+
+  def geometry(self) -> tuple[int, int, int, int]:
+    """(cam_w, cam_h, model_w, model_h) for this device: the warp modeld
+    loads. If the link's model disagrees, load() raises and the drive is
+    small-model."""
+    return tuple(self.op.camera())
+
+  def path(self, cam_w: int, cam_h: int, model_w: int, model_h: int) -> Path:
+    return Path(self.op.warp_path(cam_w, cam_h, model_w, model_h))
+
+  def is_cached(self, cam_w: int, cam_h: int, model_w: int, model_h: int) -> bool:
+    """Is there a warp for this geometry? Presence only: a pickle from an
+    incompatible tinygrad raises in load()."""
+    return self.path(cam_w, cam_h, model_w, model_h).is_file()
+
+  def built(self) -> bool:
+    """Is there a warp for this device's camera? Without one the link cannot
+    run the large model, which the offroad alert says (status.NO_WARP)."""
+    if self._built is None:
+      self._built = self.is_cached(*self.geometry())
+    return self._built
+
+  def load(self, cam_w: int, cam_h: int, model_w: int, model_h: int) -> dict:
+    """The warp as openpilot pickles it: {'run': its TinyJit, 'input_specs':
+    {name: (shape, dtype, device)}}. Raises if it is not there or is not one
+    the frame loop can run.
+
+    modeld's big-model load is wrapped in the fallback to the small model, and a
+    warp that cannot be trusted must not reach the car.
+    """
+    path = self.path(cam_w, cam_h, model_w, model_h)
+    if not path.is_file():
+      raise RuntimeError(f"no warp for {cam_w}x{cam_h} -> {model_w}x{model_h} at {path}")
+    with open(path, 'rb') as f:
+      warp = pickle.load(f)
+    if not isinstance(warp, dict) or not {'run', 'input_specs'} <= warp.keys():
+      raise RuntimeError(f"{path.name} is not a driving warp: {type(warp).__name__}")
+
+    # a JIT pickled before TinyJit captured loads fine and computes nothing; one
+    # captured under other names raises JitError on the first frame of a drive
+    captured = getattr(warp['run'], 'captured', None)
+    if captured is None:
+      raise RuntimeError("the warp was pickled before it captured; it computes nothing")
+    names = list(getattr(captured, 'expected_names', []))
+    if names != WARP_INPUT_NAMES:
+      raise RuntimeError(f"the warp expects {names}, the frame loop passes {WARP_INPUT_NAMES}")
+    specs = warp['input_specs']
+    frames, tfm = tuple(specs['input_frame'][0]), tuple(specs['M_inv'][0])
+    if len(frames) != 2 or frames[0] != 2 or tfm != (2, 3, 3):
+      raise RuntimeError(f"the warp takes frames {frames} and transforms {tfm}, not two of each")
+    made = tuple(getattr(captured.ret, 'shape', ()))
+    if made != (2, 6, model_h // 2, model_w // 2):
+      raise RuntimeError(f"the warp makes {made}, not a {model_w}x{model_h} model's input")
+    return warp
+
+
+class Warp:
+  """The warp as modeld's frame loop runs it: start() with two camera buffers
+  and their transforms, wait(), and `output` holds the warped frame, where the
+  link sends it from.
+
+  openpilot's warp takes both frames as one buffer, so start() copies the
+  camera buffers in, as modeld does, and the transforms beside them. Two
+  things the JIT alone does not do, measured on the comma with the warp
+  jetlink once built itself (2026-10-06):
+  - Its output lives in GPU memory the CPU reads through its cache. tinygrad
+    maps a QCOM buffer write-combined, which the CPU reads uncached: copying
+    the 393 KB out took 2.9 ms, the kernel's copy straight from that mapping
+    7.3 ms. The Adreno 630 is IO-coherent, so KGSL memory flagged IOCOHERENT
+    and write-back is right to read once the GPU is done: 0.22 ms for the
+    kernel's copy, the GPU's own time unchanged. It moves before the first
+    call, which links the JIT to its buffers' addresses.
+  - TinyJit prepares and checks every call's inputs, a graph rewrite per
+    input: 0.97 ms of a 1.93 ms call. Every frame's inputs are the same two
+    buffers, which start() writes into, so they are checked once, by the
+    warm-up's calls through TinyJit, and a frame replays the capture.
+
+  The warm-up, the link of the JIT and its first runs, is paid here rather
+  than on modeld's frame loop.
+  """
+
+  def __init__(self, warp: dict, frame_size: int):
+    import numpy as np
+    from tinygrad.device import Device
+    from tinygrad.tensor import Tensor
+    jit, specs = warp['run'], warp['input_specs']
+    (frames_shape, _, _), (tfm_shape, _, _) = specs['input_frame'], specs['M_inv']
+    # what it reads of each camera buffer: modeld's frame_copy_size, short of
+    # the buffer's end
+    self._frame_size = frames_shape[1]
+    if self._frame_size > frame_size:
+      raise RuntimeError(f"the warp reads {self._frame_size} bytes a frame, past a {frame_size} byte camera buffer")
+    out = jit.captured.ret.uop.base.buffer
+    self._device = out.device
+    if self._device.startswith('QCOM'):
+      _make_coherent(out)
+    # the two buffers every frame passes, written in place by start()
+    self._tensors = {name: Tensor(np.zeros(shape, dtype=dtype), device=device).realize()
+                     for name, (shape, dtype, device) in specs.items()}
+    for _ in range(2):
+      jit(**self._tensors)
+    self.wait = Device[self._device].synchronize
+    self.wait()
+    self.output = out.as_memoryview(allow_zero_copy=True)
+    self._frames = np.frombuffer(self._view('input_frame'), dtype=np.uint8).reshape(frames_shape)
+    self._at = [self._frames[i].ctypes.data for i in range(2)]
+    self._tfm = np.frombuffer(self._view('M_inv'), dtype=np.float32).reshape(tfm_shape)
+    self._replay = jit.captured
+    self._inputs = [self._tensors[name].uop.base for name in WARP_INPUT_NAMES]
+
+  def _view(self, name: str) -> memoryview:
+    """The CPU's view of an input buffer, not a copy of it."""
+    return self._tensors[name].uop.base.buffer.as_memoryview(allow_zero_copy=True)
+
+  def start(self, frame: int, big_frame: int, tfm, big_tfm) -> None:
+    """Warp the camera buffers at these addresses under their transforms.
+    `output` is the frame once wait() returns, until the next start(). The
+    GPU is idle here: every start() is waited for before the next."""
+    ctypes.memmove(self._at[0], frame, self._frame_size)
+    ctypes.memmove(self._at[1], big_frame, self._frame_size)
+    self._tfm[0] = tfm
+    self._tfm[1] = big_tfm
+    self._replay(self._inputs, {})
+
+
+def _make_coherent(out) -> None:
+  """Move a QCOM buffer to KGSL memory flagged IOCOHERENT and write-back.
+  Raises if the kernel keeps either flag back (the allocation's record holds
+  its answer): write-back memory that is not coherent reads stale frames."""
+  from tinygrad.device import Device
+  dev = Device[out.device]
+  mem = dev._gpu_alloc(out.nbytes, flags=COHERENT_WRITEBACK)
+  if mem.meta[0].flags & COHERENT_WRITEBACK != COHERENT_WRITEBACK:
+    dev._gpu_free(mem)
+    raise RuntimeError(f"the GPU driver kept back IO-coherent memory (flags {mem.meta[0].flags:#x})")
+  out.deallocate()
+  out.allocate(opaque=mem)
+
+
+def prepare_reset(model):
+  """Capture the small model's reset before driving, keeping its JIT's buffer identities.
+
+  Its history is stale after the Jetson ran, so a fallback starts from the
+  zero history modeld's warmup leaves it at. Nothing is allocated or compiled
+  on the failure frame.
+
+  The small model is whatever bundle the user picked, on stock modeld or
+  modeld_v2, and each keeps its history its own way. Stock modeld's
+  ModelState, and a modeld_v2 native bundle's adapter: the recurrent state on
+  the GPU (state_pairs) and one packed host buffer (packed_input), as their
+  warmup zeroes them. A modeld_v2 legacy bundle's adapter: history queues on
+  the GPU, and numpy inputs. The fork's tests pin those names.
+  """
+  from tinygrad import Tensor, TinyJit
+
+  adapter = getattr(model, 'adapter', None)
+  if adapter is None and not hasattr(model, 'state_pairs'):
+    # dp: dp0111pre's two-JIT ModelState (warp_enqueue + run_policy) keeps its history as GPU
+    # queues (input_queues) and numpy inputs (npy), as stock modeld did before #38916: jetlink
+    # 0.8.5's reset. 0.8.7's would raise on state_pairs here, and the link would never prepare
+    queues = tuple(q for q in model.input_queues.values() if q.device != 'NPY')
+    arrays = tuple((model.numpy_inputs if hasattr(model, 'numpy_inputs') else model.npy).values())
+  elif adapter is None or adapter.is_native:
+    keeper = model if adapter is None else adapter
+    queues = tuple(keeper.input_queues[name] for name in keeper.state_pairs)
+    arrays = (keeper.packed_input,)
+  else:
+    queues = tuple(q for q in adapter.input_queues.values() if q.device != 'NPY')
+    arrays = tuple(adapter.numpy_inputs.values())
+
+  @TinyJit
+  def clear():
+    Tensor.realize(*(q.assign(0) for q in queues))
+
+  if queues:
+    for _ in range(3):
+      clear()
+
+  def reset():
+    if queues:
+      clear()
+    model.prev_desire.fill(0)
+    for array in arrays:
+      array.fill(0)
+
+  return reset

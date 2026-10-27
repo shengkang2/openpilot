@@ -1,0 +1,12 @@
+bp7 离线安装包
+分支: bp7.020261020
+提交: 4efc46943
+生成时间: 2026-10-24 21:51:36
+
+设备上执行（/data/openpilot 是 comma 服务的固定工作目录，必须展开到这里）：
+  sudo -n rm -rf /data/openpilot && sudo -n mkdir -p /data/openpilot
+  tar -xzf /data/bp7-offline.tar.gz -C /data/openpilot
+  bash /data/openpilot/install.sh
+
+看日志： tail -f /data/bp7_install.log
+安全：全程零分区写入，不刷 boot/system/xbl/abl，不换槽。

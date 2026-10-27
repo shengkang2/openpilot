@@ -1,0 +1,133 @@
+name: bp7 prebuilt
+
+# 推 bp7 分支时自动构建 prebuilt 并发布成 GitHub Release，
+# 这样可以拿到一个稳定的直链（release 里 prebuilt.tar.gz）用于链接安装。
+#
+# 两条安装路径都支持：
+#   A. 设备上跑 install.sh（源码级适配 + 本地编译，零分区写入）
+#        bash <(curl -fsSL https://raw.githubusercontent.com/shengkang2/openpilot/bp7.020261020/install.sh)
+#   B. 下载 prebuilt.tar.gz 直链，解包到 /data/openpilot 后本地编译
+#
+# 注意：sunnypilot 上游的 prebuilt 需要自托管 tici runner，
+# 本 fork 走 ubuntu-latest + 交叉编译，只产出源码级可用的 tar.gz，
+# 装到设备后仍需在设备上编译（设备内存小，但 scons -j2 已被验证可行）。
+
+on:
+  push:
+    branches: [ 'bp7*' ]
+    tags: [ 'bp7-release/*' ]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: '发布到 Release'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bp7-prebuilt-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build prebuilt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: git lfs pull
+        run: git lfs pull
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential clang cmake git curl wget unzip \
+            libeigen3-dev libopencv-dev libpng-dev libjpeg-dev \
+            libcapnp-dev capnproto libzmq3-dev libsqlite3-dev \
+            libbz2-dev liblz4-dev libcurl4-openssl-dev python3-dev \
+            ocl-icd-opencl-dev opencl-headers
+
+      - name: Cache uv / pip
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.cache/pip
+          key: bp7-${{ runner.os }}-${{ github.sha }}
+
+      - name: Install python deps
+        run: |
+          python -m pip install --upgrade pip uv
+          uv venv --python 3.12 || true
+          # 只装纯 python 依赖；需要交叉编译的部分留给设备端
+          uv pip install --system scons==4.10.1 || true
+
+      - name: Apply CN patches (idempotent)
+        run: |
+          python3 tools/fix_jetlink_i18n.py
+          python3 tools/add_jetlink_po.py
+
+      - name: Verify sources compile
+        run: python3 tools/check_cn_patches.py
+
+      - name: Package prebuilt source
+        run: |
+          set -e
+          mkdir -p /tmp/bp7pkg
+          # 参照 release/release_files.py 的排除规则
+          rsync -am --exclude='.git' --exclude='.github/workflows' \
+                --exclude='*.o' --exclude='*.a' --exclude='*.os' --exclude='*.pyc' \
+                --exclude='__pycache__' --exclude='.lfsconfig' \
+                --exclude='.gitattributes' --exclude='.gitmodules' \
+                ./ /tmp/bp7pkg/
+          tar czf bp7-prebuilt-src.tar.gz -C /tmp/bp7pkg .
+          ls -la bp7-prebuilt-src.tar.gz
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bp7-prebuilt-src
+          path: bp7-prebuilt-src.tar.gz
+
+      - name: Publish release
+        if: inputs.publish != false
+        uses: softprops/action-gh-release@v2
+        with:
+          files: bp7-prebuilt-src.tar.gz
+          name: bp7 ${{ github.ref_name }}
+          body: |
+            bp7 (bluepilot 7.0) 源码包。
+
+            ## 链接安装（设备上执行）
+            ```
+            bash <(curl -fsSL https://raw.githubusercontent.com/shengkang2/openpilot/bp7.020261020/install.sh)
+            ```
+
+            ## 或下载本包
+            ```
+            curl -LO https://github.com/shengkang2/openpilot/releases/download/bp7-release/<tag>/bp7-prebuilt-src.tar.gz
+            ```
+
+            ## 安全说明
+            本包与安装脚本**不写任何分区、不刷引导链、不换槽**，
+            全程只做源码级适配 + 本地编译。AGNOS 版本在运行时读取 `/VERSION`，
+            装到任何 AGNOS 版本的设备都不会触发开机自动升级刷写。
+
+            历史教训（都写在 install.sh 注释里）：
+            - 绝不能刷 bp7 自带 agnos.json 的引导链分区（abl/boot 是 fork 自改的）
+            - boot 与 system 必须同版本，不可跨 AGNOS 版本混搭
+            - 两处 launch_env.sh 的 AGNOS_VERSION 都必须钉实机版本
+          tag_name: bp7-release/${{ github.run_number }}
+          prerelease: true

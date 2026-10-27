@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+
+SP_C3_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+DIR="$( cd "$SP_C3_DIR/../../../.." >/dev/null 2>&1 && pwd )"
+
+source "$SP_C3_DIR/launch_env.sh"
+
+function agnos_init {
+  # TODO: move this to agnos
+  sudo rm -f /data/etc/NetworkManager/system-connections/*.nmmeta
+
+  # set success flag for current boot slot
+  sudo abctl --set_success
+
+  # TODO: do this without udev in AGNOS
+  # udev does this, but sometimes we startup faster
+  sudo chgrp gpu /dev/adsprpc-smd /dev/ion /dev/kgsl-3d0
+  sudo chmod 660 /dev/adsprpc-smd /dev/ion /dev/kgsl-3d0
+
+
+  if [ $(< /VERSION) != "$AGNOS_VERSION" ]; then
+    # BluePilot: 三道闸门，见根目录 launch_chffrplus.sh 的同名说明。
+    # 这份是 c3 分支，MANIFEST 指向 c3/agnos.json —— 那份清单带完整引导链，
+    # 在低版本设备上刷进去必然变砖，所以这里更不能有任何闪失。
+
+    # 闸门 1：动态钉子哨兵
+    if [ "${BP7_DYNAMIC_AGNOS_PIN:-}" = "1" ]; then
+      echo "BP7: AGNOS_VERSION 动态钉子与实机不一致，疑似环境异常，跳过 AGNOS 自动升级" >&2
+      return 0
+    fi
+
+    # 闸门 2：哨兵版本号（读不到 /VERSION）
+    if [ "$AGNOS_VERSION" = "__BP7_NO_VERSION__" ]; then
+      echo "BP7: 无法确定目标 AGNOS 版本，跳过 AGNOS 自动升级" >&2
+      return 0
+    fi
+
+    # 闸门 3：禁止降级刷写
+    if printf '%s\n%s\n' "$AGNOS_VERSION" "$(< /VERSION)" | sort -V -C 2>/dev/null; then
+      echo "BP7: 目标 AGNOS 版本 ($AGNOS_VERSION) 不高于实机 ($(< /VERSION))，拒绝降级刷写" >&2
+      return 0
+    fi
+
+    AGNOS_PY="$DIR/system/hardware/tici/agnos.py"
+    MANIFEST="$SP_C3_DIR/agnos.json"
+    if $AGNOS_PY --verify $MANIFEST; then
+      sudo reboot
+    fi
+    $DIR/system/hardware/tici/updater $AGNOS_PY $MANIFEST
+  fi
+}
+
+function launch {
+  # Remove orphaned git lock if it exists on boot
+  [ -f "$DIR/.git/index.lock" ] && rm -f $DIR/.git/index.lock
+
+  # Check to see if there's a valid overlay-based update available. Conditions
+  # are as follows:
+  #
+  # 1. The DIR init file has to exist, with a newer modtime than anything in
+  #    the DIR Git repo. This checks for local development work or the user
+  #    switching branches/forks, which should not be overwritten.
+  # 2. The FINALIZED consistent file has to exist, indicating there's an update
+  #    that completed successfully and synced to disk.
+
+  if [ -f "${DIR}/.overlay_init" ]; then
+    find ${DIR}/.git -newer ${DIR}/.overlay_init | grep -q '.' 2> /dev/null
+    if [ $? -eq 0 ]; then
+      echo "${DIR} has been modified, skipping overlay update installation"
+    else
+      if [ -f "${STAGING_ROOT}/finalized/.overlay_consistent" ]; then
+        if [ ! -d /data/safe_staging/old_openpilot ]; then
+          echo "Valid overlay update found, installing"
+          LAUNCHER_LOCATION="${BASH_SOURCE[0]}"
+
+          mv $DIR /data/safe_staging/old_openpilot
+          mv "${STAGING_ROOT}/finalized" $DIR
+          cd $DIR
+
+          echo "Restarting launch script ${LAUNCHER_LOCATION}"
+          unset AGNOS_VERSION
+          exec "${LAUNCHER_LOCATION}"
+        else
+          echo "openpilot backup found, not updating"
+          # TODO: restore backup? This means the updater didn't start after swapping
+        fi
+      fi
+    fi
+  fi
+
+  # handle pythonpath
+  ln -sfn $(pwd) /data/pythonpath
+  # BluePilot: 同根目录 launch_chffrplus.sh，保留 /data/pylibs（AGNOS 18.x 下 capnproto 半装状态的解药）
+  export PYTHONPATH="/data/pylibs:$PWD"
+
+  # hardware specific init
+  if [ -f /AGNOS ]; then
+    agnos_init
+  fi
+
+  # write tmux scrollback to a file
+  tmux capture-pane -pq -S-1000 > /tmp/launch_log
+
+  # start manager
+  cd $DIR/system/manager
+  if [ ! -f $DIR/prebuilt ]; then
+    # BluePilot: 自举，见根目录 launch_chffrplus.sh 的同名说明。
+    # AGNOS 界面「填 URL 安装」这条路不跑 install.sh，编译环境全缺。
+    [ -f "$DIR/scripts/bp7_bootstrap.sh" ] && bash "$DIR/scripts/bp7_bootstrap.sh" || true
+    ./build.py
+  fi
+  ./manager.py
+
+  # if broken, keep on screen error
+  while true; do sleep 1; done
+}
+
+launch
