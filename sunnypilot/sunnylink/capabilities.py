@@ -38,6 +38,7 @@ CAPABILITY_FIELDS = (
   "tesla_has_vehicle_bus",
   "has_stop_and_go",
   "stock_longitudinal",
+  "custom_model_active",
   "device_type",
   "subaru_has_sng",
   "hyundai_alpha_long_available",
@@ -60,6 +61,7 @@ CAPABILITY_LABELS: dict[str, str] = {
   "tesla_has_vehicle_bus": "Tesla vehicle bus",
   "has_stop_and_go": "Stop and Go",
   "stock_longitudinal": "stock longitudinal",
+  "custom_model_active": "Custom model selected",
   "device_type": "Device type",
   "subaru_has_sng": "Subaru Stop-and-Go available",
   "hyundai_alpha_long_available": "Hyundai Alpha Longitudinal available",
@@ -130,6 +132,8 @@ def generate_capabilities(params: Params | None = None) -> dict:
   caps["is_sp_release"] = params.get_bool("IsReleaseSpBranch")
   caps["is_development"] = params.get_bool("IsDevelopmentBranch")
   caps["stock_longitudinal"] = params.get_bool("ToyotaEnforceStockLongitudinal")
+  # A selected custom bundle means the modeld_v2 pipeline is in use (Blendful requires it).
+  caps["custom_model_active"] = bool(params.get("ModelManager_ActiveBundle"))
 
   bundle = params.get("CarPlatformBundle")
   bundle_brand = _bundle_field(bundle, "brand")

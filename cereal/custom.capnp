@@ -468,6 +468,17 @@ struct ModelDataV2SP @0xa1680744031fdb2d {
   leftLaneChangeEdgeBlock @1 :Bool;
   rightLaneChangeEdgeBlock @2 :Bool;
 
+  # Blendful (sunnypilot #2073) diagnostics: the curvature correction added on
+  # top of the model's own curvature, plus the trust signals behind it.
+  # Ordinals @3..@9 mirror the upstream PR so the wiring stays mergeable.
+  blendfulCurvature @3 :Float32;
+  blendfulTrust @4 :Float32;
+  modelCurvature @5 :Float32;
+  blendfulGoingAround @6 :Bool;
+  blendfulLeftProb @7 :Float32;
+  blendfulRightProb @8 :Float32;
+  blendfulLaneWidth @9 :Float32;
+
   enum TurnDirection {
     none @0;
     turnLeft @1;
