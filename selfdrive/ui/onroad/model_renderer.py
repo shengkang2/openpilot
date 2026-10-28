@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.common.params import Params
 from openpilot.selfdrive.locationd.calibrationd import HEIGHT_INIT
-from openpilot.selfdrive.ui.ui_state import ui_state
+from openpilot.selfdrive.ui.ui_state import ui_state, UIStatus
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.lib.shader_polygon import draw_polygon, Gradient
 from openpilot.system.ui.widgets import Widget
@@ -135,6 +135,9 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
     self._draw_lane_lines()
     self._draw_path(sm)
 
+    if ui_state.status != UIStatus.DISENGAGED:
+      self.blendful.draw(self._rect)
+
     if render_lead_indicator and radar_state:
       self._draw_lead_indicator()
       self.chevron_metrics.draw_lead_status(sm, radar_state, self._rect, self._lead_vehicles)
@@ -183,6 +186,7 @@ class ModelRenderer(Widget, ChevronMetrics, ModelRendererSP):
     # Update road edges using raw points
     for road_edge in self._road_edges:
       road_edge.projected_points = self._map_line_to_polygon(road_edge.raw_points, 0.025, 0.0, max_idx, max_distance)
+    self.blendful.update(self, max_idx, max_distance)
 
     # Update path using raw points
     if lead and lead.status:

@@ -34,6 +34,7 @@ class UIStateSP:
       "modelManagerSP", "selfdriveStateSP", "longitudinalPlanSP", "backupManagerSP",
       "gpsLocation", "liveTorqueParameters", "carStateSP", "liveMapDataSP", "carParamsSP", "liveDelay",
       "controllerStateBP",  # BluePilot: lateral uncertainty for torque bar
+      "modelDataV2SP",  # Blendful: lane trust / curvature diagnostics for the onroad UI
     ]
 
     self.sunnylink_state = SunnylinkState()

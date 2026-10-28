@@ -93,6 +93,11 @@ class ModelsLayout(Widget):
 
     self.lagd_toggle = toggle_item_sp(tr("Live Learning Steer Delay"), "", param="LagdToggle")
 
+    self.blendful_toggle = toggle_item_sp(tr("Blendful (Alpha)"),
+                                          tr("Gently pulls the model toward the lane center, as much as it trusts the lane lines," +
+                                             " and yields around obstacles."),
+                                          param="Blendful")
+
     self.driver_model_enable_toggle = toggle_item_sp(
       tr("Driver Model Enable"),
       tr("When enabled, driver monitoring is disabled. Changing this setting will restart sunnypilot if the car is powered on."),
@@ -103,7 +108,7 @@ class ModelsLayout(Widget):
     self.items = [self.current_model_item, self.cancel_download_item, self.supercombo_label, self.vision_label,
                   self.policy_label, self.off_policy_label, self.on_policy_label, self.refresh_item, self.clear_cache_item,
                   self.driver_model_enable_toggle, self.lane_turn_desire_toggle,
-                  self.lane_turn_value_control, self.lagd_toggle, self.delay_control]
+                  self.lane_turn_value_control, self.lagd_toggle, self.blendful_toggle, self.delay_control]
 
   def _on_driver_model_enable_toggled(self, _state: bool):
     ui_state.params.put_bool("OnroadCycleRequested", True, block=True)
@@ -248,6 +253,16 @@ class ModelsLayout(Widget):
     self.lane_turn_desire_toggle.action_item.set_state(turn_desire)
     self.lane_turn_value_control.set_visible(turn_desire and advanced_controls)
     self.lagd_toggle.action_item.set_state(live_delay)
+
+    # Blendful only makes sense on a modeld_v2 (custom bundle) model, same gate as upstream #2073.
+    blendful_allowed = ui_state.active_bundle is not None
+    if blendful_allowed:
+      self.blendful_toggle.action_item.set_state(ui_state.params.get_bool("Blendful"))
+      self.blendful_toggle.action_item.set_enabled(True)
+    else:
+      self.blendful_toggle.action_item.set_state(False)
+      self.blendful_toggle.action_item.set_enabled(False)
+
     self.delay_control.set_visible(not live_delay and advanced_controls)
     new_step = int(round(100 / CV.MPH_TO_KPH)) if ui_state.is_metric else 100
     if self.lane_turn_value_control.action_item.value_change_step != new_step:
