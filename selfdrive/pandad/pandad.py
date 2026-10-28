@@ -12,11 +12,54 @@ from openpilot.common.params import Params
 from openpilot.system.hardware import HARDWARE
 from openpilot.common.swaglog import cloudlog
 
-from openpilot.sunnypilot.selfdrive.pandad.rivian_long_flasher import flash_rivian_long
+# C3/DOS internal panda is USB-only (often behind a hub). Prefer connecting immediately
+# when serial is already readable; only GPIO-reset + settle when list() is empty.
+# BluePilot: tightened vs upstream — first GPIO reset after ~2s of empty list(),
+# 0.8s settle after each reset, 0.1s poll interval, 1s modem grace.
+NO_PANDA_RESET_SETTLE_S = 0.8
+NO_PANDA_POLL_S = 0.1
+NO_PANDA_RESET_EVERY_S = 2.0
+PANDA_STABLE_BEFORE_MODEM_S = 1.0
+
+# Avoid immediate GPIO reset on first empty list(); wait one reset interval.
+_last_panda_reset_at = time.monotonic()
+
+
+def reset_and_wait_for_usb() -> None:
+  """GPIO-reset internal panda, then wait for USB re-enumeration before list/serial."""
+  global _last_panda_reset_at
+  if not HARDWARE.has_internal_panda():
+    return
+  cloudlog.event("pandad.reset_internal")
+  HARDWARE.reset_internal_panda()
+  _last_panda_reset_at = time.monotonic()
+  time.sleep(NO_PANDA_RESET_SETTLE_S)
+
+
+def list_pandas_for_connect() -> list[str]:
+  """List pandas; if USB not ready yet, poll, and only reset every few seconds."""
+  serials = Panda.list()
+  if serials:
+    return serials
+  now = time.monotonic()
+  if now - _last_panda_reset_at >= NO_PANDA_RESET_EVERY_S:
+    reset_and_wait_for_usb()
+  else:
+    time.sleep(NO_PANDA_POLL_S)
+  return Panda.list()
+
+
+def enable_modem_usb_after_panda() -> None:
+  """Panda is up — allow LTE USB enumeration on the shared hub."""
+  try:
+    time.sleep(PANDA_STABLE_BEFORE_MODEM_S)
+    HARDWARE.allow_modem_usb()
+    cloudlog.event("pandad.modem_usb_enabled")
+  except Exception:
+    cloudlog.exception("pandad.modem_usb_enable_failed")
 
 
 def get_expected_signature(panda: Panda) -> bytes:
-  # C3: DOS(F4) 内部 panda 用 F4 固件，其余（RED_PANDA/TRES/CUATRO）用 H7
   hw_type = panda.get_type()
   mcu_type = McuType.F4 if hw_type == Panda.HW_TYPE_DOS else McuType.H7
   fn = os.path.join(FW_PATH, mcu_type.config.app_fn)
@@ -25,11 +68,10 @@ def get_expected_signature(panda: Panda) -> bytes:
 def flash_panda(panda_serial: str):
   panda = Panda(panda_serial)
 
-  # skip flashing if the detected panda is not supported
-  # C3: DOS(F4) 虽然不在 SUPPORTED_DEVICES 里，但必须允许刷写
-  if panda.get_type() not in Panda.SUPPORTED_DEVICES \
-     and panda.get_type() != Panda.HW_TYPE_DOS:
-    cloudlog.warning(f"Panda {panda_serial} is not supported (hw_type: {panda.get_type()}), skipping flash...")
+  # skip flashing for unsupported external pandas; internal DOS/F4 pandas are still allowed
+  hw_type = panda.get_type()
+  if hw_type not in Panda.SUPPORTED_DEVICES and not panda.is_internal():
+    cloudlog.warning(f"Panda {panda_serial} is not supported (hw_type: {hw_type}), skipping flash...")
     panda.close()
     return
 
@@ -94,26 +136,34 @@ def main() -> None:
   do_exit = False
   signal.signal(signal.SIGINT, signal_handler)
 
-  # check health for lost heartbeat
-  try:
-    for s in Panda.list():
-      with Panda(s) as p:
-        health = p.health()
-        if p.is_internal() and health["heartbeat_lost"]:
-          Params().put_bool("PandaHeartbeatLost", True, block=True)
-          cloudlog.event("heartbeat lost", deviceState=health)
-  except Exception:
-    cloudlog.exception("pandad.uncaught_exception")
-
   count = 0
+  heartbeat_checked = False
   while not do_exit:
     try:
       cloudlog.event("pandad.flash_and_connect", count=count)
-      if (count % 2) == 0:
-        HARDWARE.reset_internal_panda()
-      else:
-        HARDWARE.recover_internal_panda()
       count += 1
+
+      # Fast path: connect if USB/serial already ready; else reset → wait 1s → list
+      panda_serials = list_pandas_for_connect()
+      if not panda_serials:
+        cloudlog.event("pandad.no_panda_after_reset", count=count)
+        continue
+
+      # check health for lost heartbeat (once, on a clean USB connection)
+      if not heartbeat_checked:
+        heartbeat_checked = True
+        try:
+          for s in panda_serials:
+            with Panda(s) as p:
+              try:
+                health = p.health()
+              except RuntimeError:
+                continue
+              if p.is_internal() and health["heartbeat_lost"]:
+                Params().put_bool("PandaHeartbeatLost", True, block=True)
+                cloudlog.event("heartbeat lost", deviceState=health)
+        except Exception:
+          cloudlog.exception("pandad.uncaught_exception")
 
       # Flash all Pandas in DFU mode
       for serial in PandaDFU.list():
@@ -123,8 +173,6 @@ def main() -> None:
 
       panda_serials = Panda.list()
       if len(panda_serials):
-        # custom flasher for xnor's Rivian Longitudinal Upgrade Kit
-        flash_rivian_long(panda_serials)
         # find the internal supported panda (e.g. skip external Black Panda)
         panda_serials = check_panda_support(panda_serials)
 
@@ -135,13 +183,8 @@ def main() -> None:
         # run real pandad
         os.environ['MANAGER_DAEMON'] = 'pandad'
         process = subprocess.Popen(["./pandad"], cwd=os.path.join(BASEDIR, "selfdrive/pandad"))
-        # C3: panda 起来并稳定后，再放行 LTE 模组 USB（共享 hub 抢电保护）
-        try:
-          time.sleep(1.0)
-          HARDWARE.allow_modem_usb()
-          cloudlog.event("pandad.modem_usb_enabled")
-        except Exception:
-          cloudlog.exception("pandad.modem_usb_enable_failed")
+        # After panda is connected, allow LTE USB enum (deferred to protect shared hub)
+        enable_modem_usb_after_panda()
         process.wait()
     # TODO: wrap all panda exceptions in a base panda exception
     except (usb1.USBErrorNoDevice, usb1.USBErrorPipe):

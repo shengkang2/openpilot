@@ -361,7 +361,11 @@ def hardware_thread(end_event, hw_queue) -> None:
       except Exception:
         pass
 
-    should_pwrsave = not onroad_conditions["ignition"] and msg.deviceState.screenBrightnessPercent < 1e-3
+    # BluePilot fix: 只要已经 onroad 就绝不关大核。ignition 信号在部分车型上会抖动/丢失，
+    # 一旦误判进省电就会 offline cpu4-7，modeld/dmonitoringmodeld 绑 core 7 当场崩，
+    # 表现为"模型不在、无法居中、UI 报 Process Not Running"。
+    should_pwrsave = (not onroad_conditions["ignition"] and not should_start
+                      and msg.deviceState.screenBrightnessPercent < 1e-3)
     if should_pwrsave != pwrsave or (count == 0):
       HARDWARE.set_power_save(should_pwrsave)
     pwrsave = should_pwrsave

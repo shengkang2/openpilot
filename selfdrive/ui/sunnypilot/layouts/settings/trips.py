@@ -24,6 +24,7 @@ from openpilot.system.ui.widgets import Widget
 
 class TripsLayout(Widget):
   PARAM_KEY = "ApiCache_DriveStats"
+  PARAM_LOCAL = "LocalDriveStats"  # BP_LOCAL_STATS
   UPDATE_INTERVAL = 30  # seconds
 
   def __init__(self):
@@ -57,6 +58,71 @@ class TripsLayout(Widget):
     except Exception:
       cloudlog.exception(f"Failed to decode drive stats: {stats}")
       return {}
+
+  def _local_stats(self):
+    """从本地 realdata 目录估算行程数/时长/里程（云端不可用时兜底）。"""
+    import glob
+    import os
+
+    now = time.time()
+    dist_m = 0.0
+    routes = 0
+    minutes = 0
+    week_dist_m = 0.0
+    week_routes = 0
+    week_minutes = 0
+    seen = set()
+
+    try:
+      from openpilot.tools.lib.logreader import LogReader
+    except Exception:
+      LogReader = None
+
+    for d in sorted(glob.glob("/data/media/0/realdata/*")):
+      if not os.path.isdir(d):
+        continue
+      name = os.path.basename(d)
+      if "--" not in name:
+        continue
+      route = name.rsplit("--", 1)[0]
+      try:
+        mtime = os.path.getmtime(d)
+      except OSError:
+        continue
+
+      in_week = (now - mtime) < 7 * 86400
+      seg_dist = 0.0
+      q = os.path.join(d, "qlog.zst")
+      if LogReader is not None and os.path.exists(q):
+        try:
+          last_t = None
+          for m in LogReader(q):
+            if m.which() != "carState":
+              continue
+            t = m.logMonoTime / 1e9
+            if last_t is not None:
+              dt = t - last_t
+              if 0 < dt <= 0.6:
+                seg_dist += max(0.0, m.carState.vEgo) * dt
+            last_t = t
+        except Exception:
+          pass
+
+      dist_m += seg_dist
+      minutes += 1  # 每个 segment 约 60 秒
+      if route not in seen:
+        seen.add(route)
+        routes += 1
+        if in_week:
+          week_routes += 1
+      if in_week:
+        week_dist_m += seg_dist
+        week_minutes += 1
+
+    return {
+      "all": {"routes": routes, "distance": dist_m / 1609.344, "minutes": minutes},
+      "week": {"routes": week_routes, "distance": week_dist_m / 1609.344, "minutes": week_minutes},
+    }
 
   def _fetch_drive_stats(self):
     try:
@@ -142,6 +208,17 @@ class TripsLayout(Widget):
     is_metric = self._params.get_bool("IsMetric")
 
     all_time = self._stats.get("all", {})
+    if not all_time or not all_time.get("routes"):
+      # BP_LOCAL_STATS: 云端统计不可用时，用本地行车记录兜底
+      local = self._params.get(self.PARAM_LOCAL)
+      if not local:
+        local = self._local_stats()
+        try:
+          self._params.put(self.PARAM_LOCAL, local)
+        except Exception:
+          pass
+      self._stats = local
+      all_time = local.get("all", {})
     week = self._stats.get("week", {})
 
     y = self._render_stat_group(x, y, w, card_height, tr("ALL TIME"), all_time, is_metric)

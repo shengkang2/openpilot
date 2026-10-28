@@ -10,6 +10,29 @@ from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.label import Label
 
+# BP_ZH_ALERTS: openpilot 上游报警文案不走 gettext，这里统一映射成中文。
+# 词表随仓库发布于 selfdrive/assets/bp/alerts_zh.json；设备侧 /data/bluepilot_zh/alerts_zh.json
+# 存在时优先使用（升级不覆盖、可自定义），两者都缺失时回退英文。
+import json as _json
+import os as _os
+
+_ZH_PATHS = (
+  "/data/bluepilot_zh/alerts_zh.json",
+  _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "../../assets/bp/alerts_zh.json"),
+)
+_ZH_ALERTS = {}
+for _zh_path in _ZH_PATHS:
+  try:
+    with open(_zh_path, encoding="utf-8") as _f:
+      _ZH_ALERTS = _json.load(_f)
+    break
+  except Exception:
+    continue
+
+
+def zh_alert(text):
+  return _ZH_ALERTS.get(text, text)
+
 AlertSize = log.SelfdriveState.AlertSize
 AlertStatus = log.SelfdriveState.AlertStatus
 
@@ -112,7 +135,7 @@ class AlertRenderer(Widget):
       return None
 
     # Return current alert
-    return Alert(text1=ss.alertText1, text2=ss.alertText2, size=ss.alertSize.raw, status=ss.alertStatus.raw)
+    return Alert(text1=zh_alert(ss.alertText1), text2=zh_alert(ss.alertText2), size=ss.alertSize.raw, status=ss.alertStatus.raw)
 
   def _render(self, rect: rl.Rectangle):
     alert = self.get_alert(ui_state.sm)

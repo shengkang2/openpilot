@@ -254,14 +254,10 @@ class ModelsLayout(Widget):
     self.lane_turn_value_control.set_visible(turn_desire and advanced_controls)
     self.lagd_toggle.action_item.set_state(live_delay)
 
-    # Blendful only makes sense on a modeld_v2 (custom bundle) model, same gate as upstream #2073.
-    blendful_allowed = ui_state.active_bundle is not None
-    if blendful_allowed:
-      self.blendful_toggle.action_item.set_state(ui_state.params.get_bool("Blendful"))
-      self.blendful_toggle.action_item.set_enabled(True)
-    else:
-      self.blendful_toggle.action_item.set_state(False)
-      self.blendful_toggle.action_item.set_enabled(False)
+    # BP tweak (2026-10-29): upstream gates the toggle on an active custom bundle, but
+    # modeld_v2 itself allows Blendful when no bundle is active (built-in model). Open it.
+    self.blendful_toggle.action_item.set_state(ui_state.params.get_bool("Blendful"))
+    self.blendful_toggle.action_item.set_enabled(True)
 
     self.delay_control.set_visible(not live_delay and advanced_controls)
     new_step = int(round(100 / CV.MPH_TO_KPH)) if ui_state.is_metric else 100

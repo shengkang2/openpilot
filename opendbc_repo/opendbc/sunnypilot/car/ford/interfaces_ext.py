@@ -48,7 +48,11 @@ def apply_ford_ext_params(ret: structs.CarParams, CP, car_fw, fingerprint, alpha
   # BluePilot: make the alpha toggle authoritative for longitudinal mode.
   # True  -> openpilot longitudinal (alpha)
   # False -> Ford ACC (stock longitudinal)
-  ret.openpilotLongitudinalControl = bool(alpha_long)
+  # 2026-10-28 fix: Ford must default to openpilot longitudinal (upstream behaviour).
+  # Binding it to the alpha toggle meant default stock ACC, and in stock mode panda's
+  # static forwarding rule drops IPMA's 0x186 (ACCDATA) while carcontroller sends nothing,
+  # so the PCM loses ACC data 0.26s after the relay closes -> Cruise Fault / pre-collision fault.
+  ret.openpilotLongitudinalControl = not ret.radarUnavailable
   if ret.openpilotLongitudinalControl:
     ret.safetyConfigs[-1].safetyParam |= FordSafetyFlags.LONG_CONTROL.value
   else:

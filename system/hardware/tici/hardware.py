@@ -267,9 +267,12 @@ class Tici(HardwareBase):
                          bottomSoc=bottomSoc)
 
   def set_display_power(self, on):
+    # BP修复(2026-10-28): 本机为克隆触摸屏，写 bl_power=4(FB_BLANK_POWERDOWN) 会让触摸
+    # 控制器随面板一起掉线，息屏后触摸无法唤醒 -> 永久黑屏（只能断电恢复）。
+    # 因此永不做 powerdown，息屏统一由 brightness=0 实现，面板保持供电、触摸可唤醒。
     try:
       with open("/sys/class/backlight/panel0-backlight/bl_power", "w") as f:
-        f.write("0" if on else "4")
+        f.write("0")
     except Exception:
       pass
 

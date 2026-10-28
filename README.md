@@ -1,5 +1,33 @@
 ![](selfdrive/assets/img_bluepilot_boot.jpg)
 
+## BluePilot TICI 本地适配（2026-10-29 更新日志）
+
+以下改动在 `bp7.020261020` 基础上，针对 comma three (tici) 设备做本地适配与修复：
+
+### 新增功能
+- **Blendful Mode (Alpha)**：同步上游 sunnypilot #2073——按车道线置信度轻柔将车辆拉回车道中心，并在障碍物附近自动让行；默认关闭，在 设置 → 模型 页打开。
+- **开发者 UI 转角对比**：新增实际转向角 STEER ACT / 请求转向角 STEER RQ 实时对比显示，误差 >4° 橙色、>10° 红色。
+- **报警与设置页中文化**：报警文案渲染层中文映射，词表随仓库发布于 `selfdrive/assets/bp/alerts_zh.json`（设备侧 `/data/bluepilot_zh/alerts_zh.json` 存在时优先，便于自定义）；Blendful 设置页中文文案与翻译条目。
+- **统计页本地兜底**：comma 云统计 API 不可达时，显示本地汇总的驾驶统计，不再全 0。
+
+### 修复 / 调整
+- **pandad**：内部 panda USB 复位时序收紧（空列表约 2s 后复位、复位后 0.8s 稳定窗口、0.1s 轮询、modem 前 1s 宽限）。
+- **Ford 纵向控制**：`interfaces_ext` 恢复 `openpilotLongitudinalControl = not radarUnavailable`，修复上车 Cruise Fault / 前避障故障。
+- **省电逻辑**：行车状态下不再关闭 CPU4-7 大核（修复 dmonitoringmodeld 崩溃）；`set_core_affinity` 遇离线核自动跳过不再抛错。
+- **屏幕（tici 克隆屏）**：背光永不写 powerdown，修复息屏后触摸控制器掉线导致的永久黑屏。
+- **提示音量**：`MIN_VOLUME` 0.1→0.55、`DB_SCALE` 30→20；`warning_immediate.wav` 响度归一化。
+- **Blendful 开关**：移除"必须激活自定义模型包"的置灰门控，内置模型可直接开启。
+- **mapd**：恢复可执行权限（644→755），修复离线地图不下载。
+- **参数白名单**：`params_keys.h` 新增 `Blendful` 参数（设备端 `params_pyx.so` 需用新头文件重编）。
+
+### 删减 / 移除
+- 移除 Blendful 开关的 `enablement` 门控（sunnylink 设置页与模型设置页两处）。
+- 无其他功能删减，上游全部功能保持可用。
+
+> 注：设备侧另有仓库外改动——`/usr/comma/comma.sh` 禁用 touch_count 误恢复出厂分支、
+> unifont 字库图集随新翻译重生成、黑匣子与风扇监控脚本位于 `/data`（不入仓库）。
+
+
 Table of Contents
 =======================
 

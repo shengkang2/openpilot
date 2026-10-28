@@ -3582,3 +3582,9 @@ msgstr "注册中"
 
 msgid "PROGRESS"
 msgstr "进行中"
+
+msgid "Blendful (Alpha)"
+msgstr "Blendful 模式（测试版）"
+
+msgid "Gently pulls the model toward the lane center, as much as it trusts the lane lines, and yields around obstacles."
+msgstr "按车道线置信度轻柔地将车辆拉回车道中心，并在障碍物附近自动让行。"

@@ -22,13 +22,13 @@ from openpilot.selfdrive.ui.bp.lib import theme_pack
 SAMPLE_RATE = 48000
 SAMPLE_BUFFER = 4096 # (approx 100ms)
 MAX_VOLUME = 1.0
-MIN_VOLUME = 0.1
+MIN_VOLUME = 0.55  # BP_TUNED_VOLUME: was 0.1 (提示音整体更响)
 ALERT_RAMP_TIME = 4 # seconds to ramp to max volume for warningImmediate
 SELFDRIVE_STATE_TIMEOUT = 5 # 5 seconds
 FILTER_DT = 1. / (micd.SAMPLE_RATE / micd.FFT_SAMPLES)
 
 AMBIENT_DB = 24 # DB where MIN_VOLUME is applied
-DB_SCALE = 30 # AMBIENT_DB + DB_SCALE is where MAX_VOLUME is applied
+DB_SCALE = 20 # BP_TUNED_VOLUME: was 30 (更快到达满音量)
 
 VOLUME_BASE = 20
 if HARDWARE.get_device_type() == "tizi":
