@@ -4,6 +4,7 @@ Table of Contents
 =======================
 
 - [Table of Contents](#table-of-contents)
+  - [🇨🇳 This fork: bp7.020261020](#-this-fork-bp7020261020-c3--chinese-ui--blendful)
   - [Updates on Branch Names and Links](#-updates-on-branch-names-and-links)
   - [Join our Discord](#-join-our-discord)
   - [What is bluepilot?](#-what-is-bluepilot)
@@ -15,6 +16,58 @@ Table of Contents
   - [Licensing](#licensing)
   - [Support sunnypilot](#support-sunnypilot)
   - [Technical Documentation](#-technical-documentation)
+
+---
+
+<details open><summary><h3>🇨🇳 This fork: bp7.020261020 (C3 + Chinese UI + Blendful)</h3></summary>
+
+---
+
+本仓库是 bluepilot **bp-7.0** 的自用分支 `bp7.020261020`，面向 **comma three (tici)**。
+上游面向 3X / 4 且为英文；本分支补回 comma 3 支持，并把日常使用需要的改动全部固化进源码。
+逐项细节、安全设计、编译坑与测试记录见 **[README-BP7.md](README-BP7.md)**。
+
+### 安装本分支
+
+```bash
+# 方式 A：设备开机 setup 界面 → Custom Software → Enter URL，填：
+installer.comma.ai/shengkang2/openpilot/bp7.020261020
+
+# 方式 B：设备上一条命令（已 SSH 进设备）
+bash <(curl -fsSL https://raw.githubusercontent.com/shengkang2/openpilot/bp7.020261020/install.sh)
+```
+
+底包要求 **AGNOS 18.5**。低版本（12.x / 13.x）会被明确拦截并说明原因 —— 不会变砖，但装不上。
+安装全程**只写 `/data/openpilot`，零分区写入**。
+
+### 本分支改了什么
+
+| 类别 | 功能 |
+|---|---|
+| 设备 | **comma 3 (tici) 完整适配**：补回 panda F4/DOS 链路、USB 传输层、预编译固件、EC25 模组抢电保护 |
+| 设备 | 关闭上游 C3 渠道闸门（`channel_type != "tici"` 会让自建分支在 C3 上永远无法 engage） |
+| 安装 | AGNOS 填 URL 一键安装 + 开机自举脚本（uv 缓存 / swapfile / LFS 模型实体 / 执行位） |
+| 安装 | `install.sh` 自动 clone、离线包安装、已有仓库增量更新 |
+| 安装 | 引导链五道防护 + 装前体检 + 装后自检，刷前刷后哈希比对证明零改动 |
+| 中文 | UI 全量汉化（zh-CHS / zh-CHT 零缺译）+ 80px NotoSansSC 位图字库 + 框架层 `tr()` 抽取 |
+| 功能 | **驾驶员监控总开关**：关掉后 `dmonitoringd` / `dmonitoringmodeld` 不启动，`camerad` 不跑 ISP/ICP |
+| 功能 | 无驾驶员摄像头的机器（3XL）自动降级为「DM 关闭」，不再开机 abort |
+| 功能 | **Jetlink 外接算力**：Jetson / PC / Mac / iPhone 挂 USB-C 口跑大模型，comma 只做前处理与控车；含设置面板与握手修复 |
+| 功能 | **Blendful 混合横向策略**（移植 sunnypilot #2073，ALPHA，默认关闭，仅自定义 modeld_v2 模型可用） |
+| 稳定性 | 关闭「未注册到 comma.ai」红条；补 `Offroad_AcceleratorUnavailable` 白名单（漏注册会让 UI 每秒崩一次） |
+| 构建 | `PYTHONPATH` 保留 `/data/pylibs`；`sign.py` 补执行位 |
+
+### 与上游的差异（重要）
+
+* **不碰引导链** —— 不刷 boot / system / abl / xbl，不改 slot；`AGNOS_VERSION` 改为运行时读 `/VERSION`，
+  并加 OTA 覆盖哨兵防止被 `git reset --hard` 打回
+* **不绕过 panda 安全** —— C3 适配只改传输层与固件选择，安全模型仍是 bluepilot 原样；
+  上游明令禁止的改动一条都没做
+* **Blendful 默认关闭**，关闭态与未移植前逐帧等价；开启需自选自定义模型包，横向行为自行评估
+* 上游 bluepilot / sunnypilot 的功能全部保留 —— 本分支只做加法与修复，没有删除任何特性
+* 验证状态：除 Blendful（仅代码级 + 单测，待实机）外，其余均在 tici + AGNOS 18.x 实机验证
+
+</details>
 
 ---
 
@@ -83,6 +136,11 @@ The following changes are a **VIOLATION** of this policy and **ARE NOT** include
 
 
 <details><summary><h3>⚒ Installation</h3></summary>
+
+> 本仓库（`shengkang2/openpilot` 的 `bp7.020261020`）的安装 URL 与前置要求见上方
+> [🇨🇳 This fork](#-this-fork-bp7020261020-c3--chinese-ui--blendful) 一节 ——
+> 用的是 `installer.comma.ai/shengkang2/openpilot/bp7.020261020`，**不是**下面的 BluePilotDev 地址。
+> 下面这段是 bluepilot 上游原文，供参考。
 
 * bluepilot not installed
   1. [Factory reset/uninstall](https://github.com/commaai/openpilot/wiki/FAQ#how-can-i-reset-the-device) the previous software if you have another software/fork installed.
