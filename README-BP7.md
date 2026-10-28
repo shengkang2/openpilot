@@ -1,6 +1,15 @@
-# bp7 — BluePilot 7.0（comma three / tici 中文优化版）
+# bp7 — BluePilot 7.0 自用分支（comma three / tici 中文 + C3 适配 + Blendful）
 
-在 bluepilot BPVERSION 7.0.0 基础上做的中文与稳定性优化版本，面向 **comma three (tici)**。
+在 bluepilot BPVERSION 7.0.0 基础上做的自用分支，面向 **comma three (tici)**：
+
+- 补回上游删掉的 **comma 3 整条 panda 链路**，并关掉 C3 渠道闸门
+- **中文全量汉化**（zh-CHS / zh-CHT 零缺译）+ 80px 位图字库
+- **一键安装**（AGNOS 界面填 URL）、离线包、引导链五道防护
+- **驾驶员监控总开关**，关掉即进程级停止
+- **Jetlink 外接算力**（Jetson / PC / Mac / iPhone 跑大模型）
+- **Blendful 混合横向策略**（移植 sunnypilot #2073，ALPHA，默认关闭）
+
+完整清单与逐项说明见 [第三章](#三本分支改了什么功能总览)。
 
 ---
 
@@ -236,14 +245,67 @@ cd /data/openpilot && git checkout -f <原分支> && bash install.sh
 
 ---
 
-## 三、本分支做了什么
+## 三、本分支改了什么（功能总览）
 
-### 3.1 关闭「未注册到 comma.ai」红条警报
+### 3.0 总览表
+
+| 类别 | 功能 | 验证情况 |
+|---|---|---|
+| 设备 | comma 3 (tici) 完整适配：panda F4/DOS 链路 + USB 传输 + 模组抢电保护 + 预编译固件 | 实机 |
+| 设备 | 关闭上游 C3 渠道闸门，自建分支可在 C3 上 onroad | 实机 |
+| 安装 | AGNOS 界面填 URL 一键安装（自举脚本补齐缺失的编译环境） | 实机 |
+| 安装 | `install.sh` 自动 clone / 离线包 / 已有仓库增量更新 | 实机 |
+| 安装 | 引导链五道防护 + 装前体检 + 装后自检，全程零分区写入 | 实机（刷前刷后哈希一致） |
+| 体验 | 关闭「未注册到 comma.ai」红条（只关提示，注册逻辑不动） | 实机 |
+| 稳定性 | 补 `Offroad_AcceleratorUnavailable` params 白名单（漏注册会让 UI 每秒崩一次） | 实机 |
+| 稳定性 | camerad 缺摄像头子设备时降级而非 abort | 实机 |
+| 中文 | UI 全量汉化：zh-CHS / zh-CHT 零缺译（约 860 词条），框架层 `tr()` 抽取 | 实机 |
+| 中文 | 80px NotoSansSC 位图字库（841 字形 / 728 汉字），按字号整数比缩放 | 实机 |
+| 功能 | 驾驶员监控（DM）总开关 `DriverModelEnable`，关掉后进程级停止 | 实机 |
+| 功能 | 无驾驶员摄像头的机器（3XL）自动降级为「DM 关闭」 | 实机 |
+| 功能 | Jetlink 外接算力接入（大模型在 USB-C 外接机上跑，comma 只做前处理与控车） | 实机 |
+| 功能 | Jetlink 设置面板补注册 + 握手顺序修复 | 实机 |
+| 功能 | **Blendful 混合横向策略**（移植 sunnypilot #2073，ALPHA，默认关闭） | 代码级 + 单测，**待实机** |
+| 构建 | `PYTHONPATH` 保留 `/data/pylibs`（AGNOS 18.x 的 capnproto 半装） | 实机 |
+| 构建 | `sign.py` 补执行位（否则固件签名 Error 126） | 实机 |
+
+### 3.1 comma 3 (tici) 适配
+
+官方 bp-7.0 在 2025 年底随上游删除了 comma 3 所需的整条 panda 链路。本分支把整条链路补回，
+C3 适配逻辑取自 `shengkang2/openpilot@spbp260825`（已在 C3 实机验证），
+pandad 主流程保持 BP 原样（rivian flasher / check_panda_support / single-panda 断言都不动）：
+
+- **panda 固件层**：`panda/` 整目录替换为含 F4/DOS 的版本（`board/stm32f4`、`dos.h`、
+  `HW_TYPE_DOS(6)` 回归），`SConscript` 同时构建 panda(F4) 与 panda_h7；
+  `.gitmodules` 去掉 panda 子模块，改为随仓库携带
+- **预编译固件**：`panda/board/obj/` 四个 `*.bin.signed` 入库，设备端不必重新签名
+- **pandad 传输层**：新增 `panda_comms.{h,cc}` USB 实现，句柄改
+  `unique_ptr<PandaCommsHandle>` 支持 USB/SPI 多态，构造与 `list()` 改为 USB 优先、SPI 回落；
+  `SConstruct` 的 `allowed_system_libs` 放行 `usb-1.0`
+- **签名与刷写**：`get_expected_signature()` 按 `hw_type` 选 F4/H7，刷写白名单放行 `HW_TYPE_DOS`
+- **C3 共享 USB hub 抢电保护**：C3 上 EC25 模组（500mA）与内部 DOS panda 共用同一 hub，
+  模组抢先枚举会把 panda 挤下线。做法是开机先压住模组（`system/hardware/tici/modem_usb.py`，
+  udev 规则 + `authorized=0`），pandad 稳定 1s 后再放行；
+  `launch_chffrplus.sh` 在 `agnos_init` 后调用 `defer_modem_usb()`
+
+### 3.2 关闭 C3 渠道闸门
+
+`system/hardware/hardwared.py`：上游弃坑 comma 3 后加了
+
+```python
+is_unsupported_combo = TICI and get_device_type() == "tici" and channel_type != "tici"
+```
+
+导致 `bp7.020261020`（`channel_type=feature`）在 C3 上 `onroad_conditions["not_tici"]`
+恒为 `False`、**永远无法 engage**，并弹 `Offroad_TiciSupport`。本分支直接置 `False`
+（与在役的 spbp260825 做法一致），panda / pandad 层不改动。
+
+### 3.3 关闭「未注册到 comma.ai」红条警报
 
 `system/athena/registration.py`：`Offroad_UnregisteredHardware` 恒置 `False`。
 **只关提示，注册逻辑一行没动**（`dongle_id` 照样尝试注册并写入参数）。
 
-### 3.2 补 params 白名单
+### 3.4 补 params 白名单
 
 `common/params_keys.h` 补 `Offroad_AcceleratorUnavailable`。
 
@@ -252,7 +314,7 @@ bp7 的 `system/hardware/hardwared.py:331` 会写这个 key，
 但白名单漏注册（旁边 14 个 `Offroad_*` 都在）。
 `Params.get()` 走 C++ `check_key()` 严格校验，直接抛异常把 UI 打死，**每秒崩一次**。
 
-### 3.3 中文化
+### 3.5 中文化
 
 | 文件 | 改动 |
 |---|---|
@@ -286,7 +348,63 @@ python3 tools/gen_cn_font.py --size 80
 `collect_chars()` **全量扫描 po 文件**（不区分 msgid/msgstr、不过滤复数形式）。
 按 `msgstr ` 前缀精细解析很容易漏掉 `msgstr[0] "{} 分钟前"` 里的「钟」。
 
-### 3.4 补回 Jetlink 面板
+### 3.6 驾驶员监控（DM）总开关
+
+`DriverModelEnable`（默认开）是**唯一真相源**，关掉后是进程级停止，不是"继续跑但不出告警"：
+
+| 层 | 行为 |
+|---|---|
+| `system/manager/process_config.py` | `dmonitoringmodeld` / `dmonitoringd` 不启动；`camerad` 带 `DISABLE_DRIVER=1`，整条驾驶员摄像头流水线（ISP / ICP / 1080p VIPC）不启动，仅在预览时开 |
+| `selfdrive/monitoring/dm_availability.py` | `driver_monitoring_disabled()` 单一判定：参数关闭，或机器上数不到 `cam-sensor-driver` 子设备（3XL 只有 2 个 → 判为无摄像头） |
+| `selfdrive/selfdrived` | `driverStateV2` / `driverMonitoringState` 进 `ignore_alive/freq/valid`，避免停掉的 DM 被读成 `cameraMalfunction` / `commIssue`；ignore 以 10Hz 随参数实时同步，不占 100Hz 控制路径 |
+| `selfdrive/controls/controlsd.py` | `forceDecel` 只在该包还活着时才认 `alertLevel` —— 原来断流后 SubMaster 一直返回最后一包，stale 的 `alertLevel` / `lockout` 会**永久 forceDecel、永久 tooDistracted** |
+| UI | 大小屏 `driver_state` 断流直接不画；驾驶员摄像头预览显示「driver monitoring is off」而不是永远「camera starting」；`circular_alerts` 的 e2e 提示（绿灯起步 / 前车起步）在 DM 关闭时视为就绪 |
+
+顺带修掉一个真实回归：`longitudinalPlanSP` 的 SP 事件原先被错放在 DM 代码块里，DM 一关就整块不发。
+
+未上 DM 开关的机器（比如 3XL 硬件的车）不需要手动关：判定会把开关本身置上，设置界面显示的就是设备真实行为。
+
+### 3.7 camerad 缺摄像头子设备时降级
+
+`openSensor()` 里 `open_v4l_by_name_and_index()` 返回 -1 时是 `assert`。没有驾驶员摄像头的机器
+（3XL）连 `cam-sensor-driver` 子设备都没有，camerad 会在开机时反复 abort，
+把两颗路面摄像头一起带走。改成与传感器 probe 失败相同的降级路径：
+`enabled = false` 后返回，`sendState()` 再补一道守卫，避免 `pm` 为空时被事件回调踩到。
+
+### 3.8 Jetlink 外接算力（Jetson / PC / Mac / iPhone）
+
+在 comma 的 USB-C 口外接一台机器跑大模型：相机、warp、parser、controlsd、panda、CAN
+全部留在 comma，外接机只是**纯函数**（warp 后的帧 + 上下文进，18452 个浮点出）。
+大模型只在「无人接管」时换入，掉帧超预算就回退小模型。
+
+#### 3.8.1 接入层
+
+- **vendored**（未改上游代码）：`jetlink_repo/jetlink`（37 个文件，jetlink 0.8.7 / API 3，MIT）
+  + `jetlink_repo/scripts/comma/jetlink-root.sh`（configfs gadget、NCM、UDC、VM 调优）；
+  树根 `jetlink` 符号链接由 `launch_chffrplus.sh` 每次开机重建
+- **转接层 `bluepilot/jetlink_adapter`**（顶层只用标准库，`jetlinkd` 常驻约 10MB）：
+  实现 `jetlink.openpilot.interface.Openpilot`，用 jetlink 自带 `conformance()` 对照 API 3
+  校验全通过（Openpilot / StatusSide / WorkerSide / ModelSide）；
+  `in_control()` 直接用 bp 的 MADS 判定（启用/转向，或 MADS enabled 含 paused），
+  不需要 dp 那套 ALKA + lkasOn 替代；`SmallModel` 代理翻译
+  `after_enqueue`（可调用）与 bp `ModelState.prepare_only`（bool）的签名差异；
+  `build_warp.py` 在构建期生成 `driving_warp_<cam>_512x256_tinygrad.pkl`
+  （bp 的 warp 熔在 `warp_enqueue` 里，没有独立 pickle）
+- **modeld**：`prepare()`（在 `config_realtime_process` 之前，tinygrad 线程不能继承
+  FIFO54/core7）→ `attach()` → `use_submaster(sm)`；每帧写 `frame_drop_ratio`，
+  handover 时重置掉帧滤波；发布 `modelDataV2SP.acceleratorState` / `bigModel`
+- **manager**：新增 `jetlinkd`（`always_run` + `should_run`，`UsbGpuPresent` 时让位）
+- **selfdrived**：4 个加速器事件（`EventName` @98–@101）、`jetlinkd` 视为可选进程、
+  切换后 1 秒 settling 内抑制 `commIssue` / `posenet` / `locationd`
+- **hardwared**：`Offroad_AcceleratorUnavailable` 离线告警；关机前先请外接机一起下电（≤25s）
+- **UI**：`ui_state` 5Hz 快照 + `JetlinkState`；设置里的 Jetlink 面板显示
+  Off / USB / iOS、链路状态、传输量、端口、将用的大模型、进度、失败原因、模型清单
+- **capnp**：`ModelDataV2SP` 增加 `acceleratorState`（6 态，名字与 jetlink `STATES` 一致）
+  与 `bigModel`；`EventName` 增加 @98–@101（bp 原最大 @97）
+- **已知限制**：只在 `selfdrive/modeld`（stock runner）上接线；
+  sunnypilot 的 `modeld_tinygrad`（自定义 bundle）暂未接入，此时 `acceleratorState` 恒为 `none`
+
+#### 3.8.2 补回设置面板
 
 bluepilot 上游把 `JetlinkLayout` 只注册进原版 `selfdrive/ui/layouts/settings/settings.py`，
 但 sunnypilot 覆盖版的 `_panels` 字典漏了这一项。
@@ -294,7 +412,7 @@ bluepilot 上游把 `JetlinkLayout` 只注册进原版 `selfdrive/ui/layouts/set
 
 `PanelType.JETLINK = 6` 枚举一直存在，`icons/jetlink.png` 也在，纯粹是面板注册漏了。
 
-### 3.5 Jetlink 握手顺序修复
+#### 3.8.3 握手顺序修复
 
 `jetlink_repo/jetlink/openpilot/provision.py`：改为
 `open_link → wait_for_jetson → provision()`（`provision()` 内含 `hello()`）。
@@ -303,7 +421,53 @@ bluepilot 上游把 `JetlinkLayout` 只注册进原版 `selfdrive/ui/layouts/set
 下载失败就永远走不到 `provision()`，`server.json` 永远为空，
 手机侧只能看到 `the device is gone` 无限循环。
 
-### 3.6 PYTHONPATH 保留 `/data/pylibs`
+### 3.9 Blendful 混合横向策略（ALPHA，移植 sunnypilot #2073）
+
+上游是 `sunnypilot/sunnypilot#2073`（`laneful-curves` 分支，作者 Discountchubbs，仍未合并）。
+本分支是**手工移植**，不是 cherry-pick：该 PR 基于 sunnypilot 2026-10 的 `openpilot/`
+monorepo 布局和被重写过约 40% 的 `modeld.py`，而本分支基座是 6 月分叉的扁平布局，
+15 个既有文件上下文全不一致，按「增量重锚定」落地。
+
+**它是什么**：不是「车道线 vs 无车道线」二选一，而是**连续混合** ——
+车道线可信时向车道中心做曲率修正，不可信时更多依赖模型预测路径。
+只有单侧线（甚至只有路缘石）也能用，不是完整 laneful 模式；空车道时退化为纯 laneless。
+
+**落地内容**
+
+| 位置 | 改动 |
+|---|---|
+| `sunnypilot/modeld_v2/blendful.py` | 新增核心数学：横向信任度、左右车道概率、绕行判定、曲率修正（含淡出与复位） |
+| `sunnypilot/modeld_v2/tests/test_blendful.py` | 上游 9 个用例随代码一起移植 |
+| `sunnypilot/modeld_v2/modeld.py` | `get_action_from_model()` 增加可选 `blendful` 回调，修正注入点在 generation≥10 平滑**之后**；`main()` 读 `Blendful` 参数、算 `blendful_active`（desire=none 且无变道）、发布 7 个诊断字段 |
+| `cereal/custom.capnp` | `ModelDataV2SP` 新增 `blendfulCurvature @3` … `blendfulLaneWidth @9`；**`@1/@2` 的 Jetlink 字段原样保留**，跳过了属于 RELC 的两个 road-edge 字段 |
+| `cereal/services.py` | `modelDataV2SP` 提到 20Hz / BIG 队列（诊断字段要上 UI） |
+| `common/params_keys.h` | 新增 `Blendful`（`PERSISTENT \| BACKUP`，默认 `"0"`） |
+| `selfdrive/ui/sunnypilot/onroad/blendful.py` | 新增可视化：信任度着色、修正量读数、绕行/车道概率 |
+| 三个渲染器 | 大屏、mici、sunnypilot mixin 各挂一处，仅非 DISENGAGED 时绘制 |
+| Models 设置页 | 大小屏各一个「Blendful (Alpha)」开关 |
+| Sunnylink | `model_behavior` 增加 `Blendful` 项 + `custom_model_active` capability |
+
+**两级门控（安全项，不能省）**
+
+1. **modeld 侧**：`blendful_capable` 只认 `Runner.tinygrad`（即 modeld_v2 / 自定义 bundle）。
+   stock / snpe runner 上开关无效；demo 与 `COMBINED_MODEL_PKL` 允许
+2. **UI 侧**：开关只在选了自定义模型包时可见可点（Sunnylink 那项用 `custom_model_active` 同理）
+
+关掉时 `update()` 严格返回 0 并把内部状态复位，**关闭态与未移植前逐帧等价**。
+
+**验证情况**
+
+- 上游 9 个单元测试全过：居中不推、向中心拉、换向慢建、弱线退化 laneless、单线闪烁保持、
+  绕行让行、trust 下降不放大、关开关归零复位、低速淡出
+- 接线与配置检查 20 项全过：capnp 序号唯一升序、modeld 只写 schema 中存在的字段、
+  `enabled=False` 严格返回 0、inactive 单调淡出、参数/服务/UI/配置项齐全
+- 改动文件全部 `py_compile` 通过
+- **真机编译、UI 渲染、横向行为未验证** —— 这也是它仍标 ALPHA 的原因
+
+**怎么用**：设置 → 模型 → 选一个自定义（modeld_v2）模型包 → 打开「Blendful (Alpha)」→
+先在封闭路面的低速弯道确认手感。出问题直接关开关即可，下一帧就回退（不用重启 modeld）。
+
+### 3.10 PYTHONPATH 保留 `/data/pylibs`
 
 AGNOS 18.x 的 `/usr/local/venv` 里 capnproto 是半装状态（dist-info 在、`install/` 缺），
 且 `/usr/local` 只读无法重装。把依赖轮子离线装到 `/data/pylibs` 是唯一出路。
@@ -311,7 +475,7 @@ AGNOS 18.x 的 `/usr/local/venv` 里 capnproto 是半装状态（dist-info 在�
 两处 `launch_chffrplus.sh` 都要带 —— `launch_chffrplus.sh` 的
 `export PYTHONPATH="$PWD"` 会覆盖 `launch_env.sh` 的设置。
 
-### 3.7 `sign.py` 执行位
+### 3.11 `sign.py` 执行位
 
 `panda/board/crypto/sign.py` 检出时 mode 位可能没还原 → `Error 126 Permission denied`。
 `install.sh` 会 `chmod +x`。
@@ -333,12 +497,23 @@ AGNOS 18.x 的 `/usr/local/venv` 里 capnproto 是半装状态（dist-info 在�
 
 ---
 
-## 五、设备上验证过的状态
+## 五、验证状态
+
+### 5.1 实机验证
 
 - tici + AGNOS 18.4，`bp7.020261020` 编译通过并稳定运行
 - **全程零分区写入**，引导链 `xbl_a=830f71fd` 刷前刷后一致
 - `comma` 服务 active，`manager.py` / `selfdrive.ui.ui` / `pandad` / `mapd` 全部在跑
 - `modeld` / `camerad` 未起属正常：offroad 状态下不启动
+- C3 panda 链路（F4 固件签名 + USB 传输 + 模组抢电保护）实际可用
+- 汉化后 UI 无越界/缺字，`zh-CHS` / `zh-CHT` 零空译
+- DM 关闭后 `dmonitoringd` / `dmonitoringmodeld` 不在进程表，`camerad` 无 ISP/ICP 占用
+- Jetlink 外接机接入、面板状态、握手、掉电联动实测通过
+
+### 5.2 仅代码级验证（未上真机）
+
+- **Blendful**：单元测试 9/9、接线与配置检查 20/20、`py_compile` 全过；
+  真机 SCons 编译（capnp 重生成）、UI 渲染、横向行为**尚未验证**
 
 ---
 
@@ -346,8 +521,10 @@ AGNOS 18.x 的 `/usr/local/venv` 里 capnproto 是半装状态（dist-info 在�
 
 | 脚本 | 用途 |
 |---|---|
-| `install.sh` | 一键安装（链接安装入口） |
-| `tools/gen_cn_font.py` | 生成中文位图字库 |
+| `install.sh` | 一键安装（链接安装入口，自动 bootstrap / 离线模式 / 增量更新） |
+| `scripts/bp7_bootstrap.sh` | AGNOS 填 URL 安装后的开机自举（uv 缓存 / swapfile / LFS 模型 / 执行位 / 防护复核） |
+| `tools/make_bundle.sh` | 生成离线包 `dist/bp7-offline.tar.gz`（约 406MB） |
+| `tools/gen_cn_font.py` | 生成中文位图字库（`--size 80`） |
 | `tools/fix_jetlink_i18n.py` | Jetlink 汉化补丁（幂等） |
 | `tools/add_jetlink_po.py` | 补 po / pot 词条（幂等） |
 | `tools/check_jetlink_i18n_anchors.py` | 校验汉化补丁锚点是否仍存在 |
@@ -357,10 +534,37 @@ AGNOS 18.x 的 `/usr/local/venv` 里 capnproto 是半装状态（dist-info 在�
 
 ## 七、已知限制
 
+- **Blendful 仍是 ALPHA**：上游 PR #2073 未合并，调参未收敛，没有上游测试数据兜底。
+  默认关闭，关闭态对行为零影响；开启后横向手感需自行评估。
+  上游若后续改字段序号或改注入点，移植部分需要重新对锚。
+- **Blendful 只对 modeld_v2 模型生效**：stock / snpe runner 上开关无效，
+  需要选一个自定义（tinygrad bundle）模型包。
+- **Blendful 未接入 UI 告警通道**：只有可视化与 Sunnylink 状态，不产生自检事件。
 - **Jetlink 中文化的字体图集要小**：CJK 图集加大开机内存/CPU 负载。
   若用家用电源头供电，可能跨过欠压阈值导致无限重启闪烁（供电问题，非软件）。
   车上 panda 供电稳定。
+- **Jetlink 未接的 runner**：`modeld_tinygrad`（自定义 bundle）路径下
+  `acceleratorState` 恒为 `none`，即自定义模型 + 外接算力不能同时用。
 - `bluepilot/ui/jetlink_ui.py` 的 `JetlinkIcons` 类写好了但全仓零实例化，
   主页和行车界面的 Jetlink 状态图标从未接入（属功能开发，非修复）。
 - CI 只产出源码包，**不产出设备可直装的 prebuilt**（sunnypilot 上游那套需要自托管 tici runner）。
   设备端仍需本地编译，已验证 `scons -j2` 可行。
+
+---
+
+## 八、更新日志
+
+| 日期 | 内容 |
+|---|---|
+| 2026-10-20 | C3 (tici) 支持：panda F4/DOS 链路补回、预编译固件入库、关闭 C3 渠道闸门 |
+| 2026-10-20 | Jetlink 外接算力接入（含 capnp 事件序号修正） |
+| 2026-10-20 | 驾驶员监控总开关 `DriverModelEnable` |
+| 2026-10-21 | `camerad` 缺摄像头子设备降级，不再开机 abort |
+| 2026-10-21 | DM 开关收敛为唯一真相源，关闭后进程级停止；修掉 DM 关闭时的 e2e 提示与 `longitudinalPlanSP` 回归 |
+| 2026-10-21 | UI 全量汉化：zh-CHS / zh-CHT 零缺译，框架层 `tr()` 抽取，80px 位图字库 |
+| 2026-10-24 | 引导链三重防护（代码层硬拦截 + 装前体检 + 装后自检） |
+| 2026-10-24 | 低版本设备防护：版本匹配闸 + OTA 覆盖哨兵 + 装前拦截 |
+| 2026-10-24 | 安装链路补全：`install.sh` 自动 bootstrap clone、离线包、符号链接重建 |
+| 2026-10-24 | 支持 AGNOS 界面「填 URL 一键安装」：新增 `scripts/bp7_bootstrap.sh` + 修正 LFS 拉取配置 |
+| 2026-10-28 | **Blendful 混合横向策略移植**（sunnypilot #2073，ALPHA，默认关闭） |
+
