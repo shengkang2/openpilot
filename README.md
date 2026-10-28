@@ -30,6 +30,12 @@
   13、支持手机地图镜像显示在OP界面，行车界面触摸会分屏显示地图，需要配合手机镜像软件；
 
   14、合入BP-7.0最新角度横向控制；
+
+  15、2026年10月29日，从 bp7.0（bp7.020261020）合入两个新功能：
+
+  **Blendful（Alpha，源自 sunnypilot #2073 lateral policy）**：在模型自身曲率之上，按对车道线的信任度轻微地把轨迹拉向车道中心，遇障碍物会让行绕行。模型端（sunnypilot/modeld_v2/blendful.py）做信任加权曲率修正，UI 端（BlendfulRenderer）显示诊断。开关位置：设置 > 模型 > "Blendful (Alpha)"。**注意**：仅在激活了自定义模型（tinygrad bundle，即 modeld_v2 管线）时生效；sunnylink 远程设置页中未激活自定义模型时开关会置灰，这是设计防线，不是故障。capnp 诊断字段为 ModelDataV2SP @3..@9。
+
+  **jetlink（外接算力）**：在 comma 的 USB-C 口外接一台机器（Jetson / PC / Mac / iPhone）跑大驾驶模型；相机、warp、解析与控制全部留在 comma，外接机只做纯函数。大模型仅在"无人接管"阶段切入，掉帧超预算自动回退小模型。设置 > Jetlink 面板（Off/USB/iOS、状态、传输、进度、失败原因、模型清单）。capnp：ModelDataV2SP.acceleratorState/bigModel（@10/@11，本分支因 @1/@2 已被路沿变道阻断占用而移号）、EventName 大模型事件 @100-@103。
   
 
 
