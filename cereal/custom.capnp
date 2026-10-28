@@ -486,8 +486,10 @@ struct ModelDataV2SP @0xa1680744031fdb2d {
   # names the same six states. bigModel is set while the large model is the one
   # driving, as modelV2.big is on other forks. Both are set every frame modeld
   # publishes, so a dead link reads as none on the next frame.
-  acceleratorState @1 :AcceleratorState;
-  bigModel @2 :Bool;
+  # Ordinals moved to @10/@11: this branch keeps left/rightLaneChangeEdgeBlock
+  # at @1/@2 and blendful diagnostics at @3..@9.
+  acceleratorState @10 :AcceleratorState;
+  bigModel @11 :Bool;
 
   enum AcceleratorState {
     none @0;         # no link, or nobody asked for one
