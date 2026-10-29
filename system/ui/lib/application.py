@@ -273,6 +273,8 @@ class GuiApplication(GuiApplicationExt):
     self._last_mouse_event: MouseEvent = MouseEvent(MousePos(0, 0), 0, False, False, False, 0.0)
 
     self._should_render = True
+    # BP: whether the panel already got its one-time black frame when going to sleep
+    self._panel_blanked = False
 
     # Debug variables
     self._mouse_history: deque[MousePosWithTime] = deque(maxlen=MOUSE_THREAD_RATE)
@@ -648,11 +650,21 @@ class GuiApplication(GuiApplicationExt):
 
         # Skip rendering when screen is off
         if not self._should_render:
+          if not self._panel_blanked and self._render_texture is None:
+            # BP fix (2026-10-29): push one pure-black frame before sleeping. The panel keeps
+            # the last image while off, and a frozen HUD is exactly what causes LCD image
+            # retention, so make that last frame black.
+            rl.begin_drawing()
+            rl.clear_background(rl.BLACK)
+            rl.end_drawing()
+            self._panel_blanked = True
           if PC:
             rl.poll_input_events()
           time.sleep(1 / self._target_fps)
           yield False, 0.0, 0.0
           continue
+
+        self._panel_blanked = False
 
         if self._render_texture:
           rl.begin_texture_mode(self._render_texture)
