@@ -17,6 +17,7 @@ from openpilot.common.bluepilot import is_bluepilot
 from openpilot.selfdrive.ui.sunnypilot.ui_state import UIStateSP, DeviceSP
 
 BACKLIGHT_OFFROAD = 65 if HARDWARE.get_device_type() == "mici" else 50
+BACKLIGHT_SLEEP = 1  # BP: never fully power off the clone panel backlight
 PARAM_UPDATE_TIME = 1 / 5.0
 
 
@@ -369,7 +370,10 @@ class Device(DeviceSP):
       brightness = DeviceSP.set_onroad_brightness(ui_state, self._awake, brightness)
 
     if not self._awake:
-      brightness = 0
+      # BP fix (2026-10-29): clone panel's backlight IC sometimes never comes back after a
+      # full shutdown (writes accepted, panel stays dark until power cycle). Keep the lowest
+      # usable level instead of zero so the IC stays alive and touch wake keeps working.
+      brightness = BACKLIGHT_SLEEP
 
     if brightness != self._last_brightness:
       self._brightness_target = brightness

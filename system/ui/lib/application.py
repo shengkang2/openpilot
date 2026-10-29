@@ -648,10 +648,8 @@ class GuiApplication(GuiApplicationExt):
 
         # Skip rendering when screen is off
         if not self._should_render:
-          # BP fix (2026-10-29): always poll input, also on device. Without this the touch
-          # controller never delivers events while the screen is off, so ui_state can never
-          # see left_down and the display stays dark until ignition or a manual UI restart.
-          rl.poll_input_events()
+          if PC:
+            rl.poll_input_events()
           time.sleep(1 / self._target_fps)
           yield False, 0.0, 0.0
           continue

@@ -281,6 +281,11 @@ class Tici(HardwareBase):
       with open("/sys/class/backlight/panel0-backlight/max_brightness") as f:
         max_brightness = float(f.read().strip())
 
+      # BP fix (2026-10-29): this unit has a clone (aftermarket) panel whose backlight IC
+      # occasionally fails to come back after being driven fully off -- brightness writes are
+      # accepted but the panel stays dark until a power cycle. Clamp so it is never fully shut.
+      percentage = max(float(percentage), 1.0)
+
       val = int(percentage * (max_brightness / 100.))
       with open("/sys/class/backlight/panel0-backlight/brightness", "w") as f:
         f.write(str(val))
