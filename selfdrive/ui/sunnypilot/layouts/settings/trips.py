@@ -210,7 +210,10 @@ class TripsLayout(Widget):
     all_time = self._stats.get("all", {})
     if not all_time or not all_time.get("routes"):
       # BP_LOCAL_STATS: 云端统计不可用时，用本地行车记录兜底
-      local = self._params.get(self.PARAM_LOCAL)
+      try:
+        local = self._params.get(self.PARAM_LOCAL)
+      except Exception:
+        local = None  # key not in compiled whitelist (params_pyx) -- fall through to local scan
       if not local:
         local = self._local_stats()
         try:
