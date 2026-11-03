@@ -174,6 +174,21 @@ class LateralAngleExt:
     self.stall_blip_count = 0         # pulses fired this stall episode
     self.angle_stall_blip_active = False
     self.press_timer_s = 0.0          # continuous steeringPressed time, for the hand-off blip
+    # BluePilot: Blendful (alpha) curvature nudge published by modeld_v2 (see blendful_delta).
+    self.blendful_enabled = False
+    self.blendful_curvature = 0.0
+    self.blendful_trust = 0.0
+
+  def blendful_delta(self, CS) -> float:
+    """BluePilot: Blendful curvature nudge to add this frame.
+
+    Zero unless the toggle is on, the model still trusts its lane fit, the model is not changing
+    lanes and the driver is not signalling.
+    """
+    if (self.blendful_enabled and self.blendful_trust > 0.05 and not self.lane_change and
+        not (CS.out.leftBlinker or CS.out.rightBlinker)):
+      return self.blendful_curvature
+    return 0.0
 
   def update_angle_params(self, params):
     """Sets per-platform gain defaults and reads user angle-tuning params."""
@@ -205,6 +220,10 @@ class LateralAngleExt:
         if raw is not None and raw != b"":
           self.lane_change_factor_high_ang = float(clip(
             float(raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else raw), 0.85, 1.50))
+      except Exception:
+        pass
+      try:
+        self.blendful_enabled = bool(params.get_bool("Blendful"))
       except Exception:
         pass
 
@@ -434,6 +453,15 @@ class LateralAngleExt:
 
     # Use planner / predicted κ directly for the κ → path_angle map; we are not sending κ on CAN.
     kappa_cmd = float(requested_curvature)
+
+    # BluePilot: Blendful (alpha) lane-centering nudge, computed in modeld_v2 from the raw model
+    # outputs and published on modelDataV2SP. Added here -- after the model/planner blend and before
+    # the measured-curvature deviation clip -- so it inherits the same clip, rate limits and
+    # PSCM/DBC clamps as the rest of the curvature command.
+    if self.sm.valid.get('modelDataV2SP', False):
+      self.blendful_curvature = float(self.sm['modelDataV2SP'].blendfulCurvature)
+      self.blendful_trust = float(self.sm['modelDataV2SP'].blendfulTrust)
+    kappa_cmd += self.blendful_delta(CS)
 
     # BluePilot: clip kappa_cmd to current_curvature (measured, from yaw rate) +- CURVATURE_ERROR,
     # mirroring lateral_curv_ext.py's apply_ford_curvature_limits_ext exactly (same formula, same

@@ -16,7 +16,6 @@ if USBGPU:
   os.environ['AMD_IFACE'] = 'USB'
 import pickle
 import time
-from functools import partial
 import numpy as np
 import cereal.messaging as messaging
 from cereal import car, custom, log
@@ -35,7 +34,7 @@ from openpilot.selfdrive.controls.lib.desire_helper import DesireHelper
 from openpilot.selfdrive.controls.lib.drive_helpers import get_accel_from_plan, smooth_value
 
 from openpilot.sunnypilot.modeld_v2.fill_model_msg import fill_model_msg, fill_pose_msg, PublishState, get_curvature_from_output
-from openpilot.sunnypilot.modeld_v2.blendful import Blendful
+from openpilot.sunnypilot.selfdrive.controls.lib.blendful import Blendful
 from openpilot.sunnypilot.modeld_v2.constants import Plan
 from openpilot.sunnypilot.modeld_v2.meta_helper import load_meta_constants
 from openpilot.sunnypilot.modeld_v2.camera_offset_helper import CameraOffsetHelper
@@ -260,6 +259,9 @@ class ModelState(ModelStateBase):
       else:
         desired_curvature = prev_action.desiredCurvature
 
+    # BluePilot: the callback updates Blendful's state from the raw model outputs. It returns the
+    # delta the caller should add; the probe used by main() returns 0, so modeld's own action stays
+    # untouched and the Ford lateral layer applies the nudge inside its deviation clip instead.
     if blendful is not None:
       desired_curvature += blendful(desired_curvature)
 
@@ -335,8 +337,17 @@ def main(demo=False):
 
   DH = DesireHelper()
   meta_constants = load_meta_constants()
+  # BluePilot: Blendful (alpha) lane-centering nudge. modeld computes the curvature delta from the
+  # raw model outputs but does not apply it to its own action; the Ford lateral layer adds it inside
+  # its measured-curvature deviation clip (see opendbc/sunnypilot/car/ford/lateral_angle_ext.py).
   blendful = Blendful()
   blendful_enabled = False
+  blendful_active = False
+  model_output = None
+
+  def blendful_probe(curvature: float) -> float:
+    blendful.update(model_output, v_ego, blendful_active, curvature, enabled=blendful_enabled)
+    return 0.0
 
   while True:
     # Keep receiving frames until we are at least 1 frame ahead of previous extra frame
@@ -433,7 +444,7 @@ def main(demo=False):
 
       blendful_active = desire == log.Desire.none and DH.lane_change_state == log.LaneChangeState.off
       action = model.get_action_from_model(model_output, prev_action, lat_delay + DT_MDL, long_delay + DT_MDL, v_ego,
-                                           partial(blendful.update, model_output, v_ego, blendful_active, enabled=blendful_enabled))
+                                           blendful_probe)
       prev_action = action
       fill_model_msg(drivingdata_send, modelv2_send, model_output, action,
                      publish_state, meta_main.frame_id, meta_extra.frame_id, frame_id,

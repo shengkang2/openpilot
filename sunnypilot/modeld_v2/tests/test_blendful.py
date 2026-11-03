@@ -8,7 +8,7 @@ import numpy as np
 
 from openpilot.common.realtime import DT_MDL
 from openpilot.common.test import OpenpilotTestCase
-from openpilot.sunnypilot.modeld_v2.blendful import Blendful
+from openpilot.sunnypilot.selfdrive.controls.lib.blendful import Blendful
 from openpilot.sunnypilot.modeld_v2.constants import ModelConstants
 
 X = np.array(ModelConstants.X_IDXS)

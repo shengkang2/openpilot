@@ -25,6 +25,17 @@ class OnroadTimerStatus(Enum):
 
 
 class UIStateSP:
+  @staticmethod
+  def lateral_active(_ui_state) -> bool:
+    """Whether lateral control is engaged right now (MADS-aware)."""
+    if _ui_state.sm.valid.get("selfdriveStateSP", False):
+      mads = _ui_state.sm["selfdriveStateSP"].mads
+      # only trust MADS while it actually drives lateral; otherwise fall back to the
+      # openpilot status, which is still what engages with MADS turned off
+      if mads.available and mads.enabled:
+        return mads.state != MADSState.paused
+    return _ui_state.status.value in ("engaged", "lat_only")
+
   def __init__(self):
     self.params = Params()
     self.CP_SP: custom.CarParamsSP | None = None
