@@ -168,8 +168,8 @@ export function DynamicControl({ control, state, panelId, groupName }: DynamicCo
           <div className="dynamic-control-content">{controlElement}</div>
           <div className="dynamic-control-actions">
             {hasPendingChange && (
-              <span className="dynamic-control-modified-badge" title="Unsaved change">
-                Modified
+              <span className="dynamic-control-modified-badge" title="未保存的修改">
+                已修改
               </span>
             )}
             <button

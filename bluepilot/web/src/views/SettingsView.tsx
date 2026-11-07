@@ -132,7 +132,7 @@ export function SettingsView({ deviceStatus: _deviceStatus }: SettingsViewProps)
         setShowBackupModal(true)
       }
     } catch (err) {
-      setBackupResult({ success: false, message: err instanceof Error ? err.message : 'Export failed' })
+      setBackupResult({ success: false, message: err instanceof Error ? err.message : '导出失败' })
       setShowBackupModal(true)
     } finally {
       setExporting(false)
@@ -176,7 +176,7 @@ export function SettingsView({ deviceStatus: _deviceStatus }: SettingsViewProps)
       }
       setShowBackupModal(true)
     } catch (err) {
-      setBackupResult({ success: false, message: err instanceof Error ? err.message : 'Import failed' })
+      setBackupResult({ success: false, message: err instanceof Error ? err.message : '导入失败' })
       setShowBackupModal(true)
     } finally {
       setImporting(false)
@@ -228,9 +228,9 @@ export function SettingsView({ deviceStatus: _deviceStatus }: SettingsViewProps)
   if (loading && panels.length === 0) {
     return (
       <>
-        <Header deviceStatus={_deviceStatus} subtitle="Configure BluePilot settings and behavior" />
+        <Header deviceStatus={_deviceStatus} subtitle="配置 BluePilot 设置与行为" />
         <div className="settings-view settings-view-centered">
-          <LoadingSpinner message="Loading settings..." />
+          <LoadingSpinner message="正在加载设置…" />
         </div>
       </>
     )
@@ -239,10 +239,10 @@ export function SettingsView({ deviceStatus: _deviceStatus }: SettingsViewProps)
   if (error) {
     return (
       <>
-        <Header deviceStatus={_deviceStatus} subtitle="Configure BluePilot settings and behavior" />
+        <Header deviceStatus={_deviceStatus} subtitle="配置 BluePilot 设置与行为" />
         <div className="settings-view settings-view-centered">
           <div className="settings-error-card">
-            <h2>Error Loading Settings</h2>
+            <h2>设置加载失败</h2>
             <p>{error}</p>
           </div>
         </div>
@@ -252,8 +252,8 @@ export function SettingsView({ deviceStatus: _deviceStatus }: SettingsViewProps)
 
   const favoritesMeta = {
     id: 'favorites',
-    name: 'Favorites',
-    description: 'Pinned controls from every panel for quick access',
+    name: '收藏',
+    description: '各面板中置顶的控件，便于快速访问',
   }
 
   const activeMetadata =
@@ -268,7 +268,7 @@ export function SettingsView({ deviceStatus: _deviceStatus }: SettingsViewProps)
 
   return (
     <>
-      <Header deviceStatus={_deviceStatus} subtitle="Configure BluePilot settings and behavior" />
+      <Header deviceStatus={_deviceStatus} subtitle="配置 BluePilot 设置与行为" />
       {/* Hidden file input for import */}
       <input
         type="file"
@@ -277,7 +277,7 @@ export function SettingsView({ deviceStatus: _deviceStatus }: SettingsViewProps)
         disabled={importing}
         ref={fileInputRef}
         className="settings-file-input-hidden"
-        aria-label="Import settings file"
+        aria-label="导入设置文件"
       />
       <div className="settings-view">
         <div className="settings-layout">
@@ -290,27 +290,27 @@ export function SettingsView({ deviceStatus: _deviceStatus }: SettingsViewProps)
                   className="settings-backup-btn"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={importing}
-                  title="Import settings"
+                  title="导入设置"
                 >
                   <Icon name="upload" size={18} />
-                  <span>{importing ? '...' : 'Import'}</span>
+                  <span>{importing ? '导入中…' : '导入'}</span>
                 </button>
                 <button
                   type="button"
                   className="settings-backup-btn"
                   onClick={handleExport}
                   disabled={exporting}
-                  title="Export settings"
+                  title="导出设置"
                 >
                   <Icon name="download" size={18} />
-                  <span>{exporting ? '...' : 'Export'}</span>
+                  <span>{exporting ? '...' : '导出'}</span>
                 </button>
               </div>
               <button
                 type="button"
                 className={`settings-nav-dropdown-trigger ${mobileNavOpen ? 'open' : ''}`}
                 onClick={() => setMobileNavOpen(!mobileNavOpen)}
-                aria-label="Select settings panel"
+                aria-label="选择设置面板"
               >
                 <div className="settings-nav-dropdown-selected">
                   <div className="settings-nav-icon">{getPanelIcon(selectedPanelId || 'favorites')}</div>
@@ -338,8 +338,8 @@ export function SettingsView({ deviceStatus: _deviceStatus }: SettingsViewProps)
                   >
                     <div className="settings-nav-icon">{getPanelIcon('favorites')}</div>
                     <div className="settings-nav-copy">
-                      <span className="settings-nav-label">Favorites</span>
-                      <span className="settings-nav-desc">Starred controls</span>
+                      <span className="settings-nav-label">收藏</span>
+                      <span className="settings-nav-desc">已星标控件</span>
                     </div>
                   </button>
                   {panels.map((panel) => (
@@ -369,20 +369,20 @@ export function SettingsView({ deviceStatus: _deviceStatus }: SettingsViewProps)
                   className="settings-backup-btn"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={importing}
-                  title="Import settings"
+                  title="导入设置"
                 >
                   <Icon name="upload" size={18} />
-                  <span>{importing ? '...' : 'Import'}</span>
+                  <span>{importing ? '导入中…' : '导入'}</span>
                 </button>
                 <button
                   type="button"
                   className="settings-backup-btn"
                   onClick={handleExport}
                   disabled={exporting}
-                  title="Export settings"
+                  title="导出设置"
                 >
                   <Icon name="download" size={18} />
-                  <span>{exporting ? '...' : 'Export'}</span>
+                  <span>{exporting ? '...' : '导出'}</span>
                 </button>
               </div>
 
@@ -393,8 +393,8 @@ export function SettingsView({ deviceStatus: _deviceStatus }: SettingsViewProps)
               >
                 <div className="settings-nav-icon">{getPanelIcon('favorites')}</div>
                 <div className="settings-nav-copy">
-                  <span className="settings-nav-label">Favorites</span>
-                  <span className="settings-nav-desc">Starred controls</span>
+                  <span className="settings-nav-label">收藏</span>
+                  <span className="settings-nav-desc">已星标控件</span>
                 </div>
               </button>
 
@@ -429,17 +429,17 @@ export function SettingsView({ deviceStatus: _deviceStatus }: SettingsViewProps)
                 <input
                   type="text"
                   className="settings-search-input"
-                  placeholder="Search settings..."
+                  placeholder="搜索设置…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  aria-label="Search settings"
+                  aria-label="搜索设置"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     className="settings-search-clear"
                     onClick={() => setSearchQuery('')}
-                    aria-label="Clear search"
+                    aria-label="清除搜索"
                   >
                     <Icon name="close" size={18} />
                   </button>
@@ -468,13 +468,13 @@ export function SettingsView({ deviceStatus: _deviceStatus }: SettingsViewProps)
                   ) : searchQuery ? (
                     <div className="settings-no-results">
                       <p>No settings found for "{searchQuery}"</p>
-                      <button type="button" onClick={() => setSearchQuery('')}>Clear search</button>
+                      <button type="button" onClick={() => setSearchQuery('')}>清除搜索</button>
                     </div>
                   ) : null}
                 </>
               ) : (
                 <div className="settings-panel-loading">
-                  <LoadingSpinner message="Loading panel..." />
+                  <LoadingSpinner message="正在加载面板…" />
                 </div>
               )}
             </div>
@@ -492,7 +492,7 @@ export function SettingsView({ deviceStatus: _deviceStatus }: SettingsViewProps)
           <p>{backupResult.message}</p>
           {backupResult.details && backupResult.details.failed > 0 && (
             <p className="settings-backup-detail">
-              <strong>Failed:</strong> {backupResult.details.failed}
+              <strong>失败：</strong> {backupResult.details.failed}
             </p>
           )}
           <div className="settings-backup-modal-actions">

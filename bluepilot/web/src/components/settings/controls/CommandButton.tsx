@@ -95,16 +95,16 @@ export function CommandButton({ control, disabled, disabledReason }: CommandButt
     if (sshKeysState?.has_keys) {
       // Show confirmation to remove
       setInputConfig({
-        title: 'Remove SSH Keys',
+        title: '移除 SSH 密钥',
         message: `Current GitHub username: <b>${sshKeysState.username}</b><br><br>Warning: This grants SSH access to all public keys in your GitHub settings. Never enter a GitHub username other than your own. A comma employee will NEVER ask you to add their GitHub username.<br><br>Do you want to remove these SSH keys?`,
       })
       setShowConfirm(true)
     } else {
       // Show input dialog for GitHub username
       setInputConfig({
-        title: 'Enter your GitHub username',
+        title: '输入你的 GitHub 用户名',
         message: 'Warning: This grants SSH access to all public keys in your GitHub settings. Never enter a GitHub username other than your own. A comma employee will NEVER ask you to add their GitHub username.',
-        placeholder: 'GitHub username',
+        placeholder: 'GitHub 用户名',
       })
       setShowInput(true)
     }
@@ -112,9 +112,9 @@ export function CommandButton({ control, disabled, disabledReason }: CommandButt
 
   const handleSetCopypartyPassword = () => {
     setInputConfig({
-      title: 'Set Copyparty Password',
+      title: '设置 Copyparty 密码',
       message: 'Enter a password to protect your Copyparty server.<br>Leave empty to disable password protection.',
-      placeholder: 'Password',
+      placeholder: '密码',
       isPassword: true,
     })
     setShowInput(true)
@@ -144,7 +144,7 @@ export function CommandButton({ control, disabled, disabledReason }: CommandButt
     } catch (error) {
       setResult({
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to load error log',
+        message: error instanceof Error ? error.message : '错误日志加载失败',
       })
     } finally {
       setExecuting(false)
@@ -180,12 +180,12 @@ export function CommandButton({ control, disabled, disabledReason }: CommandButt
 
       setResult({
         success: response.success,
-        message: response.message || response.error || (response.success ? 'Command executed successfully' : 'Command failed'),
+        message: response.message || response.error || (response.success ? 'Command executed successfully' : '命令执行失败'),
       })
     } catch (error) {
       setResult({
         success: false,
-        message: error instanceof Error ? error.message : 'Command failed',
+        message: error instanceof Error ? error.message : '命令执行失败',
       })
     } finally {
       setExecuting(false)
@@ -227,12 +227,12 @@ export function CommandButton({ control, disabled, disabledReason }: CommandButt
 
       setResult({
         success: response.success,
-        message: response.message || response.error || (response.success ? 'Command executed successfully' : 'Command failed'),
+        message: response.message || response.error || (response.success ? 'Command executed successfully' : '命令执行失败'),
       })
     } catch (error) {
       setResult({
         success: false,
-        message: error instanceof Error ? error.message : 'Command failed',
+        message: error instanceof Error ? error.message : '命令执行失败',
       })
     } finally {
       setExecuting(false)
@@ -338,12 +338,12 @@ export function CommandButton({ control, disabled, disabledReason }: CommandButt
       {showContent && contentData && (
         <Modal
           isOpen={showContent}
-          title="Error Log"
+          title="错误日志"
           onClose={() => setShowContent(false)}
           size="large"
           actions={[
             {
-              label: 'Close',
+              label: '关闭',
               onClick: () => setShowContent(false),
               variant: 'secondary',
             },

@@ -365,14 +365,14 @@ export function LogsView({ deviceStatus = 'checking' }: LogsViewProps) {
 
   return (
     <>
-      <Header deviceStatus={deviceStatus} subtitle="View real-time system logs" />
+      <Header deviceStatus={deviceStatus} subtitle="查看实时系统日志" />
       <div className="logs-view">
         <div className="logs-controls">
           <div className="search-container">
             <input
               type="text"
               className="search-input"
-              placeholder="Search logs..."
+              placeholder="搜索日志…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -380,7 +380,7 @@ export function LogsView({ deviceStatus = 'checking' }: LogsViewProps) {
               <button
                 className="search-clear"
                 onClick={() => setSearchQuery('')}
-                aria-label="Clear search"
+                aria-label="清除搜索"
               >
                 <Icon name="close" size={18} />
               </button>
@@ -403,7 +403,7 @@ export function LogsView({ deviceStatus = 'checking' }: LogsViewProps) {
               onClick={handleClear}
               icon={<Icon name="delete" size={18} />}
             >
-              Clear
+              清空
             </Button>
 
             <Button
@@ -413,7 +413,7 @@ export function LogsView({ deviceStatus = 'checking' }: LogsViewProps) {
               disabled={isConnecting}
               icon={<Icon name="refresh" size={18} />}
             >
-              Refresh
+              刷新
             </Button>
 
             <Button
@@ -423,13 +423,13 @@ export function LogsView({ deviceStatus = 'checking' }: LogsViewProps) {
               disabled={logLines.length === 0}
               icon={<Icon name="download" size={18} />}
             >
-              Export
+              导出
             </Button>
 
             <ToggleSwitch
               checked={autoScroll}
               onChange={setAutoScroll}
-              label="Auto-scroll"
+              label="自动滚动"
               size="compact"
               className="logs-toggle"
             />
@@ -444,21 +444,21 @@ export function LogsView({ deviceStatus = 'checking' }: LogsViewProps) {
           )}
 
           <div className="console-status">
-            <span className="console-status-label">Status:</span>
+            <span className="console-status-label">状态：</span>
             <span className={`console-status-value ${streamStatus === 'started' && !isPaused ? 'streaming' : 'paused'}`}>
               {isPaused ? 'Paused' : streamStatus === 'started' ? 'Streaming' : isConnecting ? 'Connecting...' : 'Stopped'}
             </span>
             {searchQuery && (
               <>
                 <span className="console-status-separator">•</span>
-                <span className="console-status-label">Showing:</span>
+                <span className="console-status-label">显示：</span>
                 <span className="console-status-value">
                   {filteredLines.length} / {logLines.length} lines
                 </span>
               </>
             )}
             <span className="console-status-separator">•</span>
-            <span className="console-status-label">Total:</span>
+            <span className="console-status-label">总计：</span>
             <span className="console-status-value">{logLines.length} lines</span>
           </div>
 

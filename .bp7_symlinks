@@ -1,0 +1,17 @@
+cereal/car.capnp	../opendbc_repo/opendbc/car/car.capnp
+docs/assets/comma-logo.png	../../selfdrive/assets/icons_mici/settings/comma_icon.png
+docs/concepts/safety.md	../SAFETY.md
+jetlink	jetlink_repo/jetlink
+msgq	msgq_repo/msgq
+opendbc	opendbc_repo/opendbc
+openpilot/bluepilot	../bluepilot
+openpilot/common	../common
+openpilot/selfdrive	../selfdrive/
+openpilot/sunnypilot	../sunnypilot
+openpilot/system	../system/
+openpilot/third_party	../third_party
+openpilot/tools	../tools
+rednose	rednose_repo/rednose
+sunnypilot/selfdrive/car/car_list.json	../../../opendbc_repo/opendbc/sunnypilot/car/car_list.json
+teleoprtc	teleoprtc_repo/teleoprtc
+tinygrad	tinygrad_repo/tinygrad

@@ -25,10 +25,10 @@ export const Header = ({
 
   const getTitle = () => {
     if (location.pathname === '/') return 'BluePilot'
-    if (isRoutesPage) return 'Routes'
-    if (location.pathname.startsWith('/parameters')) return 'Parameters'
-    if (location.pathname.startsWith('/logs')) return 'System Logs'
-    if (location.pathname.startsWith('/settings')) return 'Settings'
+    if (isRoutesPage) return '行程'
+    if (location.pathname.startsWith('/parameters')) return '参数'
+    if (location.pathname.startsWith('/logs')) return '系统日志'
+    if (location.pathname.startsWith('/settings')) return '设置'
     return 'BluePilot'
   }
 
@@ -65,7 +65,7 @@ export const Header = ({
         <button
           className="icon-btn home-btn"
           onClick={() => navigate('/')}
-          title="Home"
+          title="首页"
           type="button"
         >
           <Icon name="home" size={24} />
@@ -76,7 +76,7 @@ export const Header = ({
         {subtitle && <p className="header-subtitle">{subtitle}</p>}
       </div>
       <div className="header-stats">
-        <div className={`device-status ${deviceStatus} ${connected ? 'websocket-active' : ''}`} title="Device status">
+        <div className={`device-status ${deviceStatus} ${connected ? 'websocket-active' : ''}`} title="设备状态">
           <span className="status-indicator"></span>
           <span id="status-text">{statusTexts[deviceStatus]}</span>
           {connected && (
@@ -89,7 +89,7 @@ export const Header = ({
           <button
             type="button"
             className="icon-btn"
-            title="Parameters"
+            title="参数"
             onClick={() => navigate('/parameters')}
           >
             <Icon name="tune" size={24} />
@@ -99,7 +99,7 @@ export const Header = ({
           <button
             type="button"
             className="icon-btn"
-            title="System Logs"
+            title="系统日志"
             onClick={() => navigate('/logs')}
           >
             <Icon name="description" size={24} />
@@ -110,7 +110,7 @@ export const Header = ({
             id="header-metrics-btn"
             type="button"
             className="icon-btn"
-            title="System metrics"
+            title="系统指标"
             onClick={onMetricsClick}
           >
             <Icon name="bar_chart" size={24} />

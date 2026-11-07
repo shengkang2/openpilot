@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
-
+# 本机补丁（2026-10-31）：原文件是 Windows CRLF 行尾 + shebang 用 `env python3`，
+# tici 上 /usr/bin/python3 没有 numpy/tinygrad，导致进程一启动就退出
+# （manager 记录 exitCode=127 / ImportError），modeld 不出数据 →
+# selfdrived 判定 posenet 无效，弹「位置速度无效 Posenet Speed Invalid（Speed Error: nan）」。
+# 改为 LF 行尾并显式使用 venv 解释器。
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
-exec "$DIR/modeld.py" "$@"
+exec /usr/local/venv/bin/python3 "$DIR/modeld.py" "$@"

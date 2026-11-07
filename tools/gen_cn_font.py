@@ -69,7 +69,7 @@ def collect_chars(po_path: str):
     return {c for c in chars if c not in '\n\r\t' and ord(c) <= 0xFFFF}
 
 
-def build_font(chars, size, out_base, font_path, stroke=0):
+def build_font(chars, size, out_base, font_path, stroke=0, maxw=2048):
     """用 PIL 渲染字符到位图，写出 BMFont .fnt + .png。"""
     font = ImageFont.truetype(font_path, size)
 
@@ -96,7 +96,7 @@ def build_font(chars, size, out_base, font_path, stroke=0):
 
     # 简单货架打包
     PAD = 2
-    MAXW = 2048
+    MAXW = maxw
     x = PAD
     y = PAD
     row_h = 0
@@ -171,6 +171,9 @@ def main():
     ap.add_argument('--weights', default='Regular,Medium,SemiBold,Bold')
     ap.add_argument('--po', default=None, help='po 文件路径')
     ap.add_argument('--out', default=None, help='字库输出目录')
+    ap.add_argument('--extra', default=None, help='额外字符文件（如 GB2312 字表），与 po 取并集')
+    ap.add_argument('--maxw', type=int, default=2048, help='图集宽度，默认 2048；扩字库需 4096')
+    ap.add_argument('--prefix', default='Zh', help='输出文件名前缀，默认 Zh')
     args = ap.parse_args()
 
     here = os.path.dirname(os.path.abspath(__file__))
@@ -184,6 +187,12 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
 
     chars = collect_chars(po)
+    if args.extra:
+        with open(args.extra, encoding='utf-8') as f:
+            extra = set(f.read())
+        before = len(chars)
+        chars |= extra
+        print(f'注入额外字符: {len(extra)} 个，合并后 {len(chars)} 个（新增 {len(chars) - before}）')
     cjk = [c for c in chars if '\u4e00' <= c <= '\u9fff']
     print(f'收集字符 {len(chars)} 个（其中汉字 {len(cjk)}）')
 
@@ -195,8 +204,8 @@ def main():
         if not fp:
             print(f'!! 找不到 {w} 字体，跳过')
             continue
-        out = os.path.join(out_dir, f'Zh-{w}')
-        build_font(chars, args.size, out, fp, stroke=STROKES.get(w, 0))
+        out = os.path.join(out_dir, f'{args.prefix}-{w}')
+        build_font(chars, args.size, out, fp, stroke=STROKES.get(w, 0), maxw=args.maxw)
 
 
 if __name__ == '__main__':

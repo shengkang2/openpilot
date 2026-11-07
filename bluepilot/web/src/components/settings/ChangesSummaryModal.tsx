@@ -88,7 +88,7 @@ export function ChangesSummaryModal({ isOpen, onClose, onSave, onDiscard }: Chan
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Review Changes"
+      title="查看修改"
       size="medium"
       maxWidth="600px"
     >
@@ -103,7 +103,7 @@ export function ChangesSummaryModal({ isOpen, onClose, onSave, onDiscard }: Chan
         {groupedChanges.length === 0 ? (
           <div className="changes-summary-empty">
             <Icon name="check_circle" size={48} />
-            <p>No pending changes</p>
+            <p>没有待保存的修改</p>
           </div>
         ) : (
           <div className="changes-summary-list">
@@ -130,7 +130,7 @@ export function ChangesSummaryModal({ isOpen, onClose, onSave, onDiscard }: Chan
                         className="changes-summary-revert-btn"
                         onClick={() => handleRevertChange(change.param)}
                         aria-label={`Revert ${change.controlTitle}`}
-                        title="Revert this change"
+                        title="撤销此修改"
                       >
                         <Icon name="undo" size={16} />
                       </button>
@@ -144,15 +144,15 @@ export function ChangesSummaryModal({ isOpen, onClose, onSave, onDiscard }: Chan
 
         <div className="changes-summary-autosave">
           <div className="changes-summary-autosave-info">
-            <span className="changes-summary-autosave-label">Real-time Tuning Mode</span>
+            <span className="changes-summary-autosave-label">实时调参模式</span>
             <span className="changes-summary-autosave-desc">
-              When enabled, changes save immediately for real-time feedback
+              启用后修改会立即保存，便于实时调参
             </span>
           </div>
           <ToggleSwitch
             checked={autoSaveEnabled}
             onChange={(checked) => setAutoSave(checked)}
-            aria-label="Enable real-time tuning mode"
+            aria-label="启用实时调参模式"
           />
         </div>
 
@@ -162,7 +162,7 @@ export function ChangesSummaryModal({ isOpen, onClose, onSave, onDiscard }: Chan
           </span>
           <div className="changes-summary-actions">
             <Button variant="ghost" onClick={handleDiscard} disabled={isSaving}>
-              Discard All
+              全部放弃
             </Button>
             <Button variant="primary" onClick={handleSave} loading={isSaving}>
               Save {changes.length} {changes.length === 1 ? 'Change' : 'Changes'}

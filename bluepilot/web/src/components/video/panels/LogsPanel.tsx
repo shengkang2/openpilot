@@ -166,8 +166,8 @@ export const LogsPanel = ({ route, currentSegment, videoCurrentTime = 0 }: LogsP
         <div className="panel-title">
           <Icon name="description" className="panel-icon" size={20} />
           <div className="panel-title-text">
-            <span className="panel-title-label">Route Logs</span>
-            <span className="panel-title-subtitle">Cloudlog events & diagnostics</span>
+            <span className="panel-title-label">行程日志</span>
+            <span className="panel-title-subtitle">Cloudlog 事件与诊断</span>
           </div>
         </div>
         <div className="panel-header-actions">
@@ -192,7 +192,7 @@ export const LogsPanel = ({ route, currentSegment, videoCurrentTime = 0 }: LogsP
                   stopLogs()
                 }}
               >
-                Stop
+                停止
               </button>
             </>
           ) : (
@@ -204,7 +204,7 @@ export const LogsPanel = ({ route, currentSegment, videoCurrentTime = 0 }: LogsP
                 loadLogs()
               }}
             >
-              Load Logs
+              加载日志
             </button>
           )}
           <Icon
@@ -241,16 +241,16 @@ export const LogsPanel = ({ route, currentSegment, videoCurrentTime = 0 }: LogsP
                 value={levelFilter}
                 onChange={(e) => setLevelFilter(e.target.value)}
               >
-                <option value="all">All Levels</option>
-                <option value="error">Errors Only</option>
-                <option value="warning">Warnings</option>
-                <option value="info">Info</option>
+                <option value="all">全部级别</option>
+                <option value="error">仅错误</option>
+                <option value="warning">警告</option>
+                <option value="info">信息</option>
               </select>
               <input
                 type="text"
                 id="log-search-input"
                 className="log-search-input"
-                placeholder="Search logs..."
+                placeholder="搜索日志…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={(e) => {
@@ -267,11 +267,11 @@ export const LogsPanel = ({ route, currentSegment, videoCurrentTime = 0 }: LogsP
             {loading ? (
               <div className="log-loading">
                 <div className="spinner-small"></div>
-                <span>Loading logs...</span>
+                <span>正在加载日志…</span>
               </div>
             ) : logs.length === 0 ? (
               <div className="log-viewer-empty">
-                <p>Click "Load Logs" to view cloudlog messages</p>
+                <p>点击“加载日志”查看 cloudlog 消息</p>
               </div>
             ) : (
               <>

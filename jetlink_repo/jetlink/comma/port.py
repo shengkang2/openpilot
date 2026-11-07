@@ -328,8 +328,11 @@ class Port:
     self.seal_step, self.seal_next = 0, 0.0
     self.temp = None
     # the policy engine turns off only a device side it turned on itself, so
-    # one turned on here, by this owner or one before it, is turned off here
-    if gadget.read(UDC_MODE) == 'peripheral':
+    # one turned on here, by this owner or one before it, is turned off here.
+    # Only with an empty CC pin: a far end that drops the data role for a
+    # moment and comes straight back is re-enumerating, and turning our side
+    # off under it is what makes that look like a real unplug.
+    if gadget.read(UDC_MODE) == 'peripheral' and not gadget.port_has_host():
       run_udc('stop')
 
   def _keep_the_device_on(self, now: float) -> None:

@@ -4,6 +4,7 @@ Displays all-time and past-week driving statistics (routes, distance, hours)
 on the offroad home screen. Ported from the Qt DriveStats widget.
 """
 
+import json
 import requests
 import threading
 import time
@@ -34,6 +35,8 @@ NUMBER_COLOR = BPColors.ACCENT  # #18b4ff - matching Qt
 
 class DriveStatsWidget(Widget):
   PARAM_KEY = "ApiCache_DriveStats"
+  LOCAL_PARAM_KEY = "LocalDriveStats"  # 本机补丁（2026-10-30）：本地兜底数据源
+  REQUIRED_KEYS = ("routes", "distance", "minutes")
   UPDATE_INTERVAL = 30  # seconds
 
   def __init__(self):
@@ -54,15 +57,61 @@ class DriveStatsWidget(Widget):
     except Exception:
       pass
 
-  def _get_stats(self):
-    stats = self._params.get(self.PARAM_KEY)
-    if not stats:
-      return {}
+  @staticmethod
+  def _as_dict(value):
+    """本机补丁（2026-10-30）：把 Params 读到的值统一成 dict。
+
+    ApiCache_DriveStats 是 JSON 类型（get 返回 dict），但 LocalDriveStats 在
+    common/params_keys.h:255 注册为 STRING（get 返回 JSON 原文 str）。
+    一律兼容 dict / JSON 字符串 / bytes，畸形值退化为空 dict。
+    """
+    if isinstance(value, dict):
+      return value
+    if isinstance(value, (str, bytes, bytearray)) and value:
+      try:
+        parsed = json.loads(value)
+        return parsed if isinstance(parsed, dict) else {}
+      except Exception:
+        return {}
+    return {}
+
+  @classmethod
+  def _stats_ok(cls, data):
+    """本机补丁：统计块是否完整（必须有次数/里程/时长三项）。
+
+    旧格式或云端半截数据（只有 routes）判为无效，否则里程永远显示 0。
+    """
+    d = cls._as_dict(data)
+    return bool(d) and all(d.get(k) is not None for k in cls.REQUIRED_KEYS)
+
+  def _load_local_stats(self):
+    """本机补丁：读本地统计（由设置页 trips.py 的后台扫描写入）。"""
     try:
-      return stats
+      local = self._as_dict(self._params.get(self.LOCAL_PARAM_KEY))
+      if self._stats_ok(local.get("all")):
+        return local
     except Exception:
-      cloudlog.exception(f"Failed to decode drive stats: {stats}")
-      return {}
+      cloudlog.exception("Failed to read LocalDriveStats")
+    return {}
+
+  def _get_stats(self):
+    # 云端优先
+    try:
+      cloud = self._as_dict(self._params.get(self.PARAM_KEY))
+      if self._stats_ok(cloud.get("all")):
+        self._stats_source = "cloud"
+        return cloud
+    except Exception:
+      cloudlog.exception("Failed to decode drive stats")
+
+    # 云端不可用（本机 pilotauth 403，缓存恒空）-> 本地兜底
+    local = self._load_local_stats()
+    if local:
+      self._stats_source = "local"
+      return local
+
+    self._stats_source = "none"
+    return {}
 
   def _fetch_drive_stats(self):
     try:
@@ -74,6 +123,7 @@ class DriveStatsWidget(Widget):
       if response.status_code == 200:
         data = response.json()
         self._stats = data
+        self._stats_source = "cloud"
         self._params.put(self.PARAM_KEY, data)
     except Exception as e:
       cloudlog.error(f"Failed to fetch drive stats: {e}")
@@ -82,13 +132,23 @@ class DriveStatsWidget(Widget):
     while self._running:
       if not ui_state.started and device._awake:
         self._fetch_drive_stats()
+      # 本机补丁（2026-10-30）：当前用的是本地兜底数据时，每轮重读一次，
+      # 让主页面跟上设置页的后台刷新（读 7.5KB 参数约 0.1ms，可忽略）。
+      # 云端一旦可用会自动切回云端，不会被本地数据覆盖。
+      if getattr(self, "_stats_source", "none") != "cloud":
+        local = self._load_local_stats()
+        if local:
+          self._stats = local
+          self._stats_source = "local"
       time.sleep(self.UPDATE_INTERVAL)
 
   def _render(self, rect: rl.Rectangle):
     is_metric = self._params.get_bool("IsMetric")
 
-    all_time = self._stats.get("all", {})
-    week = self._stats.get("week", {})
+    all_time = self._as_dict(self._stats).get("all", {})
+    week = self._as_dict(self._stats).get("week", {})
+    all_time = all_time if isinstance(all_time, dict) else {}
+    week = week if isinstance(week, dict) else {}
 
     # Calculate section heights
     spacing = 10

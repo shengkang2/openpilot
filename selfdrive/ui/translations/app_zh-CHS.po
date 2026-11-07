@@ -4,6 +4,15 @@ msgstr ""
 "Language: zh-CHS\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
+msgid "Nothing on the port"
+msgstr "未接入"
+
+msgid "A device on the port"
+msgstr "已接入"
+
+msgid "On"
+msgstr "开"
+
 #: selfdrive\ui\sunnypilot\layouts\settings\device.py
 msgid " (Default)"
 msgstr " （默认）"
@@ -3544,8 +3553,8 @@ msgstr "大模型不可用：{}。由小模型驱动。"
 msgid "Big model unavailable. The small model drives."
 msgstr "大模型不可用。由小模型驱动。"
 
-msgid "{} is ready. It swaps in as soon as nothing is in control: cancel cruise, then re-engage."
-msgstr "{} 已就绪。只要没有控制接管就会切换：取消定速巡航，然后重新激活。"
+msgid "{} is ready. It swaps in when you stop, release the lane centering, or cancel cruise."
+msgstr "{} 已就绪。停车、松开居中或取消巡航后会自动切换。"
 
 msgid "The small model drives until the big one is ready."
 msgstr "大模型就绪前由小模型驱动。"
@@ -3556,8 +3565,8 @@ msgstr "{} 驱动，直到 {} 就绪。"
 msgid "{} will drive once Jetlink is ready."
 msgstr "Jetlink 就绪后由 {} 驱动。"
 
-msgid "{} will drive; a lost link falls back to the small model and returns when it is back."
-msgstr "由 {} 驱动；链路丢失时回退到小模型，恢复后再切回。"
+msgid "{} will drive; a lost link falls back to the small model and returns once you stop or release control."
+msgstr "由 {} 驱动；链路丢失时回退到小模型，停车或松开控制后会自动恢复。"
 
 msgid "CPU"
 msgstr "CPU"
@@ -3588,3 +3597,213 @@ msgstr "Blendful 模式（测试版）"
 
 msgid "Gently pulls the model toward the lane center, as much as it trusts the lane lines, and yields around obstacles."
 msgstr "按车道线置信度轻柔地将车辆拉回车道中心，并在障碍物附近自动让行。"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Adds a gentle nudge toward lane center on top of the model's own steering, stronger when lane lines are clear. Yields around obstacles."
+msgstr "在模型自身转向的基础上，向车道中心轻微修正；车道线清晰时更强。遇到障碍物时会让行。"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Driver Monitoring"
+msgstr "驾驶员监控"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Turn off to disable driver monitoring and the driver camera to save compute. Changing this setting will restart sunnypilot if the car is powered on."
+msgstr "关闭后将停止驾驶员监控与车内摄像头以节省算力。若车辆已上电，更改此设置将重启 sunnypilot。"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Adjust Camera Offset"
+msgstr "调整相机偏移"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Virtually shift camera's perspective to move model's center to Left(+ values) or Right(- values)"
+msgstr "虚拟平移相机视角，将模型中心向左（正值）或向右（负值）移动"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Big model unavailable until the next drive."
+msgstr "大模型不可用，将在下次行车时重试。"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Getting the big model ready."
+msgstr "正在准备大模型。"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Small Model"
+msgstr "小模型"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Big Model"
+msgstr "大模型"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "small"
+msgstr "小"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "{} will drive when the chestnut is ready."
+msgstr "chestnut 就绪后将由 {} 驾驶。"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "canceling..."
+msgstr "正在取消..."
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "verifying"
+msgstr "校验中"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Model Status"
+msgstr "模型状态"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Cancel Verification"
+msgstr "取消校验"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "queued"
+msgstr "排队中"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "big"
+msgstr "大"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "{} will drive. If it fails during a drive, {} takes over until the next drive."
+msgstr "将由 {} 驾驶。若行车中失效，{} 会接管直到下次行车。"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "The big model slot needs chestnut hardware, which is not supported on this device."
+msgstr "大模型槽位需要 chestnut 硬件，本设备不支持。"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "No models are available for this hardware yet. Connect to the internet and refresh the model list."
+msgstr "此硬件暂无可用模型。请连接网络并刷新模型列表。"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "Big model unavailable, {} is driving until the next drive."
+msgstr "大模型不可用，本次行车由 {} 驾驶。"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "{} drives until the big model is ready."
+msgstr "大模型就绪前由 {} 驾驶。"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/layouts/settings/models.py
+msgid "CLEARING..."
+msgstr "正在清除..."
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "small model"
+msgstr "小模型"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "big model"
+msgstr "大模型"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "unavailable"
+msgstr "不可用"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "getting ready"
+msgstr "准备中"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "refresh models"
+msgstr "刷新模型"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "clear cache"
+msgstr "清除缓存"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "blendful (alpha)"
+msgstr "Blendful（测试版）"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "small models"
+msgstr "小模型"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "clearing..."
+msgstr "正在清除..."
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "fetching..."
+msgstr "正在获取..."
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "big models"
+msgstr "大模型"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "active"
+msgstr "使用中"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "No models available"
+msgstr "无可用模型"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "slide to"
+msgstr "滑动以"
+
+#: ../pythonpath/openpilot/selfdrive/ui/sunnypilot/mici/layouts/models.py
+msgid "cancel verification"
+msgstr "取消校验"
+
+msgid "service stopped"
+msgstr "服务已停止"
+
+msgid "no warp built for this camera"
+msgstr "该摄像头未构建 warp"
+
+msgid "jetlink status failed: {}"
+msgstr "jetlink 状态异常：{}"
+
+msgid "finding model"
+msgstr "正在查找模型"
+
+msgid "connecting"
+msgstr "正在连接"
+
+msgid "engine ready"
+msgstr "引擎已就绪"
+
+msgid "waiting for jetlink"
+msgstr "等待 jetlink 连接"
+
+msgid "reconnecting"
+msgstr "正在重连"
+
+msgid "fell behind, reconnecting"
+msgstr "链路跟不上，正在重连"
+
+msgid "load failed, reconnecting"
+msgstr "加载失败，正在重连"
+
+msgid "re-engage to switch"
+msgstr "重新激活以切换"
+
+msgid "downloaded, builds when the jetson is on"
+msgstr "已下载，设备开机后构建"
+
+msgid "see the log"
+msgstr "详见日志"
+
+msgid "download failed, retrying later"
+msgstr "下载失败，稍后重试"
+
+msgid "Downloading {} of {} MB"
+msgstr "下载中：{} / {} MB"
+
+msgid "Download stalled, retrying in {} s"
+msgstr "下载暂停，{} 秒后重试"
+
+msgid "download"
+msgstr "下载中"
+
+msgid "waiting"
+msgstr "等待中"

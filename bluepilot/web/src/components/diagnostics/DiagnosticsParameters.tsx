@@ -8,11 +8,11 @@ type SortColumn = 'key' | 'value' | 'type' | 'category' | 'last_modified'
 type SortDirection = 'asc' | 'desc'
 
 const SORT_OPTIONS: { label: string; value: SortColumn }[] = [
-  { label: 'Parameter', value: 'key' },
-  { label: 'Value', value: 'value' },
-  { label: 'Type', value: 'type' },
-  { label: 'Category', value: 'category' },
-  { label: 'Last Modified', value: 'last_modified' },
+  { label: '参数', value: 'key' },
+  { label: '值', value: 'value' },
+  { label: '类型', value: 'type' },
+  { label: '分类', value: 'category' },
+  { label: '最后修改', value: 'last_modified' },
 ]
 
 const NUMERIC_TYPES = new Set(['number', 'int', 'float'])
@@ -58,7 +58,7 @@ export function DiagnosticsParameters() {
   }, [fetchParams])
 
   const formatLastModified = (timestamp?: number): string => {
-    if (!timestamp) return 'Never'
+    if (!timestamp) return '从未'
 
     const date = new Date(timestamp * 1000)
     const now = new Date()
@@ -67,11 +67,11 @@ export function DiagnosticsParameters() {
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
 
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    if (diffDays < 7) return `${diffDays}d ago`
-    return date.toLocaleDateString()
+    if (diffMins < 1) return '刚刚'
+    if (diffMins < 60) return `${diffMins} 分钟前`
+    if (diffHours < 24) return `${diffHours} 小时前`
+    if (diffDays < 7) return `${diffDays} 天前`
+    return date.toLocaleDateString('zh-CN')
   }
 
   const sortedParams = useMemo(() => {
@@ -151,12 +151,12 @@ export function DiagnosticsParameters() {
             <input
               type="text"
               className="search-input"
-              placeholder="Search parameters..."
+              placeholder="搜索参数…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             {searchQuery && (
-              <button className="search-clear" onClick={() => setSearchQuery('')} aria-label="Clear search">
+              <button className="search-clear" onClick={() => setSearchQuery('')} aria-label="清除搜索">
                 ✕
               </button>
             )}
@@ -164,13 +164,13 @@ export function DiagnosticsParameters() {
           <ToggleSwitch
             checked={editMode}
             onChange={(checked) => setEditMode(checked)}
-            label="Edit Mode"
+            label="编辑模式"
             size="compact"
             className="diagnostics-toggle"
-            title="Enable parameter editing (use with caution)"
+            title="启用参数编辑（谨慎使用）"
           />
           <div className="params-sort-controls">
-            <label htmlFor="diagnostics-sort">Sort</label>
+            <label htmlFor="diagnostics-sort">排序</label>
             <select
               id="diagnostics-sort"
               value={sortColumn}
@@ -200,22 +200,22 @@ export function DiagnosticsParameters() {
             className="diagnostics-refresh-btn"
             icon={<span aria-hidden="true">↻</span>}
           >
-            Refresh
+            刷新
           </Button>
         </div>
       </div>
 
       <div className="diagnostics-content">
         {loading && Object.keys(params).length === 0 ? (
-          <LoadingSpinner message="Loading parameters..." />
+          <LoadingSpinner message="正在加载参数…" />
         ) : error ? (
           <div className="diagnostics-error">
-            <h2>Error Loading Parameters</h2>
+            <h2>参数加载失败</h2>
             <p>{error}</p>
           </div>
         ) : sortedParams.length === 0 ? (
           <div className="no-results">
-            <p>No parameters found</p>
+            <p>未找到参数</p>
           </div>
         ) : (
           <div className="params-list">
@@ -241,12 +241,13 @@ export function DiagnosticsParameters() {
                           {param.critical && <span className="param-badge critical">critical</span>}
                         </div>
                       </div>
-                      <div className="param-last-modified">Last modified: {formatLastModified(param.last_modified)}</div>
+                      <div className="param-last-modified">修改时间：{formatLastModified(param.last_modified)}</div>
+                      {param.description && <div className="param-last-modified">{param.description}</div>}
                     </div>
                     <div className="param-row__actions">
                       {param.readonly ? (
                         <Button size="small" variant="ghost" className="param-edit-btn" disabled>
-                          Read-Only
+                          只读
                         </Button>
                       ) : (
                         <Button
@@ -257,14 +258,14 @@ export function DiagnosticsParameters() {
                           disabled={!editMode || param.type === 'bytes'}
                           title={param.type === 'bytes' ? 'Binary parameters are view-only' : undefined}
                         >
-                          Edit
+                          编辑
                         </Button>
                       )}
                     </div>
                   </div>
-                  <div className="param-row__value" title="Click to view full value" onClick={() => handleViewValue(param)}>
+                  <div className="param-row__value" title="点击查看完整值" onClick={() => handleViewValue(param)}>
                     <div className="param-row__value-header">
-                      <span className="value-label">Value</span>
+                      <span className="value-label">值</span>
                       <div className="value-pill-group">
                         {typeBadge && <span className="value-pill value-pill--type">{typeBadge}</span>}
                         {categoryBadge && (
@@ -279,7 +280,7 @@ export function DiagnosticsParameters() {
                     <pre className="value-code-block">
                       <code>{preview}</code>
                     </pre>
-                    <span className="value-footer-hint">Click to inspect full value</span>
+                    <span className="value-footer-hint">点击查看完整值</span>
                   </div>
                 </div>
               )
@@ -296,8 +297,8 @@ export function DiagnosticsParameters() {
       >
         <div className="edit-param-modal">
           <div className="param-info">
-            <p><strong>Type:</strong> {editingParam?.type}</p>
-            {editingParam?.description && <p><strong>Description:</strong> {editingParam.description}</p>}
+            <p><strong>类型：</strong> {editingParam?.type}</p>
+            {editingParam?.description && <p><strong>说明：</strong> {editingParam.description}</p>}
           </div>
           {editingParam?.type && BOOLEAN_TYPES.has(editingParam.type.toLowerCase()) ? (
             <select value={editValue} onChange={(e) => setEditValue(e.target.value)} className="edit-input">
@@ -314,10 +315,10 @@ export function DiagnosticsParameters() {
           )}
           <div className="modal-actions">
             <Button variant="secondary" onClick={() => setEditingParam(null)}>
-              Cancel
+              取消
             </Button>
             <Button variant="primary" onClick={handleSave}>
-              Save
+              保存
             </Button>
           </div>
         </div>
@@ -326,13 +327,13 @@ export function DiagnosticsParameters() {
       <Modal
         isOpen={viewValueModal !== null}
         onClose={() => setViewValueModal(null)}
-        title="Parameter Details"
+        title="参数详情"
         size="large"
       >
         {viewValueModal && (
           <div className="param-modal-simple">
             <div className="param-modal-simple__header">
-              <span className="param-key-label">Parameter Key</span>
+              <span className="param-key-label">参数键名</span>
               <div className="param-key-value-wrapper">
                 <code className="param-key-value">{viewValueModal.key}</code>
                 <button className="icon-btn" onClick={() => copyToClipboard(viewValueModal.key)}>
@@ -367,13 +368,13 @@ export function DiagnosticsParameters() {
 
             <div className="param-modal-simple__actions">
               <Button variant="secondary" onClick={() => copyToClipboard(modalCopyValue)}>
-                Copy Value
+                复制值
               </Button>
               <Button variant="secondary" onClick={() => copyToClipboard(viewValueModal.key)}>
-                Copy Key
+                复制键名
               </Button>
               <Button variant="primary" onClick={() => setViewValueModal(null)}>
-                Close
+                关闭
               </Button>
             </div>
           </div>

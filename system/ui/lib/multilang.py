@@ -19,6 +19,7 @@ UNIFONT_LANGUAGES = [
   "th",
   "zh-CHT",
   "zh-CHS",
+  "main_zh-CHS",  # BluePilot: this device reports the language with a main_ prefix; without it requires_unifont() is False and road names fall back to the 728-glyph po font, rendering OSM names as ??? (fixed 2026-11-02).
   "ko",
   "ja",
 ]

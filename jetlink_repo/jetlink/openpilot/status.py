@@ -253,6 +253,33 @@ class Status(NamedTuple):
     return 'failed'
 
 
+def _follows_far_end(parts) -> bool:
+  """bp: no model picked on the comma, so the far end's loaded one drives."""
+  follow = getattr(parts.op, 'follow_far_end', None)
+  try:
+    return bool(follow()) if callable(follow) else False
+  except Exception:
+    return False
+
+
+def _far_end_heard() -> tuple[str | None, set[str]]:
+  """bp: (the sha the far end loaded, every sha it listed as built or loaded),
+  off its last hello (gadget.SERVER). No link IO: the owner writes that file."""
+  import json
+  try:
+    heard = json.loads(gadget.SERVER.read_text())
+  except (OSError, ValueError):
+    return None, set()
+  if not isinstance(heard, dict):
+    return None, set()
+  have = {s for s in (heard.get('cached_models') or []) if isinstance(s, str)}
+  loaded = heard.get('loaded')
+  loaded = loaded if isinstance(loaded, str) and loaded else None
+  if loaded:
+    have.add(loaded)
+  return loaded, have
+
+
 def read(parts, mode: str) -> Status:
   """Everything at once, over the link setting the caller read: each file once."""
   record, live = owner_record()
@@ -262,7 +289,18 @@ def read(parts, mode: str) -> Status:
   # until the pick is built (link.open_link)
   built = parts.spec.built_sha() if enabled and reason is None else None
   selected = parts.models.selected_model() if built is not None else None
-  ready = built is not None and selected is not None and built == selected['oid']
+  # bp: following the far end, its loaded engine is the pick (link.open_link),
+  # so what counts as built is the far end's own report, not the comma's slot.
+  # Compared against the slot instead, a comma set to follow read "not built",
+  # named the default model and offered the running one as a stand-in.
+  following = enabled and reason is None and _follows_far_end(parts)
+  if following:
+    loaded, have = _far_end_heard()
+    ready = bool(loaded) and loaded in have
+    model_name = parts.models.name_for(loaded) if loaded else parts.models.selected_model_name()
+  else:
+    ready = built is not None and selected is not None and built == selected['oid']
+    model_name = parts.models.selected_model_name()
   return Status(
     enabled=enabled,
     mode=mode,
@@ -272,9 +310,9 @@ def read(parts, mode: str) -> Status:
     ready=ready,
     reason=reason,
     progress=parts.progress.read(),
-    model=parts.models.selected_model_name(),
+    model=model_name,
     default_model=parts.models.default_model_name(),
-    standin=parts.models.name_for(built) if built is not None and not ready else None,
+    standin=None if following else (parts.models.name_for(built) if built is not None and not ready else None),
   )
 
 

@@ -30,12 +30,12 @@ export function RestartUIControl({ control, disabled, disabledReason }: Props) {
         message: response.error ||
           (response.success
             ? 'UI restart requested. The interface will reload in a few seconds.'
-            : 'Failed to restart the UI.'),
+            : 'UI 重启失败。'),
       })
     } catch (error) {
       setResult({
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to restart the UI.',
+        message: error instanceof Error ? error.message : 'UI 重启失败。',
       })
     } finally {
       setLoading(false)

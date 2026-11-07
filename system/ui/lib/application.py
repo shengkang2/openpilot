@@ -115,6 +115,12 @@ class FontWeight(StrEnum):
   ZH_SEMI_BOLD = "Zh-SemiBold.fnt"
   ZH_BOLD = "Zh-Bold.fnt"
 
+  # 本机补丁（2026-10-30）：路名专用全字库（GB2312 全 6763 汉字，48px，6985 字形）。
+  # 上面 Zh-* 只收 po 里出现过的 728 个汉字，而地图路名来自 OSM 数据库，
+  # 实测上海青浦一带地名缺字率高达 54%（镇/路/街/园/河/湖/金/华/青/浦…全缺）→ 显示成 '?'。
+  # 该字库仅 RoadNameRenderer 使用，不影响其它 UI 文案。
+  ZH_ROAD = "ZhRoad-SemiBold.fnt"
+
 
 # BluePilot: 中文按原字重挑对应的中文库，保留粗细层级。
 # Inter 图集基准 200px，UI 实际只用 40~85px（缩小→清晰）；
@@ -145,8 +151,27 @@ def _zh_font_for(font: rl.Font) -> rl.Font:
   return gui_app.font(target)
 
 
+# 本机补丁（2026-11-03）：显式指定的中文字库不再被字重替换。
+# _patch_text_functions 全局接管 rl.draw_text_ex，任何字体都先过 font_fallback；
+# _zh_font_for() 用 _ZH_BY_WEIGHT 查不到 FontWeight.ZH_ROAD，会回退成 ZH_REGULAR（841 字），
+# 于是 road_name 传进来的 GBK 全字库被静默换掉，路名里 po 之外的汉字全变 ?。
+_ZH_ALL_WEIGHTS = (
+  FontWeight.ZH_REGULAR, FontWeight.ZH_MEDIUM, FontWeight.ZH_SEMI_BOLD,
+  FontWeight.ZH_BOLD, FontWeight.ZH_ROAD,
+)
+
+
+def _is_explicit_zh_font(font: rl.Font) -> bool:
+  try:
+    return any(font is gui_app.font(w) for w in _ZH_ALL_WEIGHTS)
+  except Exception:
+    return False
+
+
 def font_fallback(font: rl.Font) -> rl.Font:
   """中文等语言切到自带位图字库，保留字重。"""
+  if _is_explicit_zh_font(font):
+    return font
   if multilang.requires_unifont():
     try:
       return _zh_font_for(font)
@@ -651,9 +676,9 @@ class GuiApplication(GuiApplicationExt):
         # Skip rendering when screen is off
         if not self._should_render:
           if not self._panel_blanked and self._render_texture is None:
-            # BP fix (2026-10-29): push one pure-black frame before sleeping. The panel keeps
-            # the last image while off, and a frozen HUD is exactly what causes LCD image
-            # retention, so make that last frame black.
+            # BP fix (2026-10-29): push one pure-black frame before sleeping. The display keeps
+            # a static image while off, and a frozen HUD is what causes LCD image retention;
+            # a black frame removes that risk entirely.
             rl.begin_drawing()
             rl.clear_background(rl.BLACK)
             rl.end_drawing()
@@ -759,6 +784,8 @@ class GuiApplication(GuiApplicationExt):
           rl.gen_texture_mipmaps(font.texture)
           rl.set_texture_filter(font.texture, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)
         self._fonts[font_weight_file] = font
+        if font_weight_file in (FontWeight.ZH_ROAD, FontWeight.ZH_SEMI_BOLD):
+          cloudlog.error(f"FONT_DIAG {font_weight_file}: glyphs={font.glyphCount} tex={font.texture.width}x{font.texture.height} id={font.texture.id}")
     rl.gui_set_font(self._fonts[FontWeight.NORMAL])
 
   def _set_styles(self):

@@ -480,8 +480,10 @@ def hardware_thread(end_event, hw_queue) -> None:
     last_uptime_ts = now_ts
 
     if (count % int(60. / DT_HW)) == 0:
-      params.put("UptimeOffroad", uptime_offroad, block=True)
-      params.put("UptimeOnroad", uptime_onroad, block=True)
+      # block=True 会同步等落盘，/data 忙时能卡住主循环数秒，deviceState 断更
+      # 直接触发 selfdrived 的 commIssueAvgFreq / commIssue。改非阻塞异步写。
+      params.put("UptimeOffroad", uptime_offroad, block=False)
+      params.put("UptimeOnroad", uptime_onroad, block=False)
 
     count += 1
     should_start_prev = should_start

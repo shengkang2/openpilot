@@ -139,6 +139,12 @@ class SettingsLayoutSP(OP.SettingsLayout):
            OP.PanelType.BP_PORTAL: PanelInfo(tr_noop("BP Portal"), BPWebPanel(), icon="icons/network.png")}) if is_bluepilot() else {}),
     }
 
+    # BluePilot: the models panel's big model row opens the Jetlink panel, which owns the pick
+    if OP.PanelType.JETLINK in self._panels:
+      models_panel = self._panels[OP.PanelType.MODELS].instance
+      if hasattr(models_panel, "set_jetlink_panel_callback"):
+        models_panel.set_jetlink_panel_callback(lambda: self.set_current_panel(OP.PanelType.JETLINK))
+
   def _draw_sidebar(self, rect: rl.Rectangle):
     rl.draw_rectangle_rec(rect, OP.SIDEBAR_COLOR)
 

@@ -53,10 +53,10 @@ export const RoutesView = ({ deviceStatus = 'checking' }: RoutesViewProps) => {
       // If not preserved, preserve without confirmation
       try {
         await preserveRoute(baseName)
-        addToast('Route preserved successfully', 'success')
+        addToast('行程已保留', 'success')
       } catch (error: any) {
         console.error('Failed to preserve route:', error)
-        addToast(error?.message || 'Failed to preserve route', 'error')
+        addToast(error?.message || '保留行程失败', 'error')
       }
     }
   }
@@ -66,10 +66,10 @@ export const RoutesView = ({ deviceStatus = 'checking' }: RoutesViewProps) => {
 
     try {
       await preserveRoute(pendingActionRoute)
-      addToast('Route unpreserved successfully', 'success')
+      addToast('已取消保留该行程', 'success')
     } catch (error: any) {
       console.error('Failed to unpreserve route:', error)
-      addToast(error?.message || 'Failed to unpreserve route', 'error')
+      addToast(error?.message || '取消保留失败', 'error')
     } finally {
       setPendingActionRoute(null)
     }
@@ -138,7 +138,7 @@ export const RoutesView = ({ deviceStatus = 'checking' }: RoutesViewProps) => {
         timestamp = timestamp + 'Z'
       }
       const date = new Date(timestamp)
-      return date.toLocaleTimeString('en-US', {
+      return date.toLocaleTimeString('zh-CN', {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true
@@ -151,7 +151,7 @@ export const RoutesView = ({ deviceStatus = 'checking' }: RoutesViewProps) => {
 
   // Format UTC timestamp to local date (e.g., "Thursday - September 18th, 2024")
   const formatLocalDate = (utcTimestamp?: string): string => {
-    if (!utcTimestamp) return 'Unknown'
+    if (!utcTimestamp) return '未知'
     try {
       let timestamp = utcTimestamp
       // Append Z to treat as UTC if no timezone info
@@ -160,30 +160,15 @@ export const RoutesView = ({ deviceStatus = 'checking' }: RoutesViewProps) => {
       }
       const date = new Date(timestamp)
 
-      // Get day of week
-      const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' })
-
-      // Get month
-      const month = date.toLocaleDateString('en-US', { month: 'long' })
-
-      // Get day with ordinal suffix (1st, 2nd, 3rd, etc.)
-      const day = date.getDate()
-      const ordinal = (day: number) => {
-        if (day > 3 && day < 21) return 'th'
-        switch (day % 10) {
-          case 1: return 'st'
-          case 2: return 'nd'
-          case 3: return 'rd'
-          default: return 'th'
-        }
-      }
-
-      const year = date.getFullYear()
-
-      return `${dayOfWeek} - ${month} ${day}${ordinal(day)}, ${year}`
+      return date.toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long'
+      })
     } catch (e) {
       console.error('Error formatting date:', e)
-      return 'Unknown'
+      return '未知'
     }
   }
 
@@ -231,7 +216,7 @@ export const RoutesView = ({ deviceStatus = 'checking' }: RoutesViewProps) => {
 
           const startDate = new Date(timestamp)
           const endDate = new Date(startDate.getTime() + totalMinutes * 60 * 1000)
-          const endTime = endDate.toLocaleTimeString('en-US', {
+          const endTime = endDate.toLocaleTimeString('zh-CN', {
             hour: 'numeric',
             minute: '2-digit',
             hour12: true
@@ -252,7 +237,7 @@ export const RoutesView = ({ deviceStatus = 'checking' }: RoutesViewProps) => {
       <>
         <Header deviceStatus={deviceStatus} />
         <div className="loading">
-          <LoadingSpinner size="large" message="Loading routes..." />
+          <LoadingSpinner size="large" message="正在加载行程…" />
         </div>
       </>
     )
@@ -262,11 +247,11 @@ export const RoutesView = ({ deviceStatus = 'checking' }: RoutesViewProps) => {
   if (deviceStatus === 'onroad') {
     return (
       <>
-        <Header deviceStatus={deviceStatus} subtitle="Routes unavailable while driving" />
+        <Header deviceStatus={deviceStatus} subtitle="行驶中无法浏览行程" />
         <div className="routes-blocked">
           <Icon name="directions_car" size={80} />
-          <h2>Routes Unavailable</h2>
-          <p>Route browsing is disabled while driving for safety. Please return when parked.</p>
+          <h2>行程不可用</h2>
+          <p>为安全起见，行驶中无法浏览行程，请停车后再访问。</p>
         </div>
       </>
     )
@@ -277,7 +262,7 @@ export const RoutesView = ({ deviceStatus = 'checking' }: RoutesViewProps) => {
       <Header
         deviceStatus={deviceStatus}
         onMetricsClick={() => setShowMetricsModal(true)}
-        subtitle="Browse and review your driving recordings"
+        subtitle="浏览和查看行车录像"
       />
       <MetricsModal isOpen={showMetricsModal} onClose={() => setShowMetricsModal(false)} />
       <RouteDownloadModal
@@ -295,10 +280,10 @@ export const RoutesView = ({ deviceStatus = 'checking' }: RoutesViewProps) => {
           setPendingActionRoute(null)
         }}
         onConfirm={handleConfirmDelete}
-        title="Delete Route"
+        title="删除行程"
         message="Are you sure you want to delete this route? This action cannot be undone and all video files and logs will be permanently removed."
         confirmText="Delete"
-        cancelText="Cancel"
+        cancelText="取消"
         variant="danger"
       />
       <ConfirmDialog
@@ -308,10 +293,10 @@ export const RoutesView = ({ deviceStatus = 'checking' }: RoutesViewProps) => {
           setPendingActionRoute(null)
         }}
         onConfirm={handleConfirmUnpreserve}
-        title="Unpreserve Route"
-        message="Are you sure you want to unpreserve this route? The route may be automatically deleted when disk space is needed."
-        confirmText="Unpreserve"
-        cancelText="Cancel"
+        title="取消保留行程"
+        message="确定要取消保留该行程吗？磁盘空间不足时它可能被自动删除。"
+        confirmText="取消保留"
+        cancelText="取消"
         variant="warning"
       />
       {selectedRoute && (
@@ -322,9 +307,9 @@ export const RoutesView = ({ deviceStatus = 'checking' }: RoutesViewProps) => {
         {routes.length === 0 ? (
           <div className="empty">
             <Icon name="home" size={120} />
-            <h2>No Routes Found</h2>
+            <h2>未找到行程</h2>
             <p>
-              No driving routes available yet. Start driving to see your routes here.
+              暂无行车记录，开始驾驶后这里会显示你的行程。
             </p>
           </div>
         ) : (
@@ -355,7 +340,7 @@ export const RoutesView = ({ deviceStatus = 'checking' }: RoutesViewProps) => {
                         {preserved && (
                           <div className="preserved-badge">
                             <Icon name="star" size={12} />
-                            Preserved
+                            已保留
                           </div>
                         )}
 
@@ -363,7 +348,7 @@ export const RoutesView = ({ deviceStatus = 'checking' }: RoutesViewProps) => {
                         {route.processing && (
                           <div className="route-processing-banner">
                             <Icon name="schedule" size={14} />
-                            <span className="banner-text">Processing drive statistics...</span>
+                            <span className="banner-text">正在处理行车统计…</span>
                           </div>
                         )}
 
@@ -372,7 +357,7 @@ export const RoutesView = ({ deviceStatus = 'checking' }: RoutesViewProps) => {
                           <img
                             src={`/api/thumbnail/${baseName}`}
                             onError={(e) => { e.currentTarget.style.display = 'none' }}
-                            alt="Route thumbnail"
+                            alt="行程缩略图"
                           />
                           <div className="play-overlay">
                             <Icon name="play_circle_filled" size={48} style={{ color: '#2196f3' }} />
@@ -461,25 +446,25 @@ export const RoutesView = ({ deviceStatus = 'checking' }: RoutesViewProps) => {
                               type="button"
                               className={`route-preserve-btn ${preserved ? 'active' : ''}`}
                               aria-pressed={!!preserved}
-                              title={preserved ? 'Preserved' : 'Preserve'}
+                              title={preserved ? '已保留' : '保留'}
                               onClick={(e) => handlePreserveToggle(e, baseName)}
                             >
                               <Icon name={preserved ? 'star' : 'star_outline'} size={14} />
-                              <span>{preserved ? 'Preserved' : 'Preserve'}</span>
+                              <span>{preserved ? '已保留' : '保留'}</span>
                             </button>
                             <button
                               type="button"
                               className="route-export-btn"
-                              title="Export videos and logs"
+                              title="导出视频与日志"
                               onClick={(e) => handleExportClick(e, baseName)}
                             >
                               <Icon name="download" size={14} />
-                              <span>Export</span>
+                              <span>导出</span>
                             </button>
                             <button
                               type="button"
                               className="route-delete-btn"
-                              title="Delete route"
+                              title="删除行程"
                               onClick={(e) => handleDeleteClick(e, baseName)}
                             >
                               <Icon name="delete" size={16} />

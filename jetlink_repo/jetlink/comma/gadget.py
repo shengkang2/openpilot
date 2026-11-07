@@ -360,6 +360,50 @@ def wait_for_host(timeout: float, bounce=None, should_stop=None, report=None, mo
     time.sleep(HOST_POLL)
 
 
+# AGNOS leaves the device controller off until something asks for it, and
+# port.Port's ask waits SWAP_AFTER first. A host on the cable gets no answer
+# until then, so this is the one place that turns it on without waiting.
+DEVICE_MODE = Path('/sys/devices/platform/soc/a600000.ssusb/mode')
+
+
+def device_mode() -> str:
+  """The controller's mode: 'peripheral' with a device side on, 'none' with it
+  off, '' where the kernel has nothing to say."""
+  return read(DEVICE_MODE)
+
+
+def device_side_on() -> bool:
+  """Turn the device side on, where a port someone is plugged into needs it.
+  One read when it is already on; True once the controller can be enumerated."""
+  if bound_udc() is None:
+    return False
+  if device_mode() == 'peripheral':
+    return True
+  log.warning("jetlink: the USB device controller is %s with a host on the cable; turning its device side on",
+              device_mode() or 'unset')
+  return root.run('udc', 'start')
+
+
+def nudge_the_far_end(gap: float = 0.35) -> bool:
+  """Take the device controller down and back up: one replug, as the far end
+  sees it.
+
+  For a host that is on the cable and never enumerated. A phone drops its Rp
+  when the comma loses power, and a host that answered the bind with a bus
+  reset and stopped sits in default or addressed; neither moves without an
+  edge it can see, and only a real replug normally makes one. Nothing of ours
+  may have the endpoint files open: the unbind completes a reader's request
+  with ESHUTDOWN and the transport is done, not freshly bound.
+  """
+  if bound_udc() is None:
+    return False
+  log.warning("jetlink: re-presenting the device controller, so the far end sees the cable again")
+  if not root.run('udc', 'stop'):
+    return False
+  time.sleep(gap)
+  return root.run('udc', 'start')
+
+
 def setup_gadget(ios: bool) -> bool:
   """Create the gadget, for USB or iOS: there is none yet, or the setting
   moved between the two. The script records "ok" or the reason itself, in

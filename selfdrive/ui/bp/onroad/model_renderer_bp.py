@@ -185,6 +185,11 @@ class ModelRendererBP(RadRacerRoadMixin, ModelRenderer):
       self._dash_phase = (self._dash_phase + max(0.0, v_ego) / gui_app.target_fps) % period
 
     self._draw_lane_lines()
+    # 本机补丁（2026-10-31）：Blendful 引导线。BP 版 _render 完全覆盖了基类、
+    # 不调用 super()，所以基类里加的 draw 对 tici 无效，必须在这里补一次。
+    # 数据来自 modeld 的 modelDataV2SP.blendful*（stock modeld 已内联 Blendful）。
+    if not self._rad_racer:
+      self.blendful.draw(self._rect)
     self._draw_path(sm)
 
     # BluePilot: In Rad Racer theme, leads are drawn as sprites by RadRacerTheme

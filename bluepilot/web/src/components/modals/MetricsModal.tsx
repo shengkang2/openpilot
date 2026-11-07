@@ -49,9 +49,9 @@ export const MetricsModal = ({ isOpen, onClose }: MetricsModalProps) => {
   const tempStatus = getTempStatus(metrics?.temperature)
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="System Health Metrics">
+    <Modal isOpen={isOpen} onClose={onClose} title="系统健康指标">
       {loading && !metrics ? (
-        <div className="metrics-loading">Loading metrics...</div>
+        <div className="metrics-loading">正在加载指标…</div>
       ) : (
         <div className="metrics-grid">
           {/* CPU Card */}
@@ -63,11 +63,11 @@ export const MetricsModal = ({ isOpen, onClose }: MetricsModalProps) => {
             </div>
             <div className="metric-details">
               <div className="metric-row">
-                <span>Cores:</span>
+                <span>核心数：</span>
                 <span>{metrics?.cpu_cores ?? '--'}</span>
               </div>
               <div className="metric-row">
-                <span>FFmpeg:</span>
+                <span>FFmpeg：</span>
                 <span>{metrics?.ffmpeg_processes ?? 0} processes</span>
               </div>
             </div>
@@ -75,7 +75,7 @@ export const MetricsModal = ({ isOpen, onClose }: MetricsModalProps) => {
 
           {/* Memory Card */}
           <div className="metric-card">
-            <h3>Memory</h3>
+            <h3>内存</h3>
             <div className="metric-value">
               <span className="value-large">{metrics?.memory_percent?.toFixed(1) ?? '--'}</span>
               <span className="unit">%</span>
@@ -88,11 +88,11 @@ export const MetricsModal = ({ isOpen, onClose }: MetricsModalProps) => {
             </div>
             <div className="metric-details">
               <div className="metric-row">
-                <span>Used:</span>
+                <span>已用：</span>
                 <span>{metrics ? bytesToGB(metrics.memory_used).toFixed(1) : '--'} GB</span>
               </div>
               <div className="metric-row">
-                <span>Total:</span>
+                <span>总计：</span>
                 <span>{metrics ? bytesToGB(metrics.memory_total).toFixed(1) : '--'} GB</span>
               </div>
             </div>
@@ -100,7 +100,7 @@ export const MetricsModal = ({ isOpen, onClose }: MetricsModalProps) => {
 
           {/* Disk Card */}
           <div className="metric-card">
-            <h3>Disk (/data)</h3>
+            <h3>磁盘 (/data)</h3>
             <div className="metric-value">
               <span className="value-large">{metrics?.disk_percent?.toFixed(1) ?? '--'}</span>
               <span className="unit">%</span>
@@ -113,11 +113,11 @@ export const MetricsModal = ({ isOpen, onClose }: MetricsModalProps) => {
             </div>
             <div className="metric-details">
               <div className="metric-row">
-                <span>Used:</span>
+                <span>已用：</span>
                 <span>{metrics ? bytesToGB(metrics.disk_used).toFixed(1) : '--'} GB</span>
               </div>
               <div className="metric-row">
-                <span>Total:</span>
+                <span>总计：</span>
                 <span>{metrics ? bytesToGB(metrics.disk_total).toFixed(1) : '--'} GB</span>
               </div>
             </div>
@@ -125,7 +125,7 @@ export const MetricsModal = ({ isOpen, onClose }: MetricsModalProps) => {
 
           {/* Temperature Card */}
           <div className="metric-card">
-            <h3>Temperature</h3>
+            <h3>温度</h3>
             <div className="metric-value">
               <span className={`value-large temp-${tempStatus}`}>
                 {metrics?.temperature ?? '--'}
@@ -134,14 +134,14 @@ export const MetricsModal = ({ isOpen, onClose }: MetricsModalProps) => {
             </div>
             <div className="metric-details">
               <div className="metric-row">
-                <span>Status:</span>
+                <span>状态：</span>
                 <span className={`status-${tempStatus}`}>
                   {tempStatus}
                 </span>
               </div>
               {metrics?.cache_size !== undefined && (
                 <div className="metric-row">
-                  <span>Cache:</span>
+                  <span>缓存：</span>
                   <span>{bytesToGB(metrics.cache_size).toFixed(1)} GB</span>
                 </div>
               )}

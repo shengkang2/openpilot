@@ -82,10 +82,9 @@ export function FavoritesPanel() {
     return (
       <div className="favorites-empty">
         <div className="favorites-empty-icon">⭐</div>
-        <h3>No Favorites Yet</h3>
+        <h3>暂无收藏</h3>
         <p>
-          Star your frequently used settings to access them quickly here. Look for the star icon
-          next to each setting.
+          将常用设置星标后即可在这里快速访问。点击各项设置旁边的星形图标即可收藏。
         </p>
       </div>
     )
@@ -105,7 +104,7 @@ export function FavoritesPanel() {
 
       {isLoading && favoriteControls.length === 0 ? (
         <div className="favorites-loading">
-          <p>Loading favorite controls...</p>
+          <p>正在加载收藏项…</p>
         </div>
       ) : Object.entries(groupedByPanel).map(([panelName, items]) => (
         <div key={panelName} className="favorites-section">

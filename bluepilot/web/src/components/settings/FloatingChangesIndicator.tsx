@@ -40,7 +40,7 @@ export function FloatingChangesIndicator() {
               <div className="floating-changes-badge floating-changes-badge--autosave">
                 <Icon name="bolt" size={18} />
               </div>
-              <span className="floating-changes-text">Real-time tuning mode</span>
+              <span className="floating-changes-text">实时调参模式</span>
             </div>
 
             <div className="floating-changes-actions">
@@ -49,7 +49,7 @@ export function FloatingChangesIndicator() {
                 size="small"
                 onClick={() => setAutoSave(false)}
               >
-                Disable
+                关闭
               </Button>
             </div>
           </div>
@@ -88,9 +88,9 @@ export function FloatingChangesIndicator() {
               type="button"
               className="floating-changes-review-btn"
               onClick={() => setShowSummary(true)}
-              aria-label="Review changes"
+              aria-label="查看修改"
             >
-              Review
+              查看
             </button>
 
             <Button
@@ -99,7 +99,7 @@ export function FloatingChangesIndicator() {
               onClick={handleDiscardAll}
               disabled={isSaving}
             >
-              Discard
+              放弃
             </Button>
 
             <Button
@@ -108,7 +108,7 @@ export function FloatingChangesIndicator() {
               onClick={handleSaveAll}
               loading={isSaving}
             >
-              Save All
+              全部保存
             </Button>
           </div>
         </div>

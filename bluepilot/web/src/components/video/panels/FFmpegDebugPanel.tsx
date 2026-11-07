@@ -46,8 +46,8 @@ export const FFmpegDebugPanel = ({ show }: FFmpegDebugPanelProps) => {
         <div className="panel-title">
           <Icon name="article" className="panel-icon" size={20} />
           <div className="panel-title-text">
-            <span className="panel-title-label">FFmpeg Debug Logs</span>
-            <span className="panel-title-subtitle">Real-time transcoder output</span>
+            <span className="panel-title-label">FFmpeg 调试日志</span>
+            <span className="panel-title-subtitle">实时转码输出</span>
           </div>
         </div>
         <div className="panel-header-actions">
@@ -56,7 +56,7 @@ export const FFmpegDebugPanel = ({ show }: FFmpegDebugPanelProps) => {
             className="btn btn-sm panel-action-btn"
             onClick={clearMessages}
           >
-            Clear
+            清空
           </button>
           <label className="debug-auto-scroll-label">
             <input
@@ -65,7 +65,7 @@ export const FFmpegDebugPanel = ({ show }: FFmpegDebugPanelProps) => {
               checked={autoScroll}
               onChange={(e) => setAutoScroll(e.target.checked)}
             />
-            Auto-scroll
+            自动滚动
           </label>
         </div>
       </div>
@@ -73,7 +73,7 @@ export const FFmpegDebugPanel = ({ show }: FFmpegDebugPanelProps) => {
         <div ref={messagesRef} className="debug-messages">
           {messages.length === 0 ? (
             <div className="debug-message-empty">
-              <p>FFmpeg debug logs will appear here...</p>
+              <p>FFmpeg 调试日志将显示在这里…</p>
               <p className="debug-message-hint">
                 {connected
                   ? 'Waiting for FFmpeg processes to start...'

@@ -60,7 +60,7 @@ export function BackupRestore() {
     } catch (error) {
       setResult({
         success: false,
-        message: error instanceof Error ? error.message : 'Export failed',
+        message: error instanceof Error ? error.message : '导出失败',
       })
       setShowResult(true)
     } finally {
@@ -118,7 +118,7 @@ export function BackupRestore() {
     } catch (error) {
       setResult({
         success: false,
-        message: error instanceof Error ? error.message : 'Import failed',
+        message: error instanceof Error ? error.message : '导入失败',
       })
       setShowResult(true)
     } finally {
@@ -132,7 +132,7 @@ export function BackupRestore() {
     <>
       <div className="backup-restore">
         <ControlCard
-          title="Export Settings"
+          title="导出设置"
           description="Download a backup of all settings with the BACKUP flag. This includes user preferences, configuration, and customizations that are safe to backup and restore."
           className="backup-restore-card"
           footer={
@@ -142,13 +142,13 @@ export function BackupRestore() {
               loading={exporting}
               className="settings-btn"
             >
-              Export Backup
+              导出备份
             </Button>
           }
         />
 
         <ControlCard
-          title="Import Settings"
+          title="导入设置"
           description="Restore settings from a previously exported backup file. Only parameters with the BACKUP flag will be restored for safety."
           className="backup-restore-card"
           footer={
@@ -159,7 +159,7 @@ export function BackupRestore() {
                 loading={importing}
                 className="settings-btn"
               >
-                Import Backup
+                导入备份
               </Button>
               <input
                 type="file"
@@ -185,17 +185,17 @@ export function BackupRestore() {
             <div className="backup-result-details">
               {result.details.restored !== undefined && (
                 <p>
-                  <strong>Restored:</strong> {result.details.restored}
+                  <strong>已恢复：</strong> {result.details.restored}
                 </p>
               )}
               {result.details.failed !== undefined && result.details.failed > 0 && (
                 <p>
-                  <strong>Failed:</strong> {result.details.failed}
+                  <strong>失败：</strong> {result.details.failed}
                 </p>
               )}
               {result.details.skipped !== undefined && result.details.skipped > 0 && (
                 <p>
-                  <strong>Skipped (no BACKUP flag):</strong> {result.details.skipped}
+                  <strong>已跳过（无 BACKUP 标记）：</strong> {result.details.skipped}
                 </p>
               )}
             </div>

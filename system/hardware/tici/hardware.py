@@ -281,11 +281,8 @@ class Tici(HardwareBase):
       with open("/sys/class/backlight/panel0-backlight/max_brightness") as f:
         max_brightness = float(f.read().strip())
 
-      # BP fix (2026-10-29): this unit has a clone (aftermarket) panel whose backlight IC
-      # occasionally fails to come back after being driven fully off -- brightness writes are
-      # accepted but the panel stays dark until a power cycle. Clamp so it is never fully shut.
+      # BP: clone panel backlight IC must never be fully shut down
       percentage = max(float(percentage), 1.0)
-
       val = int(percentage * (max_brightness / 100.))
       with open("/sys/class/backlight/panel0-backlight/brightness", "w") as f:
         f.write(str(val))
@@ -319,7 +316,22 @@ class Tici(HardwareBase):
     for n in ('0', '4'):
       if powersave_enabled and n == '4':
         continue
-      gov = 'ondemand' if powersave_enabled else 'performance'
+      # BluePilot 2026-11-01 (thermal): gold cluster uses schedutil instead of performance.
+      # Measured on this tici (SDM845): idle performance pins all 4 gold cores at 2649 MHz,
+      # while schedutil drops them to 825 MHz (3.2x lower); under load it is back at 2649 MHz
+      # within 1s, and eases back down ~3s after load stops (no oscillation).
+      # In-drive procLog shows cpu5/6/7 at only 17%/20%/0.1% average utilization, so holding
+      # them at max frequency was pure heat (long-drive steady state hit 82-84C with the fan
+      # already at 100%). silver stays on performance (cpu0-3 run 50-82%, and its ceiling is
+      # only 1.69 GHz anyway).
+      # NOTE: still deliberately does NOT write scaling_max_freq -- see the BluePilot comment
+      # below about AGNOS native thermal-cpufreq cooling devices.
+      if powersave_enabled:
+        gov = 'ondemand'
+      elif n == '4':
+        gov = 'schedutil'
+      else:
+        gov = 'performance'
       sudo_write(gov, f'/sys/devices/system/cpu/cpufreq/policy{n}/scaling_governor')
       # BluePilot: deliberately do NOT write scaling_max_freq here.
       # Upstream/comma added a static `scaling_max_freq = 1689600` cap to this branch. That blunt

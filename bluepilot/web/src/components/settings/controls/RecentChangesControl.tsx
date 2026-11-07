@@ -13,13 +13,13 @@ type ChangeSource = {
 const CHANGE_SOURCES: ChangeSource[] = [
   {
     id: 'bluepilot',
-    label: 'BluePilot Changes',
+    label: 'BluePilot 变更',
     subtitle: 'Latest updates from BluePilot',
     path: 'CHANGELOG.md',
   },
   {
     id: 'sunnypilot',
-    label: 'SunnyPilot Changes',
+    label: 'SunnyPilot 变更',
     subtitle: 'Upstream SunnyPilot updates',
     path: 'CHANGELOG_SP.md',
   },
@@ -59,7 +59,7 @@ export function RecentChangesControl({ control, disabled, disabledReason }: Prop
         throw new Error(data.error || 'Failed to load change log')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load change log')
+      setError(err instanceof Error ? err.message : '变更日志加载失败')
     } finally {
       setLoading(false)
     }
@@ -104,10 +104,10 @@ export function RecentChangesControl({ control, disabled, disabledReason }: Prop
         maxWidth="900px"
       >
         <div className="recent-changes-modal">
-          {loading && <div className="recent-changes-loading">Loading...</div>}
+          {loading && <div className="recent-changes-loading">加载中…</div>}
           {error && !loading && (
             <div className="recent-changes-error">
-              <strong>Error:</strong> {error}
+              <strong>错误：</strong> {error}
             </div>
           )}
           {!loading && !error && <pre className="recent-changes-content">{content}</pre>}

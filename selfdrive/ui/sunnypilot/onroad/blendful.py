@@ -35,6 +35,7 @@ class BlendfulRenderer:
     self._pull_display = FirstOrderFilter(0.0, 0.5, DT_MDL)
     self._trust_display = FirstOrderFilter(0.0, 0.5, DT_MDL)
     self._alpha = FirstOrderFilter(0.0, 0.3, DT_MDL)
+    self._diag_n = 0
 
   def _clear(self, fade: bool = True) -> None:
     if fade:
@@ -67,24 +68,55 @@ class BlendfulRenderer:
       return
 
     l_prob, r_prob = blendful.blendfulLeftProb, blendful.blendfulRightProb
-    if l_prob + r_prob <= 0.0:
-      self._clear()
-      return
+    has_probs = l_prob + r_prob > 0.0
+    if not has_probs:
+      # modeld stops producing lane probs below MIN_SPEED (5 m/s) and while a
+      # lane change is in progress. Keep a dim geometric-center guide instead
+      # of dropping the ribbon altogether.
+      self._trust = 0.0
 
     half_width = np.clip(right[:, 1] - left[:, 1], *LANE_WIDTH_CLIP) / 2 if l_prob * r_prob > 0.5 else blendful.blendfulLaneWidth / 2
     l_var = stds[1] ** 2 / max(l_prob, 1e-4)
     r_var = stds[2] ** 2 / max(r_prob, 1e-4)
     center = left.copy()
-    center[:, 1] = (r_var * (left[:, 1] + half_width) + l_var * (right[:, 1] - half_width)) / (l_var + r_var)
+    if has_probs:
+      center[:, 1] = (r_var * (left[:, 1] + half_width) + l_var * (right[:, 1] - half_width)) / (l_var + r_var)
+    else:
+      center[:, 1] = (left[:, 1] + right[:, 1]) / 2
     self._center_points = renderer._map_line_to_polygon(center, RIBBON_HALF_WIDTH, 0.0, max_idx, *map_args)
     self._alpha.update(1.0)
+
+  def _diag_tick(self) -> None:
+    self._diag_n += 1
+    if self._diag_n % PARAM_RELOAD_FRAMES:
+      return
+    try:
+      import json
+      sm = ui_state.sm
+      valid = bool(sm.valid.get('modelDataV2SP', False))
+      sp = sm['modelDataV2SP'] if valid else None
+      data = {
+        'enabled': bool(self._enabled),
+        'sp_valid': valid,
+        'lateral_active': bool(UIStateSP.lateral_active(ui_state)),
+        'l_prob': float(sp.blendfulLeftProb) if sp is not None else 0.0,
+        'r_prob': float(sp.blendfulRightProb) if sp is not None else 0.0,
+        'trust': float(self._trust),
+        'alpha': float(self._alpha.x),
+        'center_points': int(self._center_points.shape[0]),
+        'status': str(getattr(ui_state.status, 'value', ui_state.status)),
+      }
+      Path('/dev/shm/blendful_diag.json').write_text(json.dumps(data))
+    except Exception:
+      pass
 
   def _color(self, rgb, alpha: float) -> rl.Color:
     return rl.Color(*rgb, int(alpha * self._alpha.x))
 
   def draw(self, rect: rl.Rectangle) -> None:
-    if not UIStateSP.lateral_active(ui_state):
-      return
+    self._diag_tick()
+    # the ribbon follows Blendful's own data, not whether ACC is engaged: the
+    # upstream lateral_active gate hides it whenever the car is disengaged
     if self._center_points.size and self._alpha.x > 0.01:
       points = self._center_points + (rect.x, rect.y) if self._rect_relative else self._center_points
       # dim guide ribbon when the lane lines are weak, solid once Blendful trusts them

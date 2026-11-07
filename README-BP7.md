@@ -567,4 +567,10 @@ AGNOS 18.x 的 `/usr/local/venv` 里 capnproto 是半装状态（dist-info 在�
 | 2026-10-24 | 安装链路补全：`install.sh` 自动 bootstrap clone、离线包、符号链接重建 |
 | 2026-10-24 | 支持 AGNOS 界面「填 URL 一键安装」：新增 `scripts/bp7_bootstrap.sh` + 修正 LFS 拉取配置 |
 | 2026-10-28 | **Blendful 混合横向策略移植**（sunnypilot #2073，ALPHA，默认关闭） |
+| 2026-11-07 | Jetlink 模型页接入大模型；状态图标四态（未连接不显示／连接中灰闪／就绪灰常亮／运行中绿）；`in_control` 放宽为「横纵向同时激活且实际行驶」；跟随设备模式 ready 修复 |
+| 2026-11-07 | Jetlink 面板全量汉化：静态值、动态状态、进度 stage/msg、不可用原因、USB-C 接口文案；`.po` 补词条并与中文位图字库逐字核对（缺字形改为同义写法） |
+| 2026-11-07 | Jetlink USB 重连加固：provisioning 每次插拔只跑一次、拔线判定要求 CC 真空、卡 `default` 时最多 3 次 connect 脉冲、清理僵死 transport、开机即切 peripheral |
+| 2026-11-07 | Blendful 引导线修复：去掉 engagement 门控，低速／无 probs 时用两条车道线几何中点画淡青引导带；新增 `/dev/shm/blendful_diag.json` 诊断 |
+| 2026-11-07 | 中文字库与 `warning_immediate.wav` 随源码落地（排除 LFS）、Ford 横向、模型管理器、tici 硬件适配等设备本地改动，共 133 文件 |
+| 2026-11-08 | 分支纠正：删除误建的 `BP7.020261028`，设备全量代码以合并提交接到本分支既有历史（第一父 `29862b5`，原有 7 个提交不丢）；本表补齐上述改动说明 |
 

@@ -49,18 +49,18 @@ export const StatusOverlay = ({ type, onRetry }: StatusOverlayProps) => {
   const configs = {
     onroad: {
       icon: <Icon name="schedule" size={80} />,
-      title: 'Device Onroad',
-      message: 'The device is currently driving. Web access is limited to prevent distractions.',
+      title: '行驶中',
+      message: '车辆正在行驶，为避免分心，网页访问已受限。',
     },
     offline: {
       icon: <Icon name="cloud_off" size={80} />,
-      title: 'Device Offline',
+      title: '设备离线',
       message: 'Cannot connect to the device. Make sure you\'re on the same network as your comma device.',
     },
     'no-network': {
       icon: <Icon name="wifi_off" size={80} />,
-      title: 'No Network Connection',
-      message: 'Your device appears to be offline. Please check your internet connection.',
+      title: '无网络连接',
+      message: '设备似乎已离线，请检查网络连接。',
     },
   }
   const config = configs[type]
@@ -77,15 +77,15 @@ export const StatusOverlay = ({ type, onRetry }: StatusOverlayProps) => {
         {details && (
           <div className="status-details">
             <div className="status-detail-item">
-              <span className="detail-label">Connection:</span>
+              <span className="detail-label">连接：</span>
               <span className="detail-value">{details.connection}</span>
             </div>
             <div className="status-detail-item">
-              <span className="detail-label">Rate Limit:</span>
+              <span className="detail-label">限流：</span>
               <span className="detail-value">{details.rateLimit}</span>
             </div>
             <div className="status-detail-item">
-              <span className="detail-label">Last Update:</span>
+              <span className="detail-label">最后更新：</span>
               <span className="detail-value">{details.lastUpdate}</span>
             </div>
           </div>
@@ -99,7 +99,7 @@ export const StatusOverlay = ({ type, onRetry }: StatusOverlayProps) => {
               onClick={handleRetry}
               loading={loading}
             >
-              Retry Connection
+              重试连接
             </Button>
           </div>
         )}

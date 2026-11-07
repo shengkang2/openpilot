@@ -40,7 +40,7 @@ export function FileViewer({ control, disabled }: FileViewerProps) {
         setError(data.error || 'Failed to load file')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load file')
+      setError(err instanceof Error ? err.message : '文件加载失败')
     } finally {
       setLoading(false)
     }
@@ -79,11 +79,11 @@ export function FileViewer({ control, disabled }: FileViewerProps) {
           maxWidth="800px"
         >
           <div className="file-viewer-modal-content">
-            {loading && <div className="file-viewer-loading">Loading...</div>}
+            {loading && <div className="file-viewer-loading">加载中…</div>}
 
             {error && (
               <div className="file-viewer-error">
-                <strong>Error:</strong> {error}
+                <strong>错误：</strong> {error}
               </div>
             )}
 

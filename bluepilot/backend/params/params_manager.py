@@ -15,6 +15,12 @@ from typing import Dict, List, Optional, Any, Union, Tuple
 
 logger = logging.getLogger(__name__)
 
+# 中文参数说明（key -> 简短中文描述），用于门户参数页展示与搜索
+try:
+    from bluepilot.backend.params.param_descriptions_zh import PARAM_DESCRIPTIONS_ZH
+except ImportError:
+    PARAM_DESCRIPTIONS_ZH = {}
+
 # Import Params with fallback for direct file reading
 PARAMS_DIR = "/data/params/d"
 USE_DIRECT_FILE_READING = False
@@ -511,7 +517,8 @@ def _build_param_entry(key: str, params: Optional[Params], params_dir: Optional[
         "critical": key in CRITICAL_PARAMS,
         "type": "unknown",
         "last_modified": _get_param_mtime(params_dir, key),
-        "attributes": param_attributes  # Add ParamKeyAttributes flags
+        "attributes": param_attributes,  # Add ParamKeyAttributes flags
+        "description": PARAM_DESCRIPTIONS_ZH.get(key)  # 中文说明（无则 None）
     }
 
     try:
@@ -746,6 +753,12 @@ def search_params(query: str, params: Optional[Params] = None) -> List[Dict[str,
         # Search in value
         value_str = str(param_data.get("value", "")).lower()
         if query_lower in value_str:
+            results.append(param_data)
+            continue
+
+        # Search in Chinese description
+        desc = param_data.get("description")
+        if desc and query_lower in str(desc).lower():
             results.append(param_data)
             continue
 

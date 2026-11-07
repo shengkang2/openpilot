@@ -606,22 +606,34 @@ def _own_submaster():
   return _own
 
 
+# How fast the car has to be going before a swap counts as "while driving".
+# Below it the car cannot move on the frame a swap costs, so the window opens.
+DRIVING_SPEED = 0.3  # m/s, ~1 km/h
+
+
 @_guarded(True)
 def in_control(sm) -> bool:
-  """modeld, before every frame, onto the model: is openpilot or MADS in
-  control? jetlink's large model swaps in only while it is not.
+  """modeld, before every frame, onto the model: would a swap land while the
+  car is actually being driven, so that its plan jumping ~195 m steers it?
 
-  bp: zoompilot's rule, unchanged. openpilot enabled or steering, or MADS
-  enabled, which counts while paused (gear, door, seatbelt, brake hold, park
-  brake, stock LKAS off: it steers again on its own) and is released by ACC
-  main off or its button. A service late or invalid counts as in control, so a
-  swap can never happen on no information."""
+  bp: only both axes in control at once, and the car moving, blocks the swap.
+  Everything else opens the window:
+  - stopped: the car cannot move on the frame the swap costs;
+  - one axis only: the other is still the driver's, and handing one axis over
+    is what a swap does anyway;
+  - MADS enabled but not steering: nothing of ours is moving the wheel.
+  A service late or invalid counts as in control, so a swap can never happen
+  on no information."""
   if not (sm.all_alive(IN_CONTROL) and sm.all_valid(IN_CONTROL)):
     return True
-  if sm['carControl'].enabled or sm['carControl'].latActive:
+  cc = sm['carControl']
+  if not (cc.latActive and cc.longActive):
+    return False
+  # both axes ours, the one case the fork refuses, and only while moving
+  try:
+    return float(sm['carState'].vEgo) > DRIVING_SPEED
+  except Exception:
     return True
-  mads = sm['carControlSP'].mads
-  return bool(mads.enabled or mads.active)
 
 
 @_guarded(None)

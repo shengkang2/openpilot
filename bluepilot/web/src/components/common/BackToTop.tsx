@@ -53,8 +53,8 @@ export function BackToTop({ containerRef, threshold = 300, className = '' }: Bac
       type="button"
       className={`back-to-top ${className}`}
       onClick={scrollToTop}
-      aria-label="Scroll to top"
-      title="Back to top"
+      aria-label="回到顶部"
+      title="返回顶部"
     >
       <Icon name="keyboard_arrow_up" size={24} />
     </button>
