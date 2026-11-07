@@ -220,7 +220,7 @@ export function DiagnosticsTmux() {
           <input
             type="text"
             className="search-input"
-            placeholder="Search logs..."
+            placeholder="搜索日志…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -228,7 +228,7 @@ export function DiagnosticsTmux() {
             <button
               className="search-clear"
               onClick={() => setSearchQuery('')}
-              aria-label="Clear search"
+              aria-label="清除搜索"
             >
               ✕
             </button>
@@ -251,7 +251,7 @@ export function DiagnosticsTmux() {
             onClick={handleClear}
             icon={<span aria-hidden="true">🗑</span>}
           >
-            Clear
+            清空
           </Button>
 
           <Button
@@ -261,13 +261,13 @@ export function DiagnosticsTmux() {
             disabled={isConnecting}
             icon={<span aria-hidden="true">↻</span>}
           >
-            Refresh
+            刷新
           </Button>
 
           <ToggleSwitch
             checked={autoScroll}
             onChange={setAutoScroll}
-            label="Auto-scroll"
+            label="自动滚动"
             size="compact"
             className="diagnostics-toggle"
           />
@@ -282,21 +282,21 @@ export function DiagnosticsTmux() {
         )}
 
         <div className="console-status">
-          <span className="console-status-label">Status:</span>
+          <span className="console-status-label">状态：</span>
           <span className={`console-status-value ${streamStatus === 'started' && !isPaused ? 'streaming' : 'paused'}`}>
             {isPaused ? 'Paused' : streamStatus === 'started' ? 'Streaming' : isConnecting ? 'Connecting...' : 'Stopped'}
           </span>
           {searchQuery && (
             <>
               <span className="console-status-separator">•</span>
-              <span className="console-status-label">Showing:</span>
+              <span className="console-status-label">显示：</span>
               <span className="console-status-value">
                 {filteredLines.length} / {logLines.length} lines
               </span>
             </>
           )}
           <span className="console-status-separator">•</span>
-          <span className="console-status-label">Total:</span>
+          <span className="console-status-label">总计：</span>
           <span className="console-status-value">{logLines.length} lines</span>
         </div>
 

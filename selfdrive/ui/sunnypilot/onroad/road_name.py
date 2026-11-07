@@ -8,6 +8,7 @@ import pyray as rl
 
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.application import gui_app, FontWeight
+from openpilot.system.ui.lib.multilang import multilang
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.widgets import Widget
 
@@ -17,7 +18,11 @@ class RoadNameRenderer(Widget):
     super().__init__()
     self.road_name = ""
     self.is_metric = False
-    self.font_demi = gui_app.font(FontWeight.SEMI_BOLD)
+    # 本机补丁（2026-10-30）：中文环境改用路名专用全字库。
+    # Zh-SemiBold 只有 728 汉字（仅覆盖 po 译文用字），而路名来自 OSM，
+    # 用它会大面积渲染成 '?'；ZhRoad-SemiBold 含 GB2312 全部 6763 汉字。
+    self.font_demi = gui_app.font(
+      FontWeight.ZH_ROAD if multilang.requires_unifont() else FontWeight.SEMI_BOLD)
 
   def update(self):
     sm = ui_state.sm

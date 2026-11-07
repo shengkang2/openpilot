@@ -14,7 +14,12 @@ RELEASE_SP_BRANCHES = ['release-c3', 'release', 'release-tizi', 'release-tici', 
 TESTED_SP_BRANCHES = ['staging-c3', 'staging-c3-new', 'staging']
 MASTER_SP_BRANCHES = ['master']
 RELEASE_BRANCHES = ['release-tizi-staging', 'release-mici-staging', 'release-tizi', 'release-mici', 'nightly']
-TESTED_BRANCHES = RELEASE_BRANCHES + ['devel-staging', 'nightly-dev'] + RELEASE_SP_BRANCHES + TESTED_SP_BRANCHES
+# 本机自建分支白名单：bluepilot bp7 由本地源码编译（build.json channel=bp7、
+# origin=BluePilot-Dev/bluepilot）。不加进来会每次上车弹 5 秒橙色
+# 「WARNING: This branch is not tested」，并把 IsTestedBranch 置 False。
+# 注意不要为此去改 comma_remote —— 那是发布指标。
+LOCAL_TESTED_BRANCHES = ['bp7']
+TESTED_BRANCHES = RELEASE_BRANCHES + ['devel-staging', 'nightly-dev'] + RELEASE_SP_BRANCHES + TESTED_SP_BRANCHES + LOCAL_TESTED_BRANCHES
 
 SP_BRANCH_MIGRATIONS = {
   ("tici", "staging-c3-new"): "staging-tici",

@@ -93,6 +93,12 @@ function launch {
   # BluePilot: 同根目录 launch_chffrplus.sh，保留 /data/pylibs（AGNOS 18.x 下 capnproto 半装状态的解药）
   export PYTHONPATH="/data/pylibs:$PWD"
 
+  # 本机补丁（2026-10-29）已回滚：UI 限帧实测无收益。
+  # 探针实测单帧 Python 成本：60FPS=5.7ms/33.0%单核，30FPS=16.8ms/49.6%，
+  # 25FPS=17.1ms/42.7%，20FPS=18.0ms/35.8% —— 限帧反而更费（帧间隔拉长后每帧补算更多）。
+  # 故恢复 tici 出厂 60 FPS，不再设 FPS 环境变量。
+  # export FPS=${FPS:-25}
+
   # hardware specific init
   if [ -f /AGNOS ]; then
     agnos_init

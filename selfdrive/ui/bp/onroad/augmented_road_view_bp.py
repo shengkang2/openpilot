@@ -23,6 +23,8 @@ from openpilot.selfdrive.ui.onroad.driver_state import BTN_SIZE
 from openpilot.selfdrive.ui.sunnypilot.onroad.developer_ui import DeveloperUiState, get_bottom_dev_ui_offset
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.selfdrive.ui.bp.lib.ui_debug_logger import bp_ui_log
+# 本机补丁（2026-10-31）：onroad 右上角的 Jetlink 状态角标
+from openpilot.selfdrive.ui.bp.onroad.jetlink_badge import JetlinkBadge
 # BluePilot: unified theme selector (BPThemePack param)
 from openpilot.selfdrive.ui.bp.lib import theme_pack, theme_scene
 
@@ -92,6 +94,8 @@ class AugmentedRoadViewBP(CameraViewBP, AugmentedRoadView, BlindspotRendererMixi
   def update_fade_out_bottom_overlay(self, _content_rect):
     """BluePilot: Skip MICI fade overlay on TICI — causes unwanted black gradient at bottom."""
     pass
+    # 本机补丁（2026-10-31）：右上角 Jetlink 角标
+    self._jetlink_badge = JetlinkBadge()
 
   def _render(self, rect):
     """Override render to add blindspot, gauges, confidence ball on left."""
@@ -230,6 +234,9 @@ class AugmentedRoadViewBP(CameraViewBP, AugmentedRoadView, BlindspotRendererMixi
       else ui_rect
     )
     self.alert_renderer.render(alert_rect)
+
+    # 本机补丁（2026-10-31）：Jetlink 角标画在最后，保证全屏告警时也可见
+    self._jetlink_badge.render(self._content_rect)
 
     bp_ui_log.scissor("AugRoadView", "end")
     rl.end_scissor_mode()

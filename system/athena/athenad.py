@@ -51,6 +51,13 @@ LOG_ATTR_NAME = 'user.upload'
 LOG_ATTR_VALUE_MAX_UNIX_TIME = int.to_bytes(2147483647, 4, sys.byteorder)
 RECONNECT_TIMEOUT_S = 70
 
+# 本机补丁（2026-10-29）：服务端认不出 DongleId 时会在握手后立刻 CLOSE(1000)，
+# 而原代码在握手成功时会把 conn_retries 清零，导致 backoff 恒为 0、每 2.4 秒
+# 一轮 TLS 握手，实测烧掉 30% 单核且线程堆积。下面两个常量用于识别这种情况。
+CONNECT_CLOSED_FAST_S = 5      # 连接建立后多少秒内被关闭算「可疑」
+SUSPECT_LIMIT = 5              # 连续可疑多少次判定后端不认本机
+SUSPECT_BACKOFF_S = 3600       # 判定后的重试周期（退避成常态，不再死循环）
+
 RETRY_DELAY = 10  # seconds
 MAX_RETRY_COUNT = 30  # Try for at most 5 minutes if upload fails immediately
 MAX_AGE = 31 * 24 * 3600  # seconds
@@ -956,6 +963,9 @@ def main(exit_event: threading.Event | None = None):
 
   conn_start = None
   conn_retries = 0
+  # 本机补丁（2026-10-29）：见文件头常量注释
+  connected_at: float | None = None
+  suspect_count = 0
   while exit_event is None or not exit_event.is_set():
     try:
       if conn_start is None:
@@ -969,8 +979,8 @@ def main(exit_event: threading.Event | None = None):
       cloudlog.event("athenad.main.connected_ws", ws_uri=ws_uri, retries=conn_retries,
                      duration=time.monotonic() - conn_start)
       conn_start = None
+      connected_at = time.monotonic()
 
-      conn_retries = 0
       cur_upload_items.clear()
 
       handle_long_poll(ws, exit_event)
@@ -986,6 +996,29 @@ def main(exit_event: threading.Event | None = None):
 
       conn_retries += 1
       params.remove("LastAthenaPingTime")
+
+    # 本机补丁：原来只要 create_connection 成功就把 conn_retries 清零，
+    # 于是「连上就被踢」的场景 backoff 恒为 0。改为只有在连接真正存活过
+    # （超过 CONNECT_CLOSED_FAST_S 未被关闭）才清零重连计数。
+    lived = None if connected_at is None else (time.monotonic() - connected_at)
+    connected_at = None
+
+    if lived is not None and lived < CONNECT_CLOSED_FAST_S:
+      suspect_count += 1
+      conn_retries += 1
+      if suspect_count == SUSPECT_LIMIT:
+        # 注意：cloudlog.error() 只接受 logging 的普通参数，结构化字段必须走 event()
+        cloudlog.event("athenad.backend_rejects_device",
+                       hint="server CLOSES the socket right after handshake; "
+                            "DongleId likely unknown to this backend",
+                       backoff_s=SUSPECT_BACKOFF_S)
+      if suspect_count >= SUSPECT_LIMIT:
+        # 已判定后端不认本机，长退避；期间若网络恢复也不影响，下轮重新判定
+        time.sleep(SUSPECT_BACKOFF_S)
+        continue
+    elif lived is not None:
+      conn_retries = 0
+      suspect_count = 0
 
     time.sleep(backoff(conn_retries))
 

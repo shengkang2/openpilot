@@ -170,7 +170,13 @@ class SelfdriveD(CruiseHelper):
 
 
     # Determine startup event
-    is_remote = build_metadata.openpilot.comma_remote or build_metadata.openpilot.sunnypilot_remote
+    # 本机补丁：原判据要求 origin 必须是 comma/sunnypilot 官方仓库，bluepilot bp7 永远
+    # 不满足，导致 TESTED_BRANCHES 白名单形同虚设。这里追加 tested_channel，
+    # 让在 version.py 白名单内、且为本地源码编译的分支也使用 startup 而非 startupMaster。
+    # comma_remote / sunnypilot_remote 本身仍保持原值，不影响发布指标。
+    is_remote = (build_metadata.openpilot.comma_remote
+                 or build_metadata.openpilot.sunnypilot_remote
+                 or build_metadata.tested_channel)
     self.startup_event = EventName.startup if is_remote and build_metadata.tested_channel else EventName.startupMaster
     if HARDWARE.get_device_type() == 'mici':
       self.startup_event = None

@@ -108,10 +108,10 @@ export const DiskSpaceVisualization = () => {
         isOpen={showClearCacheConfirm}
         onClose={() => setShowClearCacheConfirm(false)}
         onConfirm={handleConfirmClearCache}
-        title="Clear Cached Data"
+        title="清除缓存数据"
         message="Are you sure you want to clear all cached data (videos, thumbnails, GPS)? This will free up disk space but cached videos will need to be re-downloaded when viewing routes."
         confirmText="Clear Cache"
-        cancelText="Cancel"
+        cancelText="取消"
         variant="warning"
       />
       <div className="storage-bar">
@@ -178,7 +178,7 @@ export const DiskSpaceVisualization = () => {
           <button
             type="button"
             className="icon-btn"
-            title="Clear all cached data (videos, thumbnails, GPS)"
+            title="清除所有缓存数据（视频、缩略图、GPS）"
             onClick={handleClearCache}
           >
             <Icon name="delete" size={20} />
@@ -186,7 +186,7 @@ export const DiskSpaceVisualization = () => {
           <button
             type="button"
             className="icon-btn"
-            title="Refresh routes"
+            title="刷新行程"
             onClick={handleRefresh}
           >
             <Icon name="refresh" size={20} />

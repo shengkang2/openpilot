@@ -113,7 +113,9 @@ class LateralCurvExt:
   def __init__(self, CP, CP_SP):
     # SubMaster for model data, live parameters, and selfdrive state
     # liveDelay is consumed by LateralAngleExt (variable lookup time); harmless for curvature mode.
-    self.sm = messaging.SubMaster(['modelV2', 'liveParameters', 'selfdriveState', 'radarState', 'liveDelay'])
+    # modelDataV2SP carries the Blendful (alpha) nudge that LateralAngleExt adds to kappa_cmd.
+    self.sm = messaging.SubMaster(['modelV2', 'liveParameters', 'selfdriveState', 'radarState', 'liveDelay',
+                                   'modelDataV2SP'])
     self.VM = VehicleModel(CP)
     self.model = None
     self.lp = None

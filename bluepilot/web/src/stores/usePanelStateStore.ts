@@ -40,12 +40,12 @@ export const usePanelStateStore = create<PanelStateStore>((set) => ({
       if (response.success && response.state) {
         set({ state: response.state, loading: false })
       } else {
-        set({ error: 'Failed to load panel state', loading: false })
+        set({ error: '面板状态加载失败', loading: false })
       }
     } catch (error) {
       console.error('Error fetching panel state:', error)
       set({
-        error: error instanceof Error ? error.message : 'Failed to load panel state',
+        error: error instanceof Error ? error.message : '面板状态加载失败',
         loading: false,
       })
     }

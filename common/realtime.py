@@ -35,7 +35,19 @@ def drop_realtime() -> None:
 
 def set_core_affinity(cores: list[int]) -> None:
   if sys.platform == 'linux' and not PC:
-    os.sched_setaffinity(0, cores)
+    # tici 进入省电模式时会把大核 cpu4-7 offline，此时硬绑到已下线的核会抛
+    # OSError(EINVAL) 让进程直接退出（dmonitoringmodeld/modeld 绑 core 7 必崩）。
+    # 只绑当前真正可用的核；一个都没有就保持现状，让进程继续跑。
+    try:
+      avail = set(os.sched_getaffinity(0))
+    except OSError:
+      avail = set(cores)
+    target = [c for c in cores if c in avail]
+    if target:
+      try:
+        os.sched_setaffinity(0, target)
+      except OSError:
+        pass
 
 
 def config_realtime_process(cores: int | list[int], priority: int) -> None:

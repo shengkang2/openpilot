@@ -62,8 +62,8 @@ export const VehicleInfoPanel = ({ route }: VehicleInfoPanelProps) => {
         <div className="panel-title">
           <Icon name="directions_car" className="panel-icon" size={20} />
           <div className="panel-title-text">
-            <span className="panel-title-label">Vehicle Information</span>
-            <span className="panel-title-subtitle">Platform details & firmware</span>
+            <span className="panel-title-label">车辆信息</span>
+            <span className="panel-title-subtitle">平台详情与固件</span>
           </div>
         </div>
         <div className="panel-header-actions">
@@ -80,7 +80,7 @@ export const VehicleInfoPanel = ({ route }: VehicleInfoPanelProps) => {
         <div className="panel-content" id="vehicle-panel-content">
           <div className="vehicle-info-grid">
             <div className="vehicle-info-card">
-              <div className="vehicle-info-label">Platform</div>
+              <div className="vehicle-info-label">平台</div>
               <div className="vehicle-info-value">
                 {vehicleData.carFingerprint || '--'}
               </div>
@@ -90,11 +90,11 @@ export const VehicleInfoPanel = ({ route }: VehicleInfoPanelProps) => {
               <div className="vehicle-info-value">{vehicleData.carVin || '--'}</div>
             </div>
             <div className="vehicle-info-card">
-              <div className="vehicle-info-label">Brand</div>
+              <div className="vehicle-info-label">品牌</div>
               <div className="vehicle-info-value">{vehicleData.brand || '--'}</div>
             </div>
             <div className="vehicle-info-card">
-              <div className="vehicle-info-label">Fingerprint Source</div>
+              <div className="vehicle-info-label">指纹来源</div>
               <div className="vehicle-info-value">
                 {vehicleData.fingerprintSource?.toUpperCase() || '--'}
               </div>
@@ -103,13 +103,13 @@ export const VehicleInfoPanel = ({ route }: VehicleInfoPanelProps) => {
 
           {filteredFirmware.length > 0 && (
             <div className="firmware-section">
-              <h4 className="firmware-section-title">ECU Firmware Versions</h4>
+              <h4 className="firmware-section-title">ECU 固件版本</h4>
               <div className="firmware-table-wrapper">
                 <table className="firmware-table">
                   <thead>
                     <tr>
                       <th>ECU</th>
-                      <th>Firmware Version</th>
+                      <th>固件版本</th>
                     </tr>
                   </thead>
                   <tbody>

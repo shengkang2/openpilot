@@ -76,7 +76,7 @@ export const RouteDownloadModal = ({ isOpen, onClose, route }: RouteDownloadModa
         camera,
         status: 'processing',
         progress: 0,
-        message: 'Starting export...'
+        message: '开始导出…'
       })
       return newMap
     })
@@ -180,7 +180,7 @@ export const RouteDownloadModal = ({ isOpen, onClose, route }: RouteDownloadModa
       type: logType,
       status: 'processing',
       progress: 0,
-      message: 'Starting download...'
+      message: '开始下载…'
     })
 
     const url = `/api/download/${logType}/${routeId}`
@@ -207,7 +207,7 @@ export const RouteDownloadModal = ({ isOpen, onClose, route }: RouteDownloadModa
   const driverProgress = exportProgress.get('driver')
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Export Videos & Logs">
+    <Modal isOpen={isOpen} onClose={onClose} title="导出视频与日志">
       <div className="route-download-modal">
         {/* Route Info */}
         <div className="download-route-info">
@@ -222,16 +222,16 @@ export const RouteDownloadModal = ({ isOpen, onClose, route }: RouteDownloadModa
         <div className="download-section">
           <h3 className="download-section-title">
             <Icon name="videocam" size={20} />
-            Camera Videos
+            摄像头视频
           </h3>
           <p className="download-section-description">
-            Download full-route videos for each camera view. Videos are high-quality MP4 files.
+            导出整段行程中每个视角的视频，格式为高质量 MP4 文件。
           </p>
 
           <div className="camera-downloads">
             <div className="camera-download-item">
               <div className="camera-info">
-                <strong>Front Camera</strong>
+                <strong>前视摄像头</strong>
                 <span className="camera-size">{formatSize(cameraSizes.front)}</span>
               </div>
               <button
@@ -254,7 +254,7 @@ export const RouteDownloadModal = ({ isOpen, onClose, route }: RouteDownloadModa
 
             <div className="camera-download-item">
               <div className="camera-info">
-                <strong>Wide Camera</strong>
+                <strong>广角摄像头</strong>
                 <span className="camera-size">{formatSize(cameraSizes.wide)}</span>
               </div>
               <button
@@ -277,7 +277,7 @@ export const RouteDownloadModal = ({ isOpen, onClose, route }: RouteDownloadModa
 
             <div className="camera-download-item">
               <div className="camera-info">
-                <strong>Driver Camera</strong>
+                <strong>驾驶员摄像头</strong>
                 <span className="camera-size">{formatSize(cameraSizes.driver)}</span>
               </div>
               <button
@@ -304,7 +304,7 @@ export const RouteDownloadModal = ({ isOpen, onClose, route }: RouteDownloadModa
         <div className="download-section">
           <h3 className="download-section-title">
             <Icon name="description" size={20} />
-            Log Files
+            日志文件
           </h3>
           <p className="download-section-description">
             Download compressed log files for route analysis, debugging, and data review. These files contain timestamped telemetry data in cereal format.
@@ -313,7 +313,7 @@ export const RouteDownloadModal = ({ isOpen, onClose, route }: RouteDownloadModa
           <div className="log-downloads">
             <div className="log-download-item">
               <div className="log-info">
-                <strong>qlog (Controls/CAN)</strong>
+                <strong>qlog（控制/CAN）</strong>
                 <span className="log-description">Control commands, steering angles, gas/brake signals, CAN bus messages, lateral/longitudinal plans, and vehicle state data</span>
                 <span className="log-size">{formatSize(cameraSizes.qlog)}</span>
               </div>
@@ -337,7 +337,7 @@ export const RouteDownloadModal = ({ isOpen, onClose, route }: RouteDownloadModa
 
             <div className="log-download-item">
               <div className="log-info">
-                <strong>rlog (Raw Data)</strong>
+                <strong>rlog（原始数据）</strong>
                 <span className="log-description">Camera frame metadata, driving model predictions, radar tracks, IMU data, GPS coordinates, and full sensor suite outputs</span>
                 <span className="log-size">{formatSize(cameraSizes.rlog)}</span>
               </div>

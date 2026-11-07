@@ -38,7 +38,7 @@ export const useSystemStore = create<SystemState>((set) => ({
       set({ metrics, error: null })
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to fetch metrics',
+        error: error instanceof Error ? error.message : '系统指标获取失败',
       })
     }
   },
@@ -49,7 +49,7 @@ export const useSystemStore = create<SystemState>((set) => ({
       set({ status, error: null })
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to fetch status',
+        error: error instanceof Error ? error.message : '设备状态获取失败',
       })
     }
   },
@@ -60,7 +60,7 @@ export const useSystemStore = create<SystemState>((set) => ({
       set({ diskSpace, error: null })
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to fetch disk space',
+        error: error instanceof Error ? error.message : '磁盘空间获取失败',
       })
     }
   },

@@ -168,24 +168,24 @@ export const Home = ({ deviceStatus = 'checking' }: HomeProps) => {
     <>
       <Header
         deviceStatus={deviceStatus}
-        subtitle="Settings, routes, and diagnostics"
+        subtitle="设置、行程与诊断"
       />
       <div className="dashboard-page">
         <div className="dashboard-insights-grid">
           <section className="dashboard-status-panel">
             <div className="panel-heading">
-              <h2>System Status</h2>
+              <h2>系统状态</h2>
             </div>
             <div className="status-pills-container">
               {/* System Metrics */}
               <div className="status-pills-row">
-                <div className="status-pill" title="System uptime">
+                <div className="status-pill" title="系统运行时长">
                   <Icon name="schedule" className="pill-icon" />
-                  <span className="pill-label">Uptime</span>
+                  <span className="pill-label">运行时长</span>
                   <span className="pill-value">{getUptimeDisplay()}</span>
                 </div>
 
-                <div className={`status-pill ${getTempColorClass(metrics?.temperature)}`} title="CPU Temperature">
+                <div className={`status-pill ${getTempColorClass(metrics?.temperature)}`} title="CPU 温度">
                   <Icon name="thermostat" className="pill-icon" />
                   <span className="pill-label">CPU</span>
                   <span className="pill-value">
@@ -193,17 +193,17 @@ export const Home = ({ deviceStatus = 'checking' }: HomeProps) => {
                   </span>
                 </div>
 
-                <div className={`status-pill ${getMemoryColorClass(metrics?.memory_percent)}`} title="Memory Usage">
+                <div className={`status-pill ${getMemoryColorClass(metrics?.memory_percent)}`} title="内存占用">
                   <Icon name="memory" className="pill-icon" />
-                  <span className="pill-label">Memory</span>
+                  <span className="pill-label">内存</span>
                   <span className="pill-value">
                     {metrics?.memory_percent ? `${metrics.memory_percent.toFixed(0)}%` : 'N/A'}
                   </span>
                 </div>
 
-                <div className={`status-pill ${getStorageColorClass()}`} title="Storage Free">
+                <div className={`status-pill ${getStorageColorClass()}`} title="剩余存储">
                   <Icon name="storage" className="pill-icon" />
-                  <span className="pill-label">Storage</span>
+                  <span className="pill-label">存储</span>
                   <span className="pill-value">{getStorageDisplay()}</span>
                 </div>
               </div>
@@ -215,7 +215,7 @@ export const Home = ({ deviceStatus = 'checking' }: HomeProps) => {
                   <span className="pill-value">{deviceInfo?.dongle_id || 'N/A'}</span>
                 </div>
                 <div className="status-pill">
-                  <span className="pill-label">Serial</span>
+                  <span className="pill-label">序列号</span>
                   <span className="pill-value">{deviceInfo?.serial || 'N/A'}</span>
                 </div>
               </div>
@@ -223,15 +223,15 @@ export const Home = ({ deviceStatus = 'checking' }: HomeProps) => {
               {/* Version Info */}
               <div className="status-pills-row">
                 <div className="status-pill">
-                  <span className="pill-label">BP Version</span>
+                  <span className="pill-label">BP 版本</span>
                   <span className="pill-value">{deviceInfo?.bp_version ? `v${deviceInfo.bp_version}` : 'N/A'}</span>
                 </div>
                 <div className="status-pill">
-                  <span className="pill-label">SP Version</span>
+                  <span className="pill-label">SP 版本</span>
                   <span className="pill-value">{deviceInfo?.sp_version || 'N/A'}</span>
                 </div>
                 <div className="status-pill">
-                  <span className="pill-label">OP Version</span>
+                  <span className="pill-label">OP 版本</span>
                   <span className="pill-value">{deviceInfo?.op_version || 'N/A'}</span>
                 </div>
               </div>
@@ -240,55 +240,55 @@ export const Home = ({ deviceStatus = 'checking' }: HomeProps) => {
 
           <section className="dashboard-drive-stats-panel">
             <div className="panel-heading">
-              <h2>Drive Statistics</h2>
+              <h2>行车统计</h2>
             </div>
             {driveStatsLoading ? (
-              <div className="drive-stats-loading">Loading...</div>
+              <div className="drive-stats-loading">加载中…</div>
             ) : driveStats ? (
               <div className="drive-stats-content">
                 <div className="drive-stats-group">
-                  <h3 className="stats-period-title">All Time</h3>
+                  <h3 className="stats-period-title">全部时间</h3>
                   <div className="stats-cards-grid">
                     <div className="stat-card all-time">
                       <div className="stat-value">{driveStats.all.routes.toLocaleString()}</div>
-                      <div className="stat-label">Total Drives</div>
+                      <div className="stat-label">总行程</div>
                     </div>
                     <div className="stat-card all-time">
-                      <div className="stat-value">{Math.round(driveStats.all.distanceMiles).toLocaleString()}</div>
-                      <div className="stat-label">Miles Driven</div>
+                      <div className="stat-value">{Math.round(driveStats.all.distance / 1000).toLocaleString()}</div>
+                      <div className="stat-label">行驶里程</div>
                     </div>
                     <div className="stat-card all-time">
                       <div className="stat-value">{Math.round(driveStats.all.duration / 3600).toLocaleString()}</div>
-                      <div className="stat-label">Hours Driven</div>
+                      <div className="stat-label">行驶时长</div>
                     </div>
                   </div>
                 </div>
                 <div className="drive-stats-group">
-                  <h3 className="stats-period-title">This Week</h3>
+                  <h3 className="stats-period-title">本周</h3>
                   <div className="stats-cards-grid">
                     <div className="stat-card">
                       <div className="stat-value">{driveStats.week.routes}</div>
-                      <div className="stat-label">Drives</div>
+                      <div className="stat-label">行程</div>
                     </div>
                     <div className="stat-card">
-                      <div className="stat-value">{Math.round(driveStats.week.distanceMiles)}</div>
-                      <div className="stat-label">Miles</div>
+                      <div className="stat-value">{Math.round(driveStats.week.distance / 1000)}</div>
+                      <div className="stat-label">公里</div>
                     </div>
                     <div className="stat-card">
                       <div className="stat-value">{Math.round(driveStats.week.duration / 3600)}</div>
-                      <div className="stat-label">Hours</div>
+                      <div className="stat-label">小时</div>
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="drive-stats-empty">No drive data available</div>
+              <div className="drive-stats-empty">暂无行车数据</div>
             )}
           </section>
 
           <section className="dashboard-quick-panel">
             <div className="panel-heading">
-              <h2>Quick Access</h2>
+              <h2>快捷入口</h2>
             </div>
             <div className="quick-links-grid">
               <button
@@ -301,8 +301,8 @@ export const Home = ({ deviceStatus = 'checking' }: HomeProps) => {
                   <Icon name="place" />
                 </div>
                 <div className="quick-link-copy">
-                  <span className="label">Routes</span>
-                  <span className="subtext">{deviceStatus === 'onroad' ? 'Unavailable while driving' : 'Review recordings'}</span>
+                  <span className="label">行程</span>
+                  <span className="subtext">{deviceStatus === 'onroad' ? '行驶中不可用' : '查看行车录像'}</span>
                 </div>
                 <span className="link-badge">{status?.routes_count || 0}</span>
               </button>
@@ -311,8 +311,8 @@ export const Home = ({ deviceStatus = 'checking' }: HomeProps) => {
                   <Icon name="tune" />
                 </div>
                 <div className="quick-link-copy">
-                  <span className="label">Parameters</span>
-                  <span className="subtext">Manage system params</span>
+                  <span className="label">参数</span>
+                  <span className="subtext">管理系统参数</span>
                 </div>
                 <span className="link-badge">{paramCount}</span>
               </button>
@@ -321,8 +321,8 @@ export const Home = ({ deviceStatus = 'checking' }: HomeProps) => {
                   <Icon name="description" />
                 </div>
                 <div className="quick-link-copy">
-                  <span className="label">System Logs</span>
-                  <span className="subtext">View live system logs</span>
+                  <span className="label">系统日志</span>
+                  <span className="subtext">查看实时系统日志</span>
                 </div>
               </button>
             </div>
@@ -333,7 +333,7 @@ export const Home = ({ deviceStatus = 'checking' }: HomeProps) => {
               <div className="panel-heading">
                 <h2>
                   <Icon name="error" className="error-icon" />
-                  Recent Crash
+                  最近崩溃
                 </h2>
               </div>
               <div className="error-card">
@@ -354,7 +354,7 @@ export const Home = ({ deviceStatus = 'checking' }: HomeProps) => {
                   className="view-logs-button"
                   onClick={() => navigate('/logs')}
                 >
-                  View Full Logs
+                  查看完整日志
                 </button>
               </div>
             </section>

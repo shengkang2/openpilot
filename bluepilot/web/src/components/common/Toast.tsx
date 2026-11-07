@@ -43,7 +43,7 @@ export const Toast: React.FC<ToastProps> = ({ message, type = 'success', duratio
       <button
         className="toast__close"
         onClick={onClose}
-        aria-label="Close notification"
+        aria-label="关闭通知"
         type="button"
       >
         <Icon name="close" size={16} />

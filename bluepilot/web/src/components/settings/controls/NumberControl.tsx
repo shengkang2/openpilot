@@ -122,7 +122,7 @@ export function NumberControl({ control, disabled, disabledReason }: NumberContr
           className="number-control__btn number-control__btn--minus"
           onClick={decrement}
           disabled={disabled || localValue <= control.min}
-          aria-label="Decrease value"
+          aria-label="减小数值"
         >
           <Icon name="remove" size={24} />
         </button>
@@ -148,7 +148,7 @@ export function NumberControl({ control, disabled, disabledReason }: NumberContr
           className="number-control__btn number-control__btn--plus"
           onClick={increment}
           disabled={disabled || localValue >= control.max}
-          aria-label="Increase value"
+          aria-label="增大数值"
         >
           <Icon name="add" size={24} />
         </button>

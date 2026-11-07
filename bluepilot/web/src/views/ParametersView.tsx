@@ -14,11 +14,11 @@ type SortColumn = 'key' | 'value' | 'type' | 'category' | 'last_modified'
 type SortDirection = 'asc' | 'desc'
 
 const SORT_OPTIONS: { label: string; value: SortColumn }[] = [
-  { label: 'Parameter', value: 'key' },
-  { label: 'Value', value: 'value' },
-  { label: 'Type', value: 'type' },
-  { label: 'Category', value: 'category' },
-  { label: 'Last Modified', value: 'last_modified' },
+  { label: '参数', value: 'key' },
+  { label: '值', value: 'value' },
+  { label: '类型', value: 'type' },
+  { label: '分类', value: 'category' },
+  { label: '最后修改', value: 'last_modified' },
 ]
 
 const NUMERIC_TYPES = new Set(['number', 'int', 'float'])
@@ -57,7 +57,7 @@ export const ParametersView = ({ deviceStatus = 'checking' }: ParametersViewProp
   }, [fetchParams])
 
   const formatLastModified = (timestamp?: number): string => {
-    if (!timestamp) return 'Never'
+    if (!timestamp) return '从未'
 
     const date = new Date(timestamp * 1000)
     const now = new Date()
@@ -66,11 +66,11 @@ export const ParametersView = ({ deviceStatus = 'checking' }: ParametersViewProp
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
 
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    if (diffDays < 7) return `${diffDays}d ago`
-    return date.toLocaleDateString()
+    if (diffMins < 1) return '刚刚'
+    if (diffMins < 60) return `${diffMins} 分钟前`
+    if (diffHours < 24) return `${diffHours} 小时前`
+    if (diffDays < 7) return `${diffDays} 天前`
+    return date.toLocaleDateString('zh-CN')
   }
 
   const sortedParams = useMemo(() => {
@@ -163,7 +163,7 @@ export const ParametersView = ({ deviceStatus = 'checking' }: ParametersViewProp
       <>
         <Header deviceStatus={deviceStatus} />
         <div className="loading">
-          <LoadingSpinner size="large" message="Loading parameters..." />
+          <LoadingSpinner size="large" message="正在加载参数…" />
         </div>
       </>
     )
@@ -171,13 +171,13 @@ export const ParametersView = ({ deviceStatus = 'checking' }: ParametersViewProp
 
   return (
     <>
-      <Header deviceStatus={deviceStatus} subtitle="Manage system parameters" />
+      <Header deviceStatus={deviceStatus} subtitle="管理系统参数" />
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="params-manager">
         <div className="params-header">
           <div className="params-controls">
             <div className="params-sort-controls">
-              <label htmlFor="params-sort">Sort</label>
+              <label htmlFor="params-sort">排序</label>
               <select
                 id="params-sort"
                 value={sortColumn}
@@ -201,16 +201,16 @@ export const ParametersView = ({ deviceStatus = 'checking' }: ParametersViewProp
             <ToggleSwitch
               checked={editMode}
               onChange={setEditMode}
-              label="Edit Mode"
+              label="编辑模式"
               size="compact"
               alignLabel="start"
               className={`params-edit-toggle ${editMode ? 'active' : ''}`}
-              title="Enable parameter editing (use with caution)"
+              title="启用参数编辑（谨慎使用）"
             />
             <input
               type="text"
               id="params-search"
-              placeholder="Search parameters..."
+              placeholder="搜索参数…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -219,7 +219,7 @@ export const ParametersView = ({ deviceStatus = 'checking' }: ParametersViewProp
         <div className="params-content">
           {sortedParams.length === 0 ? (
             <div className="empty-state">
-              <p>No parameters found</p>
+              <p>未找到参数</p>
             </div>
           ) : (
             <div className="params-list">
@@ -250,12 +250,12 @@ export const ParametersView = ({ deviceStatus = 'checking' }: ParametersViewProp
                             {param.critical && <span className="param-badge critical">critical</span>}
                           </div>
                         </div>
-                        <div className="param-last-modified">Last modified: {formatLastModified(param.last_modified)}</div>
+                        <div className="param-last-modified">修改时间：{formatLastModified(param.last_modified)}</div>
                       </div>
                       <div className="param-row__actions">
                         {param.readonly ? (
                           <Button size="small" variant="ghost" className="param-edit-btn" disabled>
-                            Read-Only
+                            只读
                           </Button>
                         ) : (
                           <Button
@@ -266,18 +266,18 @@ export const ParametersView = ({ deviceStatus = 'checking' }: ParametersViewProp
                             disabled={!editMode || param.type === 'bytes'}
                             title={param.type === 'bytes' ? 'Binary parameters are view-only' : undefined}
                           >
-                            Edit
+                            编辑
                           </Button>
                         )}
                       </div>
                     </div>
                     <div
                       className="param-row__value"
-                      title="Click to view full value"
+                      title="点击查看完整值"
                       onClick={() => handleViewValue(param)}
                     >
                       <div className="param-row__value-header">
-                        <span className="value-label">Value</span>
+                        <span className="value-label">值</span>
                         <div className="value-pill-group">
                           {typeBadge && <span className="value-pill value-pill--type">{typeBadge}</span>}
                           {attributeBadges.map((attr) => (
@@ -294,17 +294,17 @@ export const ParametersView = ({ deviceStatus = 'checking' }: ParametersViewProp
                       <pre className="value-code-block">
                         <code>{preview}</code>
                       </pre>
-                      <span className="value-footer-hint">Click to inspect full value</span>
+                      <span className="value-footer-hint">点击查看完整值</span>
                     </div>
                     {param.description && (
                       <div className="param-description">
-                        <span className="description-label">Description</span>
+                        <span className="description-label">说明</span>
                         <p>{param.description}</p>
                       </div>
                     )}
                     {param.critical && (
                       <div className="critical-flag">
-                        <span>⚠️ Critical parameter</span>
+                        <span>⚠️ 关键参数，修改需谨慎</span>
                       </div>
                     )}
                   </div>
@@ -318,14 +318,14 @@ export const ParametersView = ({ deviceStatus = 'checking' }: ParametersViewProp
       <Modal
         isOpen={editingParam !== null}
         onClose={() => setEditingParam(null)}
-        title="Edit Parameter"
+        title="编辑参数"
         size="small"
       >
         {editingParam && (
           <div className="edit-param-modal-new">
             <div className="edit-param-header">
               <div className="edit-param-key-section">
-                <span className="param-key-label">Parameter Key</span>
+                <span className="param-key-label">参数键名</span>
                 <code className="param-key-value-edit">{editingParam.key}</code>
               </div>
               <div className="edit-param-type">
@@ -335,14 +335,14 @@ export const ParametersView = ({ deviceStatus = 'checking' }: ParametersViewProp
 
             {editingParam.description && (
               <div className="edit-param-description">
-                <span className="description-label">Description</span>
+                <span className="description-label">说明</span>
                 <p>{editingParam.description}</p>
               </div>
             )}
 
             <div className="edit-param-input-section">
               <label htmlFor="edit-param-value" className="input-label">
-                New Value
+                新值
               </label>
               {editingParam.type && BOOLEAN_TYPES.has(editingParam.type.toLowerCase()) ? (
                 <select
@@ -372,18 +372,18 @@ export const ParametersView = ({ deviceStatus = 'checking' }: ParametersViewProp
               <div className="edit-warning-banner">
                 <span className="warning-icon">⚠️</span>
                 <div className="warning-content">
-                  <strong>Caution: Critical Parameter</strong>
-                  <p>Changes to this parameter may affect system stability.</p>
+                  <strong>注意：关键参数</strong>
+                  <p>修改此参数可能影响系统稳定性。</p>
                 </div>
               </div>
             )}
 
             <div className="modal-actions">
               <Button variant="secondary" onClick={() => setEditingParam(null)}>
-                Cancel
+                取消
               </Button>
               <Button variant="primary" onClick={handleSave}>
-                Save Changes
+                保存修改
               </Button>
             </div>
           </div>
@@ -393,19 +393,19 @@ export const ParametersView = ({ deviceStatus = 'checking' }: ParametersViewProp
       <Modal
         isOpen={viewValueModal !== null}
         onClose={() => setViewValueModal(null)}
-        title="Parameter Details"
+        title="参数详情"
         size="large"
       >
         {viewValueModal && (
           <div className="param-modal-simple">
             <div className="param-modal-simple__header">
-              <span className="param-key-label">Parameter Key</span>
+              <span className="param-key-label">参数键名</span>
               <div className="param-key-value-wrapper">
                 <code className="param-key-value">{viewValueModal.key}</code>
                 <button
                   className="icon-btn"
                   onClick={() => copyToClipboard(viewValueModal.key, 'Key')}
-                  title="Copy key"
+                  title="复制键名"
                 >
                   📋
                 </button>
@@ -441,17 +441,17 @@ export const ParametersView = ({ deviceStatus = 'checking' }: ParametersViewProp
                 variant="secondary"
                 onClick={() => {
                   if (formattedModalValue) {
-                    copyToClipboard(modalCopyValue, 'Value')
+                    copyToClipboard(modalCopyValue, '值')
                   }
                 }}
               >
-                Copy Value
+                复制值
               </Button>
               <Button variant="secondary" onClick={() => copyToClipboard(viewValueModal.key, 'Key')}>
-                Copy Key
+                复制键名
               </Button>
               <Button variant="primary" onClick={() => setViewValueModal(null)}>
-                Close
+                关闭
               </Button>
             </div>
           </div>

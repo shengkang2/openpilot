@@ -34,7 +34,7 @@ PROGRESS_STAGES = {"connect": "Connecting", "fetch": "Downloading", "upload": "U
 
 
 def _bool_text(v: bool) -> str:
-  return "Yes" if v else "No"
+  return tr("Yes") if v else tr("No")
 
 
 class JetlinkLayout(Widget):
@@ -42,15 +42,15 @@ class JetlinkLayout(Widget):
     super().__init__()
     self._last_description = None
     # what the far end reported, read at most once a second (files and params, not per frame)
-    self._far = {'loaded': NONE_TEXT, 'built': "", 'model': NONE_TEXT, 'following': True, 'at': 0.0}
+    self._far = {'loaded': tr(NONE_TEXT), 'built': "", 'model': tr(NONE_TEXT), 'following': True, 'at': 0.0}
 
     self._link_item = multiple_button_item(
       "Jetlink", DESCRIPTION,
-      buttons=[LINK_MODE_TITLES[m] for m in LINK_MODES],
+      buttons=[tr(LINK_MODE_TITLES[m]) for m in LINK_MODES],
       selected_index=LINK_MODES.index(jetlink_ui.link_mode()),
       button_width=250, callback=self._on_link_mode)
 
-    self._state_item = text_item("Link state", lambda: jetlink_ui.STATE_TEXT[ui_state.jetlink_state],
+    self._state_item = text_item("Link state", lambda: tr(jetlink_ui.STATE_TEXT[ui_state.jetlink_state]),
                                  description=lambda: jetlink_ui.status_note(self._far['model']))
     self._transport_item = text_item("Transport", self._transport)
     self._present_item = text_item("Device online", lambda: _bool_text(bool(ui_state.jetlink and ui_state.jetlink.present)))
@@ -60,9 +60,10 @@ class JetlinkLayout(Widget):
                                  lambda: _bool_text(bool(ui_state.jetlink and ui_state.jetlink.ready)))
     self._progress_item = text_item("Progress", self._progress)
     self._reason_item = text_item("Unavailable",
-                                  lambda: (ui_state.jetlink.reason if ui_state.jetlink and ui_state.jetlink.reason else NONE_TEXT))
-    self._adb_item = text_item("ADB", lambda: "Off (held by Jetlink)" if ui_state.adb_blocked else
-                               ("On" if ui_state.params.get_bool("AdbEnabled") else "Off"))
+                                  lambda: (jetlink_ui.reason_text(ui_state.jetlink.reason)
+                                           if ui_state.jetlink and ui_state.jetlink.reason else tr(NONE_TEXT)))
+    self._adb_item = text_item("ADB", lambda: tr("Off (held by Jetlink)") if ui_state.adb_blocked else
+                               (tr("On") if ui_state.params.get_bool("AdbEnabled") else tr("Off")))
 
     # a sealed setting: no charging item is shown, and a legacy value is cleared
     try:
@@ -79,7 +80,7 @@ class JetlinkLayout(Widget):
     self._source_item = button_item("Big model", "Select", description=self._source_description,
                                     callback=self._open_source_dialog)
     self._far_end_item = text_item("Device's model", self._far_end_loaded, description=self._far_end_built)
-    self._refresh_item = button_item("Update model list", lambda: "Updating..." if self._refreshing else "Update",
+    self._refresh_item = button_item("Update model list", lambda: tr("Updating...") if self._refreshing else tr("Update"),
                                      description=lambda: self._refresh_result or
                                      "Fetches the list the Jetlink apps use, to name the phone's models.",
                                      callback=self._refresh_catalog, enabled=lambda: not self._refreshing)
@@ -94,14 +95,14 @@ class JetlinkLayout(Widget):
   @staticmethod
   def _transport() -> str:
     j = ui_state.jetlink
-    return j.transport if j is not None else NONE_TEXT
+    return tr(j.transport) if j is not None else tr(NONE_TEXT)
 
   @staticmethod
   def _port() -> str:
     j = ui_state.jetlink
     if j is None or j.port is None:
-      return NONE_TEXT
-    return "Nothing" if j.port == "empty" else "Device"
+      return tr(NONE_TEXT)
+    return tr("Nothing on the port") if j.port == "empty" else tr("A device on the port")
 
   def _model(self) -> str:
     """The model that will drive: the far end's loaded one when following, else the comma's pick."""
@@ -111,7 +112,7 @@ class JetlinkLayout(Widget):
   def _progress() -> str:
     p = jetlink_ui.progress()
     if p is None:
-      return NONE_TEXT
+      return tr(NONE_TEXT)
     stage, frac, msg = p
     label = tr(PROGRESS_STAGES.get(stage, stage))
     pct = f" {frac * 100:.0f}%" if 0.0 < frac < 1.0 else ""
@@ -136,9 +137,9 @@ class JetlinkLayout(Widget):
     if following and loaded:
       model = name(loaded)
     elif j is not None:
-      model = j.active_model or j.model or j.default_model or NONE_TEXT
+      model = j.active_model or j.model or j.default_model or tr(NONE_TEXT)
     else:
-      model = NONE_TEXT
+      model = tr(NONE_TEXT)
     self._far = {'loaded': name(loaded) or tr("Not reported"),
                  'built': (tr("Built on the device: ") + ", ".join(name(b) for b in built)) if built
                           else tr("The device has not reported a built model yet (shown once it connects)."),

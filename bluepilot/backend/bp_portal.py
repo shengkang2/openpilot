@@ -2343,6 +2343,60 @@ class WebRoutesHandler(BaseHTTPRequestHandler):
                     else:
                         logger.info("No cached stats found, will fetch from API")
 
+                    # Fallback #1: local drive stats already aggregated by the device UI (LocalDriveStats param)
+                    # The Qt/raylib UI scans /data/media/0/realdata locally, so reuse it here to keep
+                    # the portal card consistent with what the device screen shows.
+                    try:
+                        local_raw = params.get("LocalDriveStats")
+                        if isinstance(local_raw, bytes):
+                            local_raw = local_raw.decode('utf-8', errors='ignore')
+                        if isinstance(local_raw, dict):
+                            local_stats = local_raw
+                        elif isinstance(local_raw, str) and local_raw.strip():
+                            local_stats = json.loads(local_raw)
+                        else:
+                            local_stats = None
+
+                        def _num(src, key):
+                            try:
+                                return float((src or {}).get(key, 0) or 0)
+                            except (TypeError, ValueError):
+                                return 0.0
+
+                        def convert_local_stats(src):
+                            distance_miles = _num(src, 'distance')
+                            duration_minutes = _num(src, 'minutes')
+                            routes_count = int(_num(src, 'routes'))
+                            distance_meters = distance_miles * 1609.34
+                            duration_seconds = duration_minutes * 60
+                            avg_speed = distance_meters / duration_seconds if duration_seconds > 0 else 0
+                            return {
+                                'routes': routes_count,
+                                'distance': distance_meters,
+                                'distanceMiles': distance_miles,
+                                'duration': duration_seconds,
+                                'durationMinutes': duration_minutes,
+                                'averageSpeed': avg_speed,
+                            }
+
+                        if local_stats:
+                            local_all = convert_local_stats(local_stats.get('all'))
+                            local_week = convert_local_stats(local_stats.get('week'))
+                            if local_all['routes'] or local_all['distance'] or local_all['duration']:
+                                logger.info(f"Using local drive stats: {local_all['routes']} routes, "
+                                            f"{round(local_all['distanceMiles'], 1)} miles, "
+                                            f"{round(local_all['durationMinutes'])} minutes")
+                                self.send_json_response({
+                                    'success': True,
+                                    'all': local_all,
+                                    'week': local_week,
+                                    'source': 'local_param',
+                                    'timestamp': datetime.now().isoformat()
+                                })
+                                return
+                    except Exception as local_error:
+                        logger.warning(f"LocalDriveStats fallback failed: {local_error}")
+
                     # No cached data available - try fetching from Comma API first, then calculate from routes as fallback
                     logger.info("No cached drive stats in ApiCache_DriveStats param, attempting to fetch from Comma API...")
                     

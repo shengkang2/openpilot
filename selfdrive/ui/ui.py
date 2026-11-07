@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+
+import common.params_compat  # noqa: F401  BP hotfix: tolerant params (see common/params_compat.py)
 import os
 import time
 

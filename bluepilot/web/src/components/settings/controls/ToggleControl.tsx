@@ -95,7 +95,7 @@ export function ToggleControl({ control, disabled, disabledReason }: ToggleContr
         isOpen={showConfirm}
         onClose={handleCancel}
         onConfirm={handleConfirm}
-        title={`${pendingToggleValue ? 'Enable' : 'Disable'} ${title}`}
+        title={`${pendingToggleValue ? 'Enable' : '关闭'} ${title}`}
         message={
           control.confirm_text ? (
             <div dangerouslySetInnerHTML={{ __html: control.confirm_text }} />
@@ -103,7 +103,7 @@ export function ToggleControl({ control, disabled, disabledReason }: ToggleContr
             `Are you sure you want to ${pendingToggleValue ? 'enable' : 'disable'} ${title}?`
           )
         }
-        confirmText={control.confirm_yes_text || (pendingToggleValue ? 'Enable' : 'Disable')}
+        confirmText={control.confirm_yes_text || (pendingToggleValue ? 'Enable' : '关闭')}
         cancelText={control.confirm_no_text || 'Cancel'}
         variant={style?.backgroundColor?.toLowerCase().includes('e22c2c') ? 'danger' : 'warning'}
       />

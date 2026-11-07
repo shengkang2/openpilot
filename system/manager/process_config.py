@@ -136,7 +136,13 @@ def and_(*fns):
   return lambda *args: operator.and_(*(fn(*args) for fn in fns))
 
 procs = [
-  DaemonProcess("manage_athenad", "system.athena.manage_athenad", "AthenadPid"),
+  # 本机补丁（2026-10-29）：彻底停用 athenad。
+  # 行车日志里 athenad 稳定吃 22%~28% 单核（接车时），排查发现是 create_connection 成功后
+  # 立即把 conn_retries 清零，导致"连上→被拒→重连"死循环。虽已加退避补丁压到 0.00%，
+  # 但本机 v2/pilotauth 恒返回 403、20 个远程方法可用数 0/20，远程功能本就是坏的，
+  # 故按用户要求彻底停用，不留后台 HTTP/DNS 行为。
+  # 需要恢复：把下面一行取消注释，回滚 athenad.py.bak_20261029_cpu，重启 manager。
+  # DaemonProcess("manage_athenad", "system.athena.manage_athenad", "AthenadPid"),
 
   NativeProcess("loggerd", "system/loggerd", ["./loggerd"], logging),
   NativeProcess("encoderd", "system/loggerd", ["./encoderd"], only_onroad),

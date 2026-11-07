@@ -152,6 +152,31 @@ class DesiredSteeringAngleElement(LateralControlElement):
     return UiElement(value, "DESIRED STEER", self.unit, color)
 
 
+class SteeringAngleCompareElement(LateralControlElement):
+  """BP: 实际转角 vs 需求转角，一眼看偏差。"""
+
+  def __init__(self):
+    self.unit = ""
+
+  def update(self, sm, is_metric: bool) -> UiElement:
+    car_state = sm['carState']
+    car_control = sm['carControl']
+    actual = car_state.steeringAngleDeg
+    desired = car_control.actuators.steeringAngleDeg
+    lat_active = car_control.latActive
+    steer_override = car_state.steeringPressed
+    err = desired - actual
+
+    value = f"{actual:+.1f}/{desired:+.1f}" if lat_active else f"{actual:+.1f}/-"
+    color = self.get_lat_color(lat_active, steer_override)
+    if lat_active and abs(err) > 10:
+      color = rl.RED
+    elif lat_active and abs(err) > 4:
+      color = rl.Color(255, 188, 0, 255)
+
+    return UiElement(value, "STEER ACT/RQ", self.unit, color)
+
+
 class ActualLateralAccelElement(LateralControlElement):
   def __init__(self):
     self.unit = "m/s^2"

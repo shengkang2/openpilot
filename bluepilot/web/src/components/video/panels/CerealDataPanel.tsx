@@ -192,8 +192,8 @@ export const CerealDataPanel = ({ route, currentSegment, videoCurrentTime = 0 }:
         <div className="panel-title">
           <Icon name="data_usage" className="panel-icon" size={20} />
           <div className="panel-title-text">
-            <span className="panel-title-label">Cereal Data Viewer</span>
-            <span className="panel-title-subtitle">Cap'n Proto message explorer</span>
+            <span className="panel-title-label">Cereal 数据查看器</span>
+            <span className="panel-title-subtitle">Cap'n Proto 消息浏览器</span>
           </div>
         </div>
         <div className="panel-header-actions">
@@ -206,7 +206,7 @@ export const CerealDataPanel = ({ route, currentSegment, videoCurrentTime = 0 }:
                 stopCereal()
               }}
             >
-              Stop
+              停止
             </button>
           ) : (
             <button
@@ -217,7 +217,7 @@ export const CerealDataPanel = ({ route, currentSegment, videoCurrentTime = 0 }:
                 loadCerealData()
               }}
             >
-              Load Data
+              加载数据
             </button>
           )}
           <Icon
@@ -232,43 +232,43 @@ export const CerealDataPanel = ({ route, currentSegment, videoCurrentTime = 0 }:
           {/* Cereal Controls */}
           <div className="cereal-controls cereal-controls-sticky">
             <div className="cereal-control-row">
-              <label htmlFor="cereal-message-select">Message Type:</label>
+              <label htmlFor="cereal-message-select">消息类型：</label>
               <select
                 id="cereal-message-select"
                 className="cereal-message-select"
                 value={messageType}
                 onChange={(e) => setMessageType(e.target.value)}
               >
-                <optgroup label="Vehicle Data">
-                  <option value="carState">carState - Speed, steering, pedals</option>
-                  <option value="carControl">carControl - Actuator commands</option>
-                  <option value="carOutput">carOutput - Actual outputs</option>
-                  <option value="carParams">carParams - Vehicle config</option>
+                <optgroup label="车辆数据">
+                  <option value="carState">carState - 车速、转向、踏板</option>
+                  <option value="carControl">carControl - 执行器指令</option>
+                  <option value="carOutput">carOutput - 实际输出</option>
+                  <option value="carParams">carParams - 车辆配置</option>
                 </optgroup>
-                <optgroup label="Planning & Control">
-                  <option value="controlsState">controlsState - OP status</option>
-                  <option value="longitudinalPlan">longitudinalPlan - Speed planning</option>
-                  <option value="driverAssistance">driverAssistance - Assist features</option>
+                <optgroup label="规划与控制">
+                  <option value="controlsState">controlsState - OP 状态</option>
+                  <option value="longitudinalPlan">longitudinalPlan - 速度规划</option>
+                  <option value="driverAssistance">driverAssistance - 辅助功能</option>
                 </optgroup>
-                <optgroup label="Perception">
-                  <option value="modelV2">modelV2 - ML model outputs</option>
-                  <option value="radarState">radarState - Radar detections</option>
-                  <option value="liveTracks">liveTracks - Tracked objects</option>
+                <optgroup label="感知">
+                  <option value="modelV2">modelV2 - 模型输出</option>
+                  <option value="radarState">radarState - 雷达检测</option>
+                  <option value="liveTracks">liveTracks - 跟踪目标</option>
                 </optgroup>
-                <optgroup label="Localization">
-                  <option value="liveCalibration">liveCalibration - Camera calibration</option>
-                  <option value="livePose">livePose - Vehicle pose</option>
-                  <option value="gpsLocation">gpsLocation - GPS data</option>
+                <optgroup label="定位">
+                  <option value="liveCalibration">liveCalibration - 摄像头标定</option>
+                  <option value="livePose">livePose - 车辆位姿</option>
+                  <option value="gpsLocation">gpsLocation - GPS 数据</option>
                 </optgroup>
-                <optgroup label="Driver Monitoring">
-                  <option value="driverMonitoringState">driverMonitoringState - Face/eye tracking</option>
-                  <option value="driverStateV2">driverStateV2 - Driver state</option>
+                <optgroup label="驾驶员监控">
+                  <option value="driverMonitoringState">driverMonitoringState - 面部/视线追踪</option>
+                  <option value="driverStateV2">driverStateV2 - 驾驶员状态</option>
                 </optgroup>
-                <optgroup label="Device/System">
-                  <option value="deviceState">deviceState - Temp, battery, storage</option>
-                  <option value="pandaStates">pandaStates - Panda device status</option>
-                  <option value="peripheralState">peripheralState - Fan, USB</option>
-                  <option value="managerState">managerState - Process states</option>
+                <optgroup label="设备/系统">
+                  <option value="deviceState">deviceState - 温度、电池、存储</option>
+                  <option value="pandaStates">pandaStates - Panda 设备状态</option>
+                  <option value="peripheralState">peripheralState - 风扇、USB</option>
+                  <option value="managerState">managerState - 进程状态</option>
                 </optgroup>
                 <optgroup label="SunnyPilot/BluePilot">
                   <option value="selfdriveStateSP">selfdriveStateSP</option>
@@ -296,18 +296,18 @@ export const CerealDataPanel = ({ route, currentSegment, videoCurrentTime = 0 }:
             {loading ? (
               <div className="cereal-loading">
                 <div className="spinner-small"></div>
-                <span>Loading cereal data...</span>
+                <span>正在加载 cereal 数据…</span>
               </div>
             ) : messages.length === 0 ? (
               <div className="cereal-viewer-empty">
-                <p>Click "Load Data" to view cereal messages</p>
+                <p>点击“加载数据”查看 cereal 消息</p>
               </div>
             ) : (
               <table className="cereal-data-table">
                 <thead>
                   <tr>
-                    <th>Field</th>
-                    <th>Value</th>
+                    <th>字段</th>
+                    <th>值</th>
                   </tr>
                 </thead>
                 <tbody id="cereal-data-body">

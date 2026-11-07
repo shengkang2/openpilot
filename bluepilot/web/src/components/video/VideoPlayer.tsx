@@ -836,10 +836,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ route, onClose }) => {
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleConfirmDelete}
-        title="Delete Route"
+        title="删除行程"
         message={`Are you sure you want to delete route "${route.date}"? This action cannot be undone and all video files and logs will be permanently removed.`}
         confirmText="Delete"
-        cancelText="Cancel"
+        cancelText="取消"
         variant="danger"
       />
       <div className="video-player" ref={containerRef}>
@@ -848,10 +848,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ route, onClose }) => {
             <button
               className="video-back-btn"
               onClick={handleBack}
-              title="Back to routes"
+              title="返回行程列表"
             >
               <Icon name="arrow_back" size={18} />
-              <span>Routes</span>
+              <span>行程</span>
             </button>
             <div className="video-title-container">
               <h2 className="video-title">{route.date}</h2>
@@ -862,8 +862,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ route, onClose }) => {
             <button
               type="button"
               className="icon-btn"
-              title="Toggle FFmpeg Debug Logs"
-              aria-label="Toggle debug logs"
+              title="切换 FFmpeg 调试日志"
+              aria-label="切换调试日志"
               onClick={() => setShowDebugPanel(!showDebugPanel)}
             >
               <Icon name="terminal" size={24} />
@@ -906,7 +906,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ route, onClose }) => {
               <div className="video-replay">
                 <button className="replay-btn" onClick={handleReplay}>
                   <Icon name="replay" size={48} />
-                  <span>Replay Route</span>
+                  <span>回放行程</span>
                 </button>
               </div>
             )}
@@ -944,7 +944,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ route, onClose }) => {
                 </div>
               )}
               <div className="segment-status">
-                <span className="segment-status-label">Active Segment</span>
+                <span className="segment-status-label">当前分段</span>
                 <span className="segment-status-value">
                   Segment {currentSegment + 1} of {route.segments.length} -{' '}
                   {currentCamera === 'lq'
@@ -964,7 +964,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ route, onClose }) => {
         <div className="player-sidebar">
           {/* Route Details */}
           <div className="sidebar-group sidebar-header">
-            <h2 className="player-route-title">Route Details</h2>
+            <h2 className="player-route-title">行程详情</h2>
             <div className="player-route-summary">
               <div className="player-route-time">
                 <Icon name="schedule" size={16} />
@@ -972,7 +972,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ route, onClose }) => {
               </div>
               {(route.start_location || route.end_location) && (
                 <div className="player-route-location">
-                  <span className="location-label">Route</span>
+                  <span className="location-label">行程</span>
                   <div className="location-path">
                     <span>{route.start_location || 'N/A'}</span>
                     <span className="location-arrow">→</span>
@@ -983,31 +983,31 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ route, onClose }) => {
             </div>
             <div className="player-route-stats">
               <div className="player-route-stat">
-                <span className="stat-label">Duration</span>
+                <span className="stat-label">时长</span>
                 <span className="stat-value">{route.duration || '--'}</span>
               </div>
               <div className="player-route-stat">
-                <span className="stat-label">Segments</span>
+                <span className="stat-label">分段</span>
                 <span className="stat-value">{route.segments.length}</span>
               </div>
               <div className="player-route-stat">
-                <span className="stat-label">Size</span>
+                <span className="stat-label">大小</span>
                 <span className="stat-value">{route.size || '--'}</span>
               </div>
               <div className="player-route-stat">
-                <span className="stat-label">Distance</span>
+                <span className="stat-label">里程</span>
                 <span className="stat-value">{route.distance || route.mileage || '--'}</span>
               </div>
               <div className="player-route-stat">
-                <span className="stat-label">Avg Speed</span>
+                <span className="stat-label">平均车速</span>
                 <span className="stat-value">{route.avg_speed || route.avgSpeed || '--'}</span>
               </div>
               <div className="player-route-stat">
-                <span className="stat-label">Top Speed</span>
+                <span className="stat-label">最高车速</span>
                 <span className="stat-value">{route.top_speed || route.topSpeed || '--'}</span>
               </div>
               <div className="player-route-stat">
-                <span className="stat-label">OP Engaged</span>
+                <span className="stat-label">OP 已启用</span>
                 <span className="stat-value">
                   {route.op_engaged_percent !== undefined
                     ? `${Math.round(route.op_engaged_percent)}%`
@@ -1017,13 +1017,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ route, onClose }) => {
                 </span>
               </div>
               <div className="player-route-stat">
-                <span className="stat-label">Disengagements</span>
+                <span className="stat-label">接管次数</span>
                 <span className="stat-value">
                   {route.disengagements || route.driveStats?.disengagementCount || '--'}
                 </span>
               </div>
               <div className="player-route-stat">
-                <span className="stat-label">Alerts</span>
+                <span className="stat-label">告警</span>
                 <span className="stat-value">
                   {route.alert_count || route.alerts || route.driveStats?.alertCount || '--'}
                 </span>
@@ -1033,23 +1033,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ route, onClose }) => {
 
           {/* Route Actions */}
           <div className="sidebar-group">
-            <h3 className="sidebar-group-title">Actions</h3>
+            <h3 className="sidebar-group-title">操作</h3>
             <div className="route-actions-sidebar">
-              <button type="button" className={`btn btn-secondary ${route.preserved ? 'active' : ''}`} onClick={handlePreserve} title={route.preserved ? 'Preserved' : 'Preserve this route'}>
+              <button type="button" className={`btn btn-secondary ${route.preserved ? 'active' : ''}`} onClick={handlePreserve} title={route.preserved ? '已保留' : '保留此行程'}>
                 <Icon name={route.preserved ? 'star' : 'star_border'} size={18} />
-                <span>{route.preserved ? 'Preserved' : 'Preserve'}</span>
+                <span>{route.preserved ? '已保留' : '保留'}</span>
               </button>
-              <button type="button" className="btn btn-primary" title="Export videos and backup route data" onClick={() => setShowExportModal(true)}>
+              <button type="button" className="btn btn-primary" title="导出视频并备份行程数据" onClick={() => setShowExportModal(true)}>
                 <Icon name="download" size={18} />
-                Export Videos & Logs
+                导出视频与日志
               </button>
               <button type="button" className="btn btn-danger" onClick={handleDelete}>
                 <Icon name="delete" size={18} />
-                Delete Route
+                删除行程
               </button>
             </div>
             <div className="route-actions-info">
-              <strong>Tip:</strong> Preserved routes are protected from automatic deletion but still count towards storage usage.
+              <strong>提示：</strong> Preserved routes are protected from automatic deletion but still count towards storage usage.
             </div>
           </div>
         </div>

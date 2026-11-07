@@ -109,7 +109,7 @@ export const useChangeTrackingStore = create<ChangeTrackingState>((set, get) => 
       set({ pendingChanges: new Map(), isSaving: false, saveError: null })
       return { success: true }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save changes'
+      const errorMessage = error instanceof Error ? error.message : '保存修改失败'
       set({ isSaving: false, saveError: errorMessage })
       return { success: false, error: errorMessage }
     }

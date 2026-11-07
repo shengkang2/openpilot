@@ -76,6 +76,13 @@ _VLT_V_HIGH_MS  = 55.0 * 0.44704    # 55 mph — no extra lookahead at or above 
 _VLT_KAPPA_FULL  = 0.005             # 1/m — full extra lookahead below this curvature (200m+ radius)
 _VLT_KAPPA_TAPER = 0.020             # 1/m — no extra lookahead above this curvature (50m radius)
 
+# BluePilot: low-speed base path_angle gain, ported from spbp260825 (FordAngleBaseGain default 1.25).
+# spbp on-road note: 1.0/1.30 understeered; 1.5/1.95 over-corrected. Settled at 1.25 base and a
+# 1.20 sharp-curve ratio (= 1.50 at high curvature). bp7 shipped the pre-fix 1.0/1.30 pair, which is
+# exactly why the wheel turns noticeably less than spbp at low/mid speed.
+_ANGLE_BASE_GAIN = 1.25
+_ANGLE_GAIN_HIGH_C_RATIO = 1.20
+
 # Rate cap on path_angle magnitude DECREASE during PSCM LimitReached (rad/call = 0.40 rad/s).
 # Both model and planner naturally drop path_angle ~0.36 rad/s at a sharp 90° apex, while the PSCM is
 # physically pinned and cannot execute the rapidly falling desired angle. The resulting actual-vs-desired
@@ -136,6 +143,7 @@ class LateralAngleExt:
     # High-speed gain factors: set per-platform via carFingerprint in update_angle_params.
     self.path_angle_gain_lowC_highV = 1.0   # dampening at high speed, low curvature
     self.path_angle_gain_highC_highV = 1.0  # gain at high speed, high curvature
+    self.angle_base_gain = _ANGLE_BASE_GAIN  # low-speed base gain (spbp260825 parity)
     self.bp_path_angle_gain_lowC_highV = 1.0
     self.bp_path_angle_gain_highC_highV = 1.0
     # User-tunable "feel" multipliers: read from the angle-tuning Params below.
@@ -174,6 +182,21 @@ class LateralAngleExt:
     self.stall_blip_count = 0         # pulses fired this stall episode
     self.angle_stall_blip_active = False
     self.press_timer_s = 0.0          # continuous steeringPressed time, for the hand-off blip
+    # BluePilot: Blendful (alpha) curvature nudge published by modeld_v2 (see blendful_delta).
+    self.blendful_enabled = False
+    self.blendful_curvature = 0.0
+    self.blendful_trust = 0.0
+
+  def blendful_delta(self, CS) -> float:
+    """BluePilot: Blendful curvature nudge to add this frame.
+
+    Zero unless the toggle is on, the model still trusts its lane fit, the model is not changing
+    lanes and the driver is not signalling.
+    """
+    if (self.blendful_enabled and self.blendful_trust > 0.05 and not self.lane_change and
+        not (CS.out.leftBlinker or CS.out.rightBlinker)):
+      return self.blendful_curvature
+    return 0.0
 
   def update_angle_params(self, params):
     """Sets per-platform gain defaults and reads user angle-tuning params."""
@@ -205,6 +228,10 @@ class LateralAngleExt:
         if raw is not None and raw != b"":
           self.lane_change_factor_high_ang = float(clip(
             float(raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else raw), 0.85, 1.50))
+      except Exception:
+        pass
+      try:
+        self.blendful_enabled = bool(params.get_bool("Blendful"))
       except Exception:
         pass
 
@@ -435,6 +462,15 @@ class LateralAngleExt:
     # Use planner / predicted κ directly for the κ → path_angle map; we are not sending κ on CAN.
     kappa_cmd = float(requested_curvature)
 
+    # BluePilot: Blendful (alpha) lane-centering nudge, computed in modeld_v2 from the raw model
+    # outputs and published on modelDataV2SP. Added here -- after the model/planner blend and before
+    # the measured-curvature deviation clip -- so it inherits the same clip, rate limits and
+    # PSCM/DBC clamps as the rest of the curvature command.
+    if self.sm.valid.get('modelDataV2SP', False):
+      self.blendful_curvature = float(self.sm['modelDataV2SP'].blendfulCurvature)
+      self.blendful_trust = float(self.sm['modelDataV2SP'].blendfulTrust)
+    kappa_cmd += self.blendful_delta(CS)
+
     # BluePilot: clip kappa_cmd to current_curvature (measured, from yaw rate) +- CURVATURE_ERROR,
     # mirroring lateral_curv_ext.py's apply_ford_curvature_limits_ext exactly (same formula, same
     # v_ego > 9 gate, same CarControllerParams.CURVATURE_ERROR tolerance). Without this, kappa_cmd
@@ -458,11 +494,12 @@ class LateralAngleExt:
 
 
 
-    # Speed-interpolated gain: at low speed both curves use 1.0; at high speed the params take effect.
+    # Speed-interpolated gain: at low speed the base is _ANGLE_BASE_GAIN (1.25, spbp260825 parity);
+    # at high speed the params take effect. kappa*v*gain implies a lookahead of v*gain metres.
     self.low_gain_calc = interp(
-      v_ego, [13.5, 26.82], [1.0, (self.path_angle_gain_lowC_highV * self.user_dampening_factor)]
+      v_ego, [13.5, 26.82], [self.angle_base_gain, (self.path_angle_gain_lowC_highV * self.user_dampening_factor)]
     )
-    self.high_gain_calc = interp(v_ego, [13.5, 26.82], [(1.30 * self.low_speed_curv_factor), (self.path_angle_gain_highC_highV * self.high_speed_curv_factor)])
+    self.high_gain_calc = interp(v_ego, [13.5, 26.82], [(self.angle_base_gain * _ANGLE_GAIN_HIGH_C_RATIO * self.low_speed_curv_factor), (self.path_angle_gain_highC_highV * self.high_speed_curv_factor)])
 
     # As the curve gets bigger, we will need a little boost to the signal to to not understeer
     self.curvature_factor = interp(abs(kappa_cmd), [0.0007, 0.001], [self.low_gain_calc, self.high_gain_calc])

@@ -139,11 +139,19 @@ class FrequencyTracker:
     if self.avg_dt.count == 0:
       return False
 
-    avg_freq = 1.0 / self.avg_dt.get_average()
+    # guard against zero/negative average dt (burst messages with identical
+    # timestamps can yield dt == 0, causing ZeroDivisionError on startup)
+    avg = self.avg_dt.get_average()
+    if avg <= 0:
+      return False
+    avg_freq = 1.0 / avg
     if self.min_freq <= avg_freq <= self.max_freq:
       return True
 
-    avg_freq_recent = 1.0 / self.recent_avg_dt.get_average()
+    recent = self.recent_avg_dt.get_average()
+    if recent <= 0:
+      return False
+    avg_freq_recent = 1.0 / recent
     return self.min_freq <= avg_freq_recent <= self.max_freq
 
 

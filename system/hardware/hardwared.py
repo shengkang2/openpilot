@@ -361,7 +361,11 @@ def hardware_thread(end_event, hw_queue) -> None:
       except Exception:
         pass
 
-    should_pwrsave = not onroad_conditions["ignition"] and msg.deviceState.screenBrightnessPercent < 1e-3
+    # BluePilot fix: 只要已经 onroad 就绝不关大核。ignition 信号在部分车型上会抖动/丢失，
+    # 一旦误判进省电就会 offline cpu4-7，modeld/dmonitoringmodeld 绑 core 7 当场崩，
+    # 表现为"模型不在、无法居中、UI 报 Process Not Running"。
+    should_pwrsave = (not onroad_conditions["ignition"] and not should_start
+                      and msg.deviceState.screenBrightnessPercent < 1e-3)
     if should_pwrsave != pwrsave or (count == 0):
       HARDWARE.set_power_save(should_pwrsave)
     pwrsave = should_pwrsave
@@ -476,8 +480,10 @@ def hardware_thread(end_event, hw_queue) -> None:
     last_uptime_ts = now_ts
 
     if (count % int(60. / DT_HW)) == 0:
-      params.put("UptimeOffroad", uptime_offroad, block=True)
-      params.put("UptimeOnroad", uptime_onroad, block=True)
+      # block=True 会同步等落盘，/data 忙时能卡住主循环数秒，deviceState 断更
+      # 直接触发 selfdrived 的 commIssueAvgFreq / commIssue。改非阻塞异步写。
+      params.put("UptimeOffroad", uptime_offroad, block=False)
+      params.put("UptimeOnroad", uptime_onroad, block=False)
 
     count += 1
     should_start_prev = should_start

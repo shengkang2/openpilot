@@ -28,10 +28,10 @@ export const WarningBanners = () => {
           <div className="cellular-warning-content">
             <Icon name="warning" size={24} />
             <div className="cellular-warning-text">
-              <strong>Cellular Access Enabled</strong>
-              <span>Server accessible over cellular network</span>
+              <strong>已启用蜂窝网络访问</strong>
+              <span>服务器可通过蜂窝网络访问</span>
             </div>
-            <button className="cellular-warning-close" onClick={() => setShowCellular(false)} title="Dismiss">
+            <button className="cellular-warning-close" onClick={() => setShowCellular(false)} title="忽略">
               <Icon name="close" size={20} />
             </button>
           </div>
@@ -43,13 +43,13 @@ export const WarningBanners = () => {
           <div className="firefox-warning-content">
             <Icon name="info" size={24} />
             <div className="firefox-warning-text">
-              <strong>Limited Functionality on Firefox</strong>
+              <strong>Firefox 浏览器功能受限</strong>
               <span>
                 HEVC video playback is not supported. Only the LQ (H.264) camera will be available for route viewing. For
                 full functionality, please use Safari, Chrome, or Edge.
               </span>
             </div>
-            <button className="firefox-warning-close" onClick={() => setShowFirefox(false)} title="Dismiss">
+            <button className="firefox-warning-close" onClick={() => setShowFirefox(false)} title="忽略">
               <Icon name="close" size={20} />
             </button>
           </div>

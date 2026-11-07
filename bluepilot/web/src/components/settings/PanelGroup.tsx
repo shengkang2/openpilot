@@ -146,12 +146,12 @@ export function PanelGroup({ group, state, panelId }: PanelGroupProps) {
             variant="secondary"
             size="small"
             className="panel-group-reset"
-            title="Reset to defaults"
+            title="恢复默认值"
             type="button"
             onClick={() => setShowResetConfirm(true)}
             icon={<Icon name="refresh" size={16} />}
           >
-            Reset
+            重置
           </Button>
         )}
       </div>
@@ -171,22 +171,22 @@ export function PanelGroup({ group, state, panelId }: PanelGroupProps) {
       {/* Reset Confirmation Modal */}
       <Modal
         isOpen={showResetConfirm}
-        title="Reset Group Settings"
+        title="重置分组设置"
         onClose={() => setShowResetConfirm(false)}
       >
         <div className="panel-group-reset-modal">
           <p>
-            Are you sure you want to reset all <strong>{resettableControls.length}</strong> settings
+            确定要重置全部 <strong>{resettableControls.length}</strong> settings
             in "{group.title}" to their default values?
           </p>
-          <p className="reset-warning">This action cannot be undone.</p>
+          <p className="reset-warning">此操作无法撤销。</p>
           <div className="reset-modal-actions">
             <Button
               variant="secondary"
               onClick={() => setShowResetConfirm(false)}
               disabled={isResetting}
             >
-              Cancel
+              取消
             </Button>
             <Button
               variant="danger"

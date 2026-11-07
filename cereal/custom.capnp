@@ -129,18 +129,28 @@ struct ModelManagerSP @0xaedffd8f31e7b55d {
     downloaded @2;
     cached @3;
     failed @4;
+    verifying @5;
   }
 
   struct DownloadProgress {
     status @0 :DownloadStatus;
     progress @1 :Float32;
     eta @2 :UInt32;
+    speed @3 :Float32;
+    canceling @4 :Bool;
+    resuming @5 :Bool;
+  }
+
+  struct Chunk {
+    fileName @0 :Text;
+    sha256 @1 :Text;
   }
 
   struct Artifact {
     fileName @0 :Text;
     downloadUri @1 :DownloadUri;
     downloadProgress @2 :DownloadProgress;
+    chunks @3 :List(Chunk);
   }
 
   struct Model {
@@ -155,6 +165,7 @@ struct ModelManagerSP @0xaedffd8f31e7b55d {
       policy @3;
       offPolicy @4;
       onPolicy @5;
+      chunked @6;
     }
   }
 
@@ -458,6 +469,17 @@ struct ModelDataV2SP @0xa1680744031fdb2d {
   # publishes, so a dead link reads as none on the next frame.
   acceleratorState @1 :AcceleratorState;
   bigModel @2 :Bool;
+
+  # Blendful (sunnypilot #2073) diagnostics: the curvature correction added on
+  # top of the model's own curvature, plus the trust signals behind it.
+  # Ordinals @3..@9 mirror the upstream PR so the wiring stays mergeable.
+  blendfulCurvature @3 :Float32;
+  blendfulTrust @4 :Float32;
+  modelCurvature @5 :Float32;
+  blendfulGoingAround @6 :Bool;
+  blendfulLeftProb @7 :Float32;
+  blendfulRightProb @8 :Float32;
+  blendfulLaneWidth @9 :Float32;
 
   enum AcceleratorState {
     none @0;         # no link, or nobody asked for one

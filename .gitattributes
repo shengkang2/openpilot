@@ -72,3 +72,7 @@ selfdrive/assets/icons/jetlink_orange.png -filter -diff -merge -text
 
 # Shell scripts must stay LF: device runs them with bash, CRLF breaks them.
 *.sh text eol=lf
+
+# device-local change: the alert sound ships with the tree; upstream LFS
+# points at a gitlab repo this fork cannot push to
+selfdrive/assets/sounds/warning_immediate.wav -filter -diff -merge -text

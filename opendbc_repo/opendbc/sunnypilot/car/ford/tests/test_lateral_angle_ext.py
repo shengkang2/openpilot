@@ -47,7 +47,11 @@ class _FakeLiveDelay:
 
 class _FakeSubMaster:
   def __init__(self, *args, **kwargs):
-    self.updated = {s: False for s in ('modelV2', 'liveParameters', 'selfdriveState', 'radarState', 'liveDelay')}
+    self.updated = {s: False for s in ('modelV2', 'liveParameters', 'selfdriveState', 'radarState', 'liveDelay',
+                                      'modelDataV2SP')}
+    # real SubMaster exposes valid as a dict; Blendful reads it before touching modelDataV2SP
+    self.valid = {s: False for s in self.updated}
+    self.data = {}
 
   def update(self, timeout=0):
     pass
@@ -55,6 +59,8 @@ class _FakeSubMaster:
   def __getitem__(self, key):
     if key == 'liveDelay':
       return _FakeLiveDelay()
+    if key in self.data:
+      return self.data[key]
     raise KeyError(key)
 
 
@@ -75,6 +81,9 @@ class _FakeParams:
 
   def get(self, key, return_default=False):
     return self.values.get(key)
+
+  def get_bool(self, key):
+    return bool(self.values.get(key, False))
 
 
 @dataclass

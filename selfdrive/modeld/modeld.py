@@ -20,6 +20,11 @@ from openpilot.common.transformations.model import get_warp_matrix
 from openpilot.selfdrive.controls.lib.desire_helper import DesireHelper
 from openpilot.selfdrive.controls.lib.drive_helpers import get_accel_from_plan, smooth_value, get_curvature_from_plan
 from openpilot.selfdrive.modeld.parse_model_outputs import Parser
+# 本机补丁（2026-10-31）：Blendful 的算法是纯 numpy 实现，跟 tinygrad 无关。
+# 上游只在 sunnypilot/modeld_v2 里调用它，而 jetlink 跑的是这个 stock modeld，
+# 于是开关打开也不会产生任何 blendful 数据 —— 这里直接复用同一份实现。
+from functools import partial
+from openpilot.sunnypilot.selfdrive.controls.lib.blendful import Blendful
 from openpilot.selfdrive.modeld.compile_modeld import make_input_queues, WARP_INPUTS, POLICY_INPUTS
 from openpilot.selfdrive.modeld.fill_model_msg import fill_model_msg, fill_pose_msg, PublishState
 from openpilot.common.file_chunker import read_file_chunked, get_manifest_path
@@ -47,7 +52,8 @@ MIN_LAT_CONTROL_SPEED = 0.3
 
 
 def get_action_from_model(model_output: dict[str, np.ndarray], prev_action: log.ModelDataV2.Action,
-                          lat_action_t: float, long_action_t: float, v_ego: float) -> log.ModelDataV2.Action:
+                          lat_action_t: float, long_action_t: float, v_ego: float,
+                          blendful=None) -> log.ModelDataV2.Action:
   if 'action' not in model_output:
     plan = model_output['plan'][0]
     desired_accel, should_stop = get_accel_from_plan(plan[:,Plan.VELOCITY][:,0],
@@ -68,6 +74,12 @@ def get_action_from_model(model_output: dict[str, np.ndarray], prev_action: log.
     desired_curvature = smooth_value(desired_curvature, prev_action.desiredCurvature, LAT_SMOOTH_SECONDS)
   else:
     desired_curvature = prev_action.desiredCurvature
+
+  # BluePilot: Blendful 只在这里更新内部状态（供 modelDataV2SP 发布诊断字段），不再把增量写进
+  # desiredCurvature。真正的施加挪到福特 angle 车层 lateral_angle_ext.blendful_delta()，在那里叠加
+  # 才能继承实测曲率偏差 clip、速率限制与 PSCM/DBC 限幅。返回值丢弃。
+  if blendful is not None:
+    blendful(desired_curvature)
 
   return log.ModelDataV2.Action(desiredCurvature=float(desired_curvature),
                                 desiredAcceleration=float(desired_accel),
@@ -250,6 +262,10 @@ def main(demo=False):
 
   DH = DesireHelper()
 
+  # 本机补丁（2026-10-31）：Blendful 实例；enabled 每 60 帧从参数刷新
+  blendful = Blendful()
+  blendful_enabled = False
+
   while True:
     # Keep receiving frames until we are at least 1 frame ahead of previous extra frame
     while meta_main.timestamp_sof < meta_extra.timestamp_sof + 25000000:
@@ -290,6 +306,7 @@ def main(demo=False):
     v_ego = max(sm["carState"].vEgo, 0.)
     if sm.frame % 60 == 0:
       model.lat_delay = get_lat_delay(params, sm["liveDelay"].lateralDelay)
+      blendful_enabled = params.get_bool("Blendful")  # 本机补丁：Blendful 开关
     lat_delay = model.lat_delay + LAT_SMOOTH_SECONDS
     if sm.updated["liveCalibration"] and sm.seen['roadCameraState'] and sm.seen['deviceState']:
       device_from_calib_euler = np.array(sm["liveCalibration"].rpyCalib, dtype=np.float32)
@@ -362,7 +379,11 @@ def main(demo=False):
       posenet_send = messaging.new_message('cameraOdometry')
       mdv2sp_send = messaging.new_message('modelDataV2SP')
 
-      action = get_action_from_model(model_output, prev_action, lat_action_t, long_action_t, v_ego)
+      # 本机补丁（2026-10-31）：desire 与换道状态决定 blendful 是否能介入
+      blendful_active = desire == log.Desire.none and DH.lane_change_state == log.LaneChangeState.off
+      action = get_action_from_model(model_output, prev_action, lat_action_t, long_action_t, v_ego,
+                                     partial(blendful.update, model_output, v_ego, blendful_active,
+                                             enabled=blendful_enabled))
       prev_action = action
       fill_model_msg(drivingdata_send, modelv2_send, model_output, action,
                      publish_state, meta_main.frame_id, meta_extra.frame_id, frame_id,
@@ -382,6 +403,14 @@ def main(demo=False):
       mdv2sp_send.modelDataV2SP.acceleratorState = ACCELERATOR_STATES.get(
         str(getattr(model, 'big_model_state', 'none')), custom.ModelDataV2SP.AcceleratorState.none)
       mdv2sp_send.modelDataV2SP.bigModel = bool(getattr(model, 'chestnut', False))
+      # 本机补丁（2026-10-31）：Blendful 诊断字段，桌面 UI 的 BlendfulRenderer 依赖它们
+      mdv2sp_send.modelDataV2SP.blendfulCurvature = float(blendful.curvature)
+      mdv2sp_send.modelDataV2SP.blendfulTrust = float(blendful.trust)
+      mdv2sp_send.modelDataV2SP.modelCurvature = float(blendful.model_curvature)
+      mdv2sp_send.modelDataV2SP.blendfulGoingAround = bool(blendful.going_around)
+      mdv2sp_send.modelDataV2SP.blendfulLeftProb = float(blendful.l_prob)
+      mdv2sp_send.modelDataV2SP.blendfulRightProb = float(blendful.r_prob)
+      mdv2sp_send.modelDataV2SP.blendfulLaneWidth = float(blendful.lane_width.x)
       drivingdata_send.drivingModelData.meta.laneChangeState = DH.lane_change_state
       drivingdata_send.drivingModelData.meta.laneChangeDirection = DH.lane_change_direction
 

@@ -55,7 +55,16 @@ def save_bootlog():
   tmp = tempfile.mkdtemp()
   params_dirname = pathlib.Path(Params().get_param_path()).name
   params_dir = os.path.join(tmp, params_dirname)
-  shutil.copytree(Params().get_param_path(), params_dir, dirs_exist_ok=True)
+  try:
+    shutil.copytree(Params().get_param_path(), params_dir, dirs_exist_ok=True)
+  except (OSError, shutil.Error) as e:
+    # 本机补丁（2026-10-30）：params 目录里若有别的进程以 root 写的文件
+    # （root:root -rw-------），comma 用户读不到，copytree 抛 shutil.Error，
+    # 直接导致 manager 启动失败并弹 "Manager failed to start"。
+    # bootlog 只是开机诊断快照，不该阻塞启动——跳过这次快照即可。
+    print(f"save_bootlog: skip params copy due to permission error: {e}", file=sys.stderr)
+    shutil.rmtree(tmp, ignore_errors=True)
+    return
 
   def fn(tmpdir):
     env = os.environ.copy()

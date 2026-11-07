@@ -61,6 +61,17 @@ POLL = 0.5
 DORMANT_HOLD = 60.0
 # how long settle() waits for its own re-enumeration before carrying on
 SETTLE_TIMEOUT = 10.0
+# a cable that is in and not enumerated, before one connect edge is spent on it
+NUDGE_AFTER = 5.0
+# how many connect edges one plug gets before the far end is left alone, and
+# how long between them: the first can land while the phone is still reworking
+# its own USB settings, and then nothing moves again until the cable comes out
+NUDGE_TRIES = 3
+NUDGE_COOLDOWN = 15.0
+# how long the CC pin must read empty before this counts as a new plug. A phone
+# drops the data role for about a second when it reworks its USB settings, and
+# a provisioning run on each of those re-attaches is what kept the link cycling
+PLUG_GONE = 3.0
 # after a borrower lets go. The server has just lost its client and is closing
 # the gadget and reopening it, two seconds at a time
 LEASE_SETTLE = 4.0
@@ -183,6 +194,11 @@ class Owner:
     # coming up
     self.idle_since = time.monotonic()
     self.next_attempt = 0.0
+    # the far end of a plug that never enumerated: when the port first saw
+    # a host, and whether this plug has had its one connect edge
+    self.cc_since: float | None = None
+    self.cc_nudges = 0                     # edges spent on this plug, up to NUDGE_TRIES
+    self.last_nudge = 0.0
     self.next_gadget_attempt = 0.0
     self.failed_ios: bool | None = None  # the mode whose last build failed, until one works
     self.next_worker = 0.0
@@ -204,6 +220,8 @@ class Owner:
     self.worker: subprocess.Popen | None = None
     self.seen: dict[str, int] = {}      # watched param -> mtime when last looked
     self.had_host = False
+    self.ran_for_this_plug = False       # a run was spawned since the cable went in
+    self.empty_since: float | None = None   # when the CC pin first read empty
     # the status record every other process reads (gadget.STATUS): the setting
     # the last step acted on, when a host last had us configured (presence's
     # hold), when the record was last written, and a failure writing it, said once
@@ -489,7 +507,7 @@ class Owner:
       return f"{', '.join(changed)} changed"
     if self.dialed:
       return 'a phone dialed in'
-    if self.attached and not self.had_host:
+    if self.attached and not self.had_host and not self.ran_for_this_plug:
       return 'a jetson turned up'
     if time.monotonic() >= self.next_worker and self.unfinished:
       return 'the last run left something to do'
@@ -499,6 +517,10 @@ class Owner:
     gadget.log.warning("jetlink: starting a provisioning run: %s", why)
     self.dialed = False
     self.note_marks()
+    # a re-attach after the phone dropped the data role is the same plug; only
+    # the first run for it may hand the endpoints over again
+    if why == 'a jetson turned up':
+      self.ran_for_this_plug = True
     self.next_worker = time.monotonic() + WORKER_BACKOFF
     try:
       self.worker = subprocess.Popen(self.worker_argv, cwd=self.worker_cwd,
@@ -618,6 +640,73 @@ class Owner:
       forget_start(self.born)
       self.born = None
 
+  def watch_the_cable(self) -> None:
+    """Forget this plug's run once the cable is really out.
+
+    The far end drops the data role for about a second whenever it reworks its
+    USB settings; that is not a new plug.  Counting it as one put a
+    provisioning run on every re-attach, and handing the endpoints over is
+    itself what makes the phone start over, so the link cycled for as long as
+    the cable stayed in.  Only PLUG_GONE of an empty CC pin is a new plug.
+    """
+    if gadget.port_has_host():
+      self.empty_since = None
+      return
+    now = time.monotonic()
+    if self.empty_since is None:
+      self.empty_since = now
+    elif now - self.empty_since >= PLUG_GONE:
+      self.ran_for_this_plug = False
+
+  def nudge_if_stuck(self) -> None:
+    """One connect edge for a far end that is on the cable and not enumerated.
+
+    The port controller seeing a host is the only sign of a cable that is in
+    but dead: the phone dropped its Rp when we lost power, or answered the
+    bind with a reset and stopped. A replug fixes both; this is the edge a
+    replug makes, spent once per plug, and only with nothing of ours open on
+    the endpoints. Gated by NUDGE_AFTER so the milliseconds a real enumeration
+    takes are never mistaken for a stall.
+    """
+    if self.built_ios:
+      return
+    now = time.monotonic()
+    if not gadget.port_has_host():
+      self.cc_since, self.cc_nudges = None, 0
+      return
+    if self.cc_since is None:
+      self.cc_since = now
+    if gadget.host_attached():
+      return
+    if self.cc_nudges >= NUDGE_TRIES or now - self.last_nudge < NUDGE_COOLDOWN:
+      return
+    if gadget.device_mode() != 'peripheral':
+      # AGNOS leaves the controller off. With a host on the cable nothing
+      # enumerates until it is on, so this comes before the stall timer: an
+      # edge spent on a dead bus is an edge wasted.
+      if gadget.device_side_on():
+        self.cc_since = now
+      return
+    if now - self.cc_since < NUDGE_AFTER:
+      return
+    if self.lender.lent:
+      return   # a borrower has the endpoints; not ours to re-present
+    if self.transport is not None:
+      # a transport cannot outlive the configuration that carried it: the far
+      # end reset the bus and never came back, and holding the endpoints open
+      # is exactly what keeps the controller from being presented again
+      gadget.log.warning("jetlink: the link is unconfigured but its transport is still open; closing it")
+      self.close_link()
+      self.cc_since = now
+      return
+    if not gadget.link_configured():
+      return
+    self.cc_nudges += 1
+    self.last_nudge = now
+    gadget.log.warning("jetlink: a host has been on the cable for %.0f s and never enumerated; "
+                       "re-presenting the device controller", now - self.cc_since)
+    gadget.nudge_the_far_end()
+
   def step(self) -> None:
     # each read is a file; take them once and pass them down
     mode = self.mode = self.settings.mode()
@@ -694,6 +783,8 @@ class Owner:
     if self.switch_mode(offroad, ios):
       return
     self.attached = gadget.host_attached()
+    self.watch_the_cable()
+    self.nudge_if_stuck()
     self.watch_the_port()
     self.ensure_steered(offroad)
 
