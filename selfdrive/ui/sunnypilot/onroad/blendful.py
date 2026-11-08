@@ -4,6 +4,8 @@ Copyright (c) 2021-, sunnypilot, and a number of other contributors.
 This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
+from pathlib import Path
+
 import numpy as np
 import pyray as rl
 from openpilot.common.filter_simple import FirstOrderFilter
@@ -36,6 +38,8 @@ class BlendfulRenderer:
     self._trust_display = FirstOrderFilter(0.0, 0.5, DT_MDL)
     self._alpha = FirstOrderFilter(0.0, 0.3, DT_MDL)
     self._diag_n = 0
+    self._update_calls = 0
+    self._draw_calls = 0
 
   def _clear(self, fade: bool = True) -> None:
     if fade:
@@ -45,6 +49,7 @@ class BlendfulRenderer:
   def update(self, renderer, max_idx: int, *map_args) -> None:
     sm = ui_state.sm
     self._frame += 1
+    self._update_calls += 1
     if self._frame % PARAM_RELOAD_FRAMES == 0:
       self._enabled = ui_state.params.get_bool("Blendful")
 
@@ -104,6 +109,10 @@ class BlendfulRenderer:
         'trust': float(self._trust),
         'alpha': float(self._alpha.x),
         'center_points': int(self._center_points.shape[0]),
+        'update_calls': int(self._update_calls),
+        'draw_calls': int(self._draw_calls),
+        'sp_seen': bool(sm.seen.get('modelDataV2SP', False)),
+        'sp_alive': bool(sm.alive.get('modelDataV2SP', False)),
         'status': str(getattr(ui_state.status, 'value', ui_state.status)),
       }
       Path('/dev/shm/blendful_diag.json').write_text(json.dumps(data))
@@ -115,6 +124,7 @@ class BlendfulRenderer:
 
   def draw(self, rect: rl.Rectangle) -> None:
     self._diag_tick()
+    self._draw_calls += 1
     # the ribbon follows Blendful's own data, not whether ACC is engaged: the
     # upstream lateral_active gate hides it whenever the car is disengaged
     if self._center_points.size and self._alpha.x > 0.01:

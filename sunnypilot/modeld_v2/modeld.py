@@ -472,6 +472,10 @@ def main(demo=False):
       pm.send('modelV2', modelv2_send)
       pm.send('drivingModelData', drivingdata_send)
       pm.send('cameraOdometry', posenet_send)
+      # BluePilot: new_message() defaults valid=False -- without this every
+      # modelDataV2SP frame is flagged invalid, so sm.valid['modelDataV2SP']
+      # stays False and the Blendful UI/vehicle gates never open.
+      mdv2sp_send.valid = modelv2_send.valid
       pm.send('modelDataV2SP', mdv2sp_send)
     last_vipc_frame_id = meta_main.frame_id
 

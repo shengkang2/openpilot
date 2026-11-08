@@ -187,6 +187,25 @@ class LateralAngleExt:
     self.blendful_curvature = 0.0
     self.blendful_trust = 0.0
 
+  def _blendful_diag(self, nudge: float) -> None:
+    # 1 Hz light-weight proof that the car layer received the Blendful correction
+    self._blendful_diag_n = getattr(self, '_blendful_diag_n', 0) + 1
+    if self._blendful_diag_n % 20:
+      return
+    try:
+      import json
+      from pathlib import Path as _Path
+      data = {
+        'enabled': bool(self.blendful_enabled),
+        'sp_valid': bool(self.sm.valid.get('modelDataV2SP', False)),
+        'trust': float(self.blendful_trust),
+        'curvature': float(self.blendful_curvature),
+        'nudge': float(nudge),
+      }
+      _Path('/dev/shm/blendful_car_diag.json').write_text(json.dumps(data))
+    except Exception:
+      pass
+
   def blendful_delta(self, CS) -> float:
     """BluePilot: Blendful curvature nudge to add this frame.
 
@@ -469,7 +488,9 @@ class LateralAngleExt:
     if self.sm.valid.get('modelDataV2SP', False):
       self.blendful_curvature = float(self.sm['modelDataV2SP'].blendfulCurvature)
       self.blendful_trust = float(self.sm['modelDataV2SP'].blendfulTrust)
-    kappa_cmd += self.blendful_delta(CS)
+    _blendful_nudge = self.blendful_delta(CS)
+    kappa_cmd += _blendful_nudge
+    self._blendful_diag(_blendful_nudge)
 
     # BluePilot: clip kappa_cmd to current_curvature (measured, from yaw rate) +- CURVATURE_ERROR,
     # mirroring lateral_curv_ext.py's apply_ford_curvature_limits_ext exactly (same formula, same

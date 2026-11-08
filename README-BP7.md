@@ -574,3 +574,4 @@ AGNOS 18.x 的 `/usr/local/venv` 里 capnproto 是半装状态（dist-info 在�
 | 2026-11-07 | 中文字库与 `warning_immediate.wav` 随源码落地（排除 LFS）、Ford 横向、模型管理器、tici 硬件适配等设备本地改动，共 133 文件 |
 | 2026-11-08 | 分支纠正：删除误建的 `BP7.020261028`，设备全量代码以合并提交接到本分支既有历史（第一父 `29862b5`，原有 7 个提交不丢）；本表补齐上述改动说明 |
 
+| 2026-11-08 | Blendful 失效根治：`modelDataV2SP` 发布时补 `valid`（跟随 `modelV2`），恢复 UI 引导线与 Ford 车层曲率修正；补 UI 诊断 `Path` 导入与调用计数、车层 nudge 诊断 |
