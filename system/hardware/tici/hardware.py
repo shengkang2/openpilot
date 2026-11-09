@@ -197,6 +197,33 @@ class Tici(HardwareBase):
 
     return network_strength
 
+  def _read_wifi_metered(self, ssid: str):
+    """Read NM keyfiles to decide if ssid is metered. None means unknown."""
+    # wpa_supplicant escapes non-printable bytes as \xNN; NM keyfile stores ASCII SSIDs as a literal and others as a byte;byte; list
+    ssid_bytes = ssid.encode().decode('unicode_escape').encode('latin-1')
+    ssid_keyfile_list = ';'.join(str(b) for b in ssid_bytes) + ';'
+
+    nm_dirs = ("/run/NetworkManager/system-connections", "/data/etc/NetworkManager/system-connections")
+    for fpath in (p for d in nm_dirs for p in Path(d).glob("*.nmconnection")):
+      raw = sudo_read(str(fpath))
+      if not raw:
+        continue
+      cp = configparser.ConfigParser(interpolation=None)
+      try:
+        cp.read_string(raw)
+        keyfile_ssid = cp.get("wifi", "ssid", fallback="")
+        if keyfile_ssid != ssid and keyfile_ssid != ssid_keyfile_list:
+          continue
+        metered = cp.getint("connection", "metered", fallback=0)
+      except (configparser.Error, ValueError):
+        continue
+      if metered == 1:  # NM_METERED_YES
+        return True
+      if metered == 2:  # NM_METERED_NO
+        return False
+      break
+    return None
+
   def get_network_metered(self, network_type) -> bool:
     if network_type in (NetworkType.cell2G, NetworkType.cell3G, NetworkType.cell4G, NetworkType.cell5G):
       from openpilot.common.params import Params
@@ -205,29 +232,18 @@ class Tici(HardwareBase):
       if network_type == NetworkType.wifi:
         ssid = wpa_supplicant_cmd("STATUS").get("ssid", "")
         if ssid:
-          # wpa_supplicant escapes non-printable bytes as \xNN; NM keyfile stores ASCII SSIDs as a literal and others as a byte;byte; list
-          ssid_bytes = ssid.encode().decode('unicode_escape').encode('latin-1')
-          ssid_keyfile_list = ';'.join(str(b) for b in ssid_bytes) + ';'
-
-          nm_dirs = ("/run/NetworkManager/system-connections", "/data/etc/NetworkManager/system-connections")
-          for fpath in (p for d in nm_dirs for p in Path(d).glob("*.nmconnection")):
-            raw = sudo_read(str(fpath))
-            if not raw:
-              continue
-            cp = configparser.ConfigParser(interpolation=None)
-            try:
-              cp.read_string(raw)
-              keyfile_ssid = cp.get("wifi", "ssid", fallback="")
-              if keyfile_ssid != ssid and keyfile_ssid != ssid_keyfile_list:
-                continue
-              metered = cp.getint("connection", "metered", fallback=0)
-            except (configparser.Error, ValueError):
-              continue
-            if metered == 1:  # NM_METERED_YES
-              return True
-            if metered == 2:  # NM_METERED_NO
-              return False
-            break
+          # hardwared 每 10s 轮询一次，而每个 keyfile 都要 fork 一次 sudo+cat（本机 4 个文件就是四次），
+          # 一分钟上百条 pam/COMMAND 日志、白烧 fork。metered 只在换网或改设置时变，按 ssid 缓存 120s。
+          now = time.monotonic()
+          cache = getattr(self, "_metered_cache", None)
+          if cache is not None and cache[0] == ssid and (now - cache[1]) < 120.0:
+            if cache[2] is not None:
+              return cache[2]
+          else:
+            metered = self._read_wifi_metered(ssid)
+            self._metered_cache = (ssid, now, metered)
+            if metered is not None:
+              return metered
     except Exception:
       pass
 

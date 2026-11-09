@@ -576,3 +576,4 @@ AGNOS 18.x 的 `/usr/local/venv` 里 capnproto 是半装状态（dist-info 在�
 
 | 2026-11-08 | Blendful 失效根治：`modelDataV2SP` 发布时补 `valid`（跟随 `modelV2`），恢复 UI 引导线与 Ford 车层曲率修正；补 UI 诊断 `Path` 导入与调用计数、车层 nudge 诊断 |
 | 2026-11-09 | Blendful 护栏：车道拟合置信度衰减（概率硬下限 0.10 + 连续衰减 + 车道线标准差）+ 幅度上限 0.0005 + 反向拒绝（`max(0.0004, 25% 期望曲率)`）；UI 引导线同步按置信度淡出；黑匣子目录名加日期 |
+| 2026-11-09 | 治噪：`system/hardware/tici/hardware.py` 的 WiFi metered 判定按 ssid 缓存 120 秒，`sudo cat *.nmconnection` 由每 10 秒 4 次降到每 2 分钟一次（journal 日志量降 60%+，省掉无谓的 fork/PAM 认证） |
