@@ -40,6 +40,7 @@ class BlendfulRenderer:
     self._diag_n = 0
     self._update_calls = 0
     self._draw_calls = 0
+    self._conf = 1.0
 
   def _clear(self, fade: bool = True) -> None:
     if fade:
@@ -88,8 +89,19 @@ class BlendfulRenderer:
       center[:, 1] = (r_var * (left[:, 1] + half_width) + l_var * (right[:, 1] - half_width)) / (l_var + r_var)
     else:
       center[:, 1] = (left[:, 1] + right[:, 1]) / 2
+    # Fade the ribbon with lane-fit confidence: on ambiguous markings the model's centre can sit
+    # off the road (2026-11-09 road test), and a solid ribbon there actively misleads the driver.
+    # Both line probs must be plausible and the geometry tight; below that the ribbon dims out.
+    if has_probs:
+      conf = float(np.clip(min(l_prob, r_prob) / 0.40, 0.0, 1.0))
+      worst_std = float(max(stds[1], stds[2]))
+      sharp = float(np.clip((0.80 - worst_std) / (0.80 - 0.25), 0.0, 1.0))
+      self._conf = conf * sharp
+    else:
+      # no probs at all (low speed / lane change): keep the dim geometric-centre guide
+      self._conf = 1.0
     self._center_points = renderer._map_line_to_polygon(center, RIBBON_HALF_WIDTH, 0.0, max_idx, *map_args)
-    self._alpha.update(1.0)
+    self._alpha.update(1.0 if self._conf > 0.05 else 0.0)
 
   def _diag_tick(self) -> None:
     self._diag_n += 1
@@ -108,6 +120,7 @@ class BlendfulRenderer:
         'r_prob': float(sp.blendfulRightProb) if sp is not None else 0.0,
         'trust': float(self._trust),
         'alpha': float(self._alpha.x),
+        'conf': float(self._conf),
         'center_points': int(self._center_points.shape[0]),
         'update_calls': int(self._update_calls),
         'draw_calls': int(self._draw_calls),
@@ -130,7 +143,7 @@ class BlendfulRenderer:
     if self._center_points.size and self._alpha.x > 0.01:
       points = self._center_points + (rect.x, rect.y) if self._rect_relative else self._center_points
       # dim guide ribbon when the lane lines are weak, solid once Blendful trusts them
-      alpha = (BASE_ALPHA + (1.0 - BASE_ALPHA) * float(np.clip(self._trust * 2.0, 0.0, 1.0))) * self._alpha.x
+      alpha = (BASE_ALPHA + (1.0 - BASE_ALPHA) * float(np.clip(self._trust * 2.0, 0.0, 1.0))) * self._alpha.x * self._conf
       draw_polygon(rect, points, self._color(BLENDFUL_COLOR, alpha * 255))
     if self._center_points.size and self._readout and self._trust > 0.05:
       self._draw_readout(rect)

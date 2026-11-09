@@ -132,6 +132,18 @@ def pscm_d_ref_m(v_ego_ms: float) -> float:
   return d
 
 
+# BluePilot: Blendful guard rails. On ambiguous markings the model can lock onto the wrong lane
+# line; an unguarded nudge then steers the car off the road (2026-11-09 road test: 633 frames
+# pushing right against a left-hand curve -> curvature clip saturated + steerSaturated alert).
+BLENDFUL_MAX_NUDGE = 0.0005     # absolute cap on the injected curvature (0.20 m/s^2 at 20 m/s)
+BLENDFUL_OPPOSE_TOL = 0.0004    # pushing against the planner by more than this = bad lane fit
+BLENDFUL_OPPOSE_RATIO = 0.25    # ...or by more than this fraction of the planner's own curvature
+BLENDFUL_CONF_MIN = 0.10        # hard floor: one line essentially missing -> refuse entirely
+BLENDFUL_CONF_FULL = 0.40       # min(left, right) lane prob for a 100% nudge
+BLENDFUL_STD_FULL = 0.25        # max lane-line std (m) for a 100% nudge
+BLENDFUL_STD_ZERO = 0.80        # max lane-line std (m) where the nudge is fully faded out
+
+
 class LateralAngleExt:
   def __init__(self, CP=None, CP_SP=None):
     # Predicted-curvature blend for path_angle: pred * b + desired * (1-b); b from ``FordPathAngleBlendRatio``
@@ -186,6 +198,13 @@ class LateralAngleExt:
     self.blendful_enabled = False
     self.blendful_curvature = 0.0
     self.blendful_trust = 0.0
+    # lane-fit quality of the frame that produced the nudge (guard-rail inputs + diagnostics)
+    self.blendful_lprob = 0.0
+    self.blendful_rprob = 0.0
+    self.blendful_lstd = BLENDFUL_STD_ZERO
+    self.blendful_rstd = BLENDFUL_STD_ZERO
+    self.blendful_scale = 0.0
+    self.blendful_reject = ""
 
   def _blendful_diag(self, nudge: float) -> None:
     # 1 Hz light-weight proof that the car layer received the Blendful correction
@@ -201,21 +220,57 @@ class LateralAngleExt:
         'trust': float(self.blendful_trust),
         'curvature': float(self.blendful_curvature),
         'nudge': float(nudge),
+        'scale': float(self.blendful_scale),
+        'reject': str(self.blendful_reject),
+        'l_prob': float(self.blendful_lprob),
+        'r_prob': float(self.blendful_rprob),
+        'lane_std': float(max(self.blendful_lstd, self.blendful_rstd)),
       }
       _Path('/dev/shm/blendful_car_diag.json').write_text(json.dumps(data))
     except Exception:
       pass
 
-  def blendful_delta(self, CS) -> float:
+  def blendful_delta(self, CS, requested_curvature: float = 0.0) -> float:
     """BluePilot: Blendful curvature nudge to add this frame.
 
     Zero unless the toggle is on, the model still trusts its lane fit, the model is not changing
     lanes and the driver is not signalling.
+
+    The nudge is additionally faded by lane-fit quality (both lane probs must be plausible and the
+    line geometry tight), capped in magnitude, and refused when it fights the planner harder than
+    its own tolerance. Rationale: when markings are ambiguous the model sometimes locks onto the
+    wrong line, and trust alone does not catch it -- the 2026-11-09 road test had trust 0.44-0.99
+    while pushing right through a left-hand curve, which saturated the curvature clip and raised a
+    steerSaturated alert. Fading (rather than a hard switch) keeps the assist smooth on clean road.
     """
-    if (self.blendful_enabled and self.blendful_trust > 0.05 and not self.lane_change and
-        not (CS.out.leftBlinker or CS.out.rightBlinker)):
-      return self.blendful_curvature
-    return 0.0
+    self.blendful_scale = 0.0
+    self.blendful_reject = ""
+    if not (self.blendful_enabled and self.blendful_trust > 0.05 and not self.lane_change and
+            not (CS.out.leftBlinker or CS.out.rightBlinker)):
+      self.blendful_reject = "gate"
+      return 0.0
+
+    if min(self.blendful_lprob, self.blendful_rprob) < BLENDFUL_CONF_MIN:
+      self.blendful_reject = "low_confidence"
+      return 0.0
+    conf = float(clip(min(self.blendful_lprob, self.blendful_rprob) / BLENDFUL_CONF_FULL, 0.0, 1.0))
+    worst_std = max(self.blendful_lstd, self.blendful_rstd)
+    sharp = float(clip((BLENDFUL_STD_ZERO - worst_std) / (BLENDFUL_STD_ZERO - BLENDFUL_STD_FULL), 0.0, 1.0))
+    scale = conf * sharp
+    self.blendful_scale = scale
+    if scale <= 0.0:
+      self.blendful_reject = "low_confidence"
+      return 0.0
+
+    # Judge the raw (pre-cap) nudge against the planner: the tolerance grows with the planner's own
+    # intent, so a firm curve entry leaves no room for a counter-push while gentle centering on a
+    # near-straight is still allowed.
+    nudge = self.blendful_curvature * scale
+    oppose_limit = max(BLENDFUL_OPPOSE_TOL, BLENDFUL_OPPOSE_RATIO * abs(requested_curvature))
+    if nudge * requested_curvature < 0.0 and abs(nudge) > oppose_limit:
+      self.blendful_reject = "opposes_planner"
+      return 0.0
+    return float(clip(nudge, -BLENDFUL_MAX_NUDGE, BLENDFUL_MAX_NUDGE))
 
   def update_angle_params(self, params):
     """Sets per-platform gain defaults and reads user angle-tuning params."""
@@ -488,7 +543,17 @@ class LateralAngleExt:
     if self.sm.valid.get('modelDataV2SP', False):
       self.blendful_curvature = float(self.sm['modelDataV2SP'].blendfulCurvature)
       self.blendful_trust = float(self.sm['modelDataV2SP'].blendfulTrust)
-    _blendful_nudge = self.blendful_delta(CS)
+      self.blendful_lprob = float(self.sm['modelDataV2SP'].blendfulLeftProb)
+      self.blendful_rprob = float(self.sm['modelDataV2SP'].blendfulRightProb)
+    if self.sm.valid.get('modelV2', False):
+      try:
+        _stds = self.sm['modelV2'].laneLineStds
+        if len(_stds) >= 3:
+          self.blendful_lstd = float(_stds[1])
+          self.blendful_rstd = float(_stds[2])
+      except Exception:
+        pass
+    _blendful_nudge = self.blendful_delta(CS, requested_curvature)
     kappa_cmd += _blendful_nudge
     self._blendful_diag(_blendful_nudge)
 
