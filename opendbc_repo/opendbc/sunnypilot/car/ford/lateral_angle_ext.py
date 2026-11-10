@@ -30,6 +30,7 @@ from opendbc.car.ford.values import CAR, CarControllerParams
 from opendbc.sunnypilot.car.ford.lateral_curv_ext import LateralResult
 from opendbc.sunnypilot.car.ford.human_turn import HumanTurnDetector
 from opendbc.sunnypilot.car.ford.values_ext import BP_ANGLE_LIMITS
+from opendbc.sunnypilot.car.ford.lane_center_trim import LaneCenterTrim
 from selfdrive.modeld.constants import ModelConstants
 
 # Hard-coded per-platform gain defaults.
@@ -205,6 +206,14 @@ class LateralAngleExt:
     self.blendful_rstd = BLENDFUL_STD_ZERO
     self.blendful_scale = 0.0
     self.blendful_reject = ""
+    # BluePilot (bp-7.0): angle-mode lane centering trim in the curvature domain.
+    # Curvature has no spare DBC slot for a centering signal, so the correction is added to
+    # kappa_cmd before the deviation clip / gain table / PSCM clamp / soft ROC -- it inherits
+    # every limiter instead of opening a new path around them (see lane_center_trim.py).
+    self.lane_center_trim = LaneCenterTrim()
+    self.enable_lane_positioning_ang = False
+    self.custom_path_offset_ang = 0.0
+    self.lane_centering_strength_ang = 0.25
 
   def _blendful_diag(self, nudge: float) -> None:
     # 1 Hz light-weight proof that the car layer received the Blendful correction
@@ -225,6 +234,8 @@ class LateralAngleExt:
         'l_prob': float(self.blendful_lprob),
         'r_prob': float(self.blendful_rprob),
         'lane_std': float(max(self.blendful_lstd, self.blendful_rstd)),
+        'trim': float(getattr(self, '_trim_correction', 0.0)),
+        'lane_pos': bool(getattr(self, 'enable_lane_positioning_ang', False)),
       }
       _Path('/dev/shm/blendful_car_diag.json').write_text(json.dumps(data))
     except Exception:
@@ -308,11 +319,27 @@ class LateralAngleExt:
         self.blendful_enabled = bool(params.get_bool("Blendful"))
       except Exception:
         pass
+      # BluePilot (bp-7.0): angle-mode lane centering trim params.
+      # This build's params_keys.h only registers the generic names (no *_ang variants yet), so
+      # reuse the master lane-positioning toggle and the generic offset; authority is a constant.
+      try:
+        self.enable_lane_positioning_ang = bool(params.get_bool("enable_lane_positioning"))
+      except Exception:
+        pass
+      try:
+        _raw = params.get("custom_path_offset", return_default=True)
+        if _raw is not None and _raw != b"":
+          self.custom_path_offset_ang = float(clip(
+            float(_raw.decode("utf-8", errors="replace") if isinstance(_raw, bytes) else _raw), -0.5, 0.5))
+      except Exception:
+        pass
+      self.lane_centering_strength_ang = 0.25
 
   def update_angle_strategy(self, CC, CS, actuators, CP):
     """
     Curvature from planner (+ optional predicted blend) → path_angle via ½·κ·d_ref.
-    c0 (path_offset) is always zero on the wire -- no centering trim in angle mode. c2 and c3 are zero.
+    c0 (path_offset) is always zero on the wire; lane centering lives in the curvature domain
+    (LaneCenterTrim, see lane_center_trim.py). c2 and c3 are zero.
     Blended κ is not passed through Ford c2 rate / DBC limits (those target the curvature actuator).
     """
     self._ensure_lateral_curv_initialized(CP)
@@ -346,6 +373,7 @@ class LateralAngleExt:
       self.bp_kappa_cmd = self.get_current_curvature(CS)
       self.human_turn_detector.reset()
       self.angle_human_turn_active = False
+      self.lane_center_trim.reset()
       self.stall_blip_hold_s = 0.0
       self.stall_blip_frames_left = 0
       self.stall_blip_cooldown_s = 0.0
@@ -384,6 +412,7 @@ class LateralAngleExt:
       # there): the driver is steering, so the honest command is the car's actual curvature,
       # and the panda-latched shadow stays current for the re-engage frame.
       self.bp_kappa_cmd = self.get_current_curvature(CS)
+      self.lane_center_trim.reset()
       # Keep exit detection current so resume doesn't compare against a stale pre-turn value.
       self._desired_curvature_last = float(actuators.curvature)
       # A human turn ends any stall episode -- its own mode 0 does the PSCM reset job. That also
@@ -436,6 +465,7 @@ class LateralAngleExt:
       self.sim_curvature_last = 0.0
       # Truthful shadow during the blip (see the inactive-path comment).
       self.bp_kappa_cmd = self.get_current_curvature(CS)
+      self.lane_center_trim.reset()
       self._desired_curvature_last = float(actuators.curvature)
       self.precision_type = 1
       if self.stall_blip_frames_left <= 0:
@@ -553,6 +583,14 @@ class LateralAngleExt:
           self.blendful_rstd = float(_stds[2])
       except Exception:
         pass
+    # BluePilot (bp-7.0): lane centering trim, applied before the deviation clip below so the
+    # correction inherits the clip / gain table / PSCM clamp / soft ROC like the planner command.
+    kappa_cmd = self.lane_center_trim.update(
+      kappa_cmd, self.model, v_ego, self.enable_lane_positioning_ang,
+      self.custom_path_offset_ang, self.lane_centering_strength_ang,
+      CC.latActive, self.lane_change)
+    self._trim_correction = self.lane_center_trim.correction
+
     _blendful_nudge = self.blendful_delta(CS, requested_curvature)
     kappa_cmd += _blendful_nudge
     self._blendful_diag(_blendful_nudge)
