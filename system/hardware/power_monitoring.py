@@ -13,6 +13,8 @@ CAR_BATTERY_CAPACITY_uWh = 30e6
 CAR_CHARGING_RATE_W = 45
 
 VBATT_PAUSE_CHARGING = 11.8           # Lower limit on the LPF car battery voltage
+VBATT_PAUSE_CHARGING_MIN = 11.0       # BP (2026-11-12): range exposed by the UI control
+VBATT_PAUSE_CHARGING_MAX = 14.0       # values outside this range fall back to the constant
 MAX_TIME_OFFROAD_S = 30*3600
 MIN_ON_TIME_S = 3600
 DELAY_SHUTDOWN_TIME_S = 300 # Wait at least DELAY_SHUTDOWN_TIME_S seconds after offroad_time to shutdown.
@@ -104,6 +106,26 @@ class PowerMonitoring:
   def get_car_battery_capacity(self) -> int:
     return int(self.car_battery_capacity_uWh)
 
+  # 12V battery low-voltage shutdown limit
+  def get_vbatt_pause_charging(self) -> float:
+    """Lower limit on the low-passed car battery voltage, in volts.
+
+    Upstream hardcoded this as VBATT_PAUSE_CHARGING. BluePilot exposes it as the
+    "12V Battery Limit" setting (vbatt_pause_charging) but never read the param back,
+    so the control did nothing. Values outside the UI range are rejected in favour of
+    the upstream default rather than silently disabling the protection.
+    """
+    try:
+      v = self.params.get("vbatt_pause_charging", return_default=True)
+      if isinstance(v, bytes):
+        v = v.decode("utf-8", errors="replace").strip("\x00")
+      v = float(v)
+      if not (VBATT_PAUSE_CHARGING_MIN <= v <= VBATT_PAUSE_CHARGING_MAX):
+        return VBATT_PAUSE_CHARGING
+      return v
+    except Exception:
+      return VBATT_PAUSE_CHARGING
+
   # Max Time Offroad
   def max_time_offroad_exceeded(self, offroad_time):
     """
@@ -127,7 +149,10 @@ class PowerMonitoring:
     now = time.monotonic()
     should_shutdown = False
     offroad_time = (now - offroad_timestamp)
-    low_voltage_shutdown = (self.car_voltage_mV < (VBATT_PAUSE_CHARGING * 1e3) and
+    # BP (2026-11-12): was the hardcoded VBATT_PAUSE_CHARGING constant, which made the
+    # BluePilot "12V Battery Limit" setting a no-op. Now driven by the param.
+    vbatt_limit_v = self.get_vbatt_pause_charging()
+    low_voltage_shutdown = (self.car_voltage_mV < (vbatt_limit_v * 1e3) and
                             offroad_time > VOLTAGE_SHUTDOWN_MIN_OFFROAD_TIME_S)
     should_shutdown |= self.max_time_offroad_exceeded(offroad_time)
     should_shutdown |= low_voltage_shutdown

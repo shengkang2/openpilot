@@ -478,7 +478,7 @@ class BluePilotLayout(Widget):
     # 12V battery limit (float)
     self._vbatt_pause_charging = float_control_item(
       lambda: tr("12V Battery Limit"),
-      lambda: tr("Set the 12V battery charging pause limit (11.0-14.0V)."),
+      lambda: tr("Power off when the 12V battery stays below this voltage while offroad (11.0-14.0V)."),
       param="vbatt_pause_charging",
       min_value=11.0,
       max_value=14.0,

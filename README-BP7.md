@@ -578,4 +578,5 @@ AGNOS 18.x 的 `/usr/local/venv` 里 capnproto 是半装状态（dist-info 在�
 | 2026-11-09 | Blendful 护栏：车道拟合置信度衰减（概率硬下限 0.10 + 连续衰减 + 车道线标准差）+ 幅度上限 0.0005 + 反向拒绝（`max(0.0004, 25% 期望曲率)`）；UI 引导线同步按置信度淡出；黑匣子目录名加日期 |
 | 2026-11-09 | 治噪：`system/hardware/tici/hardware.py` 的 WiFi metered 判定按 ssid 缓存 120 秒，`sudo cat *.nmconnection` 由每 10 秒 4 次降到每 2 分钟一次（journal 日志量降 60%+，省掉无谓的 fork/PAM 认证） |
 | 2026-11-10 | Ford 角度模式居中改为曲率域位置闭环（对齐 BluePilot bp-7.0）：新增 `lane_center_trim.py` 原版未改一行，在 `kappa_cmd` 之后、Blendful 之前施加，继承偏差 clip／增益表／PSCM clamp／soft ROC 全部限幅；三个 early-return 分支补 `reset()`；关闭 `Blendful`、开启 `enable_lane_positioning`；增益 1.25 与偏差 clip 0.005 保持不变以保住转角能力 |
+| 2026-11-12 | 12V 电池上限接线：`vbatt_pause_charging` 此前只被塞进 `ControllerStateBP.bmsTwelveVBatteryLimit`（全仓库零消费者），真实阈值是 `power_monitoring.py` 里硬编码的 `VBATT_PAUSE_CHARGING = 11.8`，菜单设置完全无效；改为 `get_vbatt_pause_charging()` 从参数读取（越界回落 11.8V，改动即时生效），并把误导性的「充电暂停上限」文案改为「熄火后低压关机阈值」 |
 | 2026-11-12 | 行程统计修复：小时显示由 `int(minutes/60)` 改为一位小数（163 分钟与 144 分钟都被截断成 2，表现为「永远两小时、不随行程增长」）；`LOCAL_REFRESH_S` 3600→600，主页统计十分钟内跟上；`ui_state.py` 增加超时值变更检测，修 `InteractivityTimeout` 改完不生效（UI 启动早期按默认 30 秒定死计时） |

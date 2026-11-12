@@ -229,5 +229,5 @@ PARAM_DESCRIPTIONS_ZH = {
     "OsmLocationName": "OSM 位置名称",
     "OsmLocationTitle": "OSM 位置标题",
     "OsmStateName": "OSM 州/省名称",
-    "vbatt_pause_charging": "电池电压低时暂停充电",
+    "vbatt_pause_charging": "12V 电池低压关机阈值",
 }
