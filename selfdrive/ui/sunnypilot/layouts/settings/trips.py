@@ -34,7 +34,8 @@ class TripsLayout(Widget):
   # 避免每次刷新都全量读 111 个 qlog.zst（实测 36.5 秒）。
   LOCAL_CACHE_PATH = "/data/bp_local_drive_stats.json"
   LOCAL_CACHE_VER = 2
-  LOCAL_REFRESH_S = 3600  # 本地数据超过 1 小时就在后台增量刷新一次
+  # 本机补丁（2026-11-12）：原 3600 秒，主页行程统计要等 1 小时才更新，看起来像卡死。改 10 分钟。
+  LOCAL_REFRESH_S = 600
   REQUIRED_KEYS = ("routes", "distance", "minutes")
 
   def __init__(self):

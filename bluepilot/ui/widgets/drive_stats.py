@@ -196,7 +196,11 @@ class DriveStatsWidget(Widget):
     routes = int(data.get("routes", 0))
     distance = data.get("distance", 0)
     distance_str = str(int(distance * CV.MPH_TO_KPH)) if is_metric else str(int(distance))
-    hours = int(data.get("minutes", 0) / 60)
+    # BP fix (2026-11-12): int(minutes/60) 把 163 和 144 分钟都截断成 2，
+    # 表现为"小时数永远是 2、不随行程增长"。改为保留一位小数，让增长可见。
+    _minutes = float(data.get("minutes", 0) or 0)
+    _hours = _minutes / 60.0
+    hours = f"{_hours:.1f}" if _hours < 100.0 else str(int(round(_hours)))
     dist_unit = tr("KM") if is_metric else tr("Miles")
 
     number_font = gui_app.font(FontWeight.BOLD)

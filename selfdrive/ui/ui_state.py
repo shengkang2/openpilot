@@ -284,6 +284,7 @@ class Device(DeviceSP):
     self._override_interactive_timeout: int | None = None
     self._interactive_timeout_callbacks: list[Callable] = []
     self._prev_timed_out = False
+    self._prev_timeout: int = -1  # BP fix (2026-11-12): 追踪超时值变化
     self._awake: bool = True
 
     self._offroad_brightness: int = BACKLIGHT_OFFROAD
@@ -390,6 +391,13 @@ class Device(DeviceSP):
       if gui_app.sunnypilot_ui():
         DeviceSP.wake_from_dimmed_onroad_brightness(ui_state, gui_app.mouse_events)
 
+      self._reset_interactive_timeout()
+
+    # BP fix (2026-11-12): InteractivityTimeout 是参数，UI 启动早期参数还没载入时会先按
+    # 默认 30 秒起算，导致改完参数照样熄屏。这里检测超时值变化并重新计时。
+    _cur_timeout = self.interactive_timeout
+    if _cur_timeout != self._prev_timeout:
+      self._prev_timeout = _cur_timeout
       self._reset_interactive_timeout()
 
     interaction_timeout = time.monotonic() > self._interaction_time
